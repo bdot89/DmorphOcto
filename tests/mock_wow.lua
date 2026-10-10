@@ -342,6 +342,9 @@ function Mock.ResetUI()
 	function JoinChannelByName(name)
 		Mock.channels[strlower(name)] = 6
 	end
+	function LeaveChannelByName(name)
+		Mock.channels[strlower(name)] = nil
+	end
 	function GetChannelName(name)
 		local id = Mock.channels[strlower(name)]
 		if id then
@@ -350,6 +353,25 @@ function Mock.ResetUI()
 		return 0
 	end
 	NUM_CHAT_WINDOWS = 7
+	-- What the chat windows were given to show: { event, arg1, channel }.
+	Mock.shown = {}
+	function ChatFrame_OnEvent(event)
+		table.insert(Mock.shown, { event = event, msg = arg1, channel = arg9 })
+	end
+	-- Guild: Mock.guild = { names }; the roster arrives with GUILD_ROSTER_UPDATE.
+	Mock.guild, Mock.rosterRequests = nil, 0
+	function IsInGuild() return Mock.guild and 1 or nil end
+	function GuildRoster() Mock.rosterRequests = Mock.rosterRequests + 1 end
+	function GetNumGuildMembers() return Mock.guild and table.getn(Mock.guild) or 0 end
+	function GetGuildRosterInfo(index)
+		local name = Mock.guild and Mock.guild[index]
+		if name then
+			return name, "Member", 1, 60, "Warrior", "Orgrimmar", "", "", 1
+		end
+	end
+	function GetRealmName() return "OctoWoW" end
+	Mock.now = Mock.now or 1700000000
+	function time() return Mock.now end
 	ChatFrame1 = { channelList = { "General" }, zoneChannelList = {} }
 	function ChatFrame_RemoveChannel(chatFrame, channel)
 		for index, value in pairs(chatFrame.channelList) do

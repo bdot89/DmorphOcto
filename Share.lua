@@ -1,42 +1,70 @@
 -- DMorph for OctoWoW: other DMorph users see your morph, and you see theirs.
 --
 -- Each client tells the others what it looks like (body, item morphs, and
--- the mount skin while it rides) on DMorph's own chat channel, which the
--- addon joins itself so no chat window shows it, and with addon messages in a
--- group. Each client then morphs those players on its own screen through
--- VanillaHelpers whenever it has a unit token for them: target, mouseover,
--- target of target, party, raid, or with SuperWoW their GUID. VanillaHelpers
--- only morphs friendly players. Nobody without DMorph sees anything different.
+-- the mount skin while it rides). Each client then morphs those players on
+-- its own screen through VanillaHelpers whenever it has a unit token for
+-- them: target, mouseover, target of target, party, raid, or with SuperWoW
+-- their GUID. VanillaHelpers only morphs friendly players. Nobody without
+-- DMorph sees anything different.
+--
+-- Talking as little as possible (the server slows down anyone who chats fast):
+--  * Group, raid, battleground and guild mates get hidden addon messages.
+--    Only players outside those hear us on DMorph's own chat channel, which
+--    no chat window shows.
+--  * Your changes go out once they stand still for a second (one message for
+--    a whole outfit), and only to the players who are around you and have
+--    DMorph. Anyone else asks when they see you.
+--  * Mounting and dismounting is a tiny message of its own that goes first.
+--  * Looks are short (base 36) and remembered between sessions. A question
+--    carries a fingerprint of the look we remember, and the answer is a
+--    fingerprint too when nothing changed.
 --
 -- VanillaHelpers keeps a morph on the player's GUID, but when a player leaves
 -- your sight and comes back the game builds them afresh without it. So every
 -- fifth of a second the addon looks at the players it knows and puts the look
 -- straight back on anyone who has just come back into view.
 --
--- Messages: "DMO1 L <display> <mount> <slot:item,...|-> [guid]" is a look
--- (0 = none) and "DMO1 Q <name>,<name>" asks those players for theirs.
+-- Messages (prefix "DMO2"). A look is "<display> <mount> <items>": display and
+-- mount IDs in base 36 (0 = none), items as a slot letter (a = 1 ... s = 19)
+-- and an item ID in base 36 each, or "-".
+--   L <look> <guid|->     this is my look
+--   M <mount>             my mount skin changed, the rest didn't
+--   H <fingerprint> <guid|->  my look is still the one with this fingerprint
+--   Q <name>[:<fingerprint>],...  what do these players look like now?
+-- Questions are answered on the way they came (channel, group or guild).
 
 local M = DmorphOcto
 
-local CHANNEL = "DmorphOcto"
-local TAG = "DMO1"
+local CHANNEL, PASSWORD = "DmorphShare", "dmo2"
+local OLD_CHANNEL = "DmorphOcto" -- 1.7's channel: left after login
+local TAG = "DMO2"
 local TICK, SCAN_GAP = 0.1, 0.2
-local SEND_DELAY = 0.5 -- wait this long after a change, so quick changes go in one message
+local SETTLE, MAX_WAIT = 1, 3 -- send a changed look once it stands still this long, at most this late
+local CHANNEL_GAP, ADDON_GAP = 0.6, 0.2 -- between our messages
 local JOIN_DELAY, READY_DELAY = 3, 2 -- after login: join the channel, then talk
-local REPLY_GAP = 3 -- answer questions about us at most this often
-local QUERY_GAP = 3 -- ask about new faces at most this often
+local REPLY_GAP = 3 -- answer questions about us at most this often (per way)
+local QUERY_GAP = 3 -- ask about players at most this often
 local ASK_AGAIN = 300 -- ask a player without DMorph again after this long
-local REFRESH = 300 -- ask a DMorph user again if we haven't heard from them for this long
+local RECHECK = 60 -- ask a DMorph user who comes back into sight whether they changed, at most this often
+local CONFIRM_WAIT = 20 -- a remembered player who doesn't answer in this long has no DMorph now
+local AUDIENCE = 180 -- DMorph users seen this recently, or who asked about us, get our changes
+local GUILD_GAP = 120 -- refresh the guild list this often
+local KEEP = 14 * 86400 -- forget remembered looks after two weeks
 local MAX_ASK = 12
 local MAX_PEERS = 500
 
 local clock, scanID = 0, 0
-local peers, peerCount = {}, 0 -- name -> { display, mount, items, guid, key, version, heard }
+local peers, peerCount = {}, 0 -- name -> { display, mount, items, d, m, it, look, print, guid, version, heard, confirmed }
 local applied = {} -- name -> what we put on them: { display, mount, items, version, scan, away }
-local asked, queue, queued = {}, {}, {} -- name -> when we last asked; names to ask about
-local timers = {} -- clock times: join, ready, send, group, reply, replied, query, scan
-local lastKey, lastMount
+local asked, queue, queued = {}, {}, {} -- name -> when we last asked; names to ask about; name -> fingerprint or true
+local audience = {} -- name -> when they last showed they see us
+local inGroup, inGuild = {}, {} -- names
+local replies = {} -- way -> "L" (full look) or "H" (fingerprint)
+local timers = {} -- clock times: join, ready, send, first, mount, reply, replied, query, scan, guild, next
+local sent = { d = "0", m = "0", it = "-" } -- what the others were last told
+local cache -- DmorphOctoAccount.peerCache for this realm
 local guidWorks -- whether VanillaHelpers took a GUID as a unit token (nil: not tried)
+local counts = { channel = 0, hidden = 0 }
 
 local function Sharing()
 	return not M.GetAccount().shareOff
@@ -46,20 +74,61 @@ local function Seeing()
 	return not M.GetAccount().othersOff
 end
 
--- Our look as "display mount items", the parts other clients need.
-local function OwnLook()
+-- Short numbers --------------------------------------------------------------------
+
+local DIGITS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+local function Encode(n)
+	n = math.floor(tonumber(n) or 0)
+	if n <= 0 then
+		return "0"
+	end
+	local text = ""
+	while n > 0 do
+		local digit = math.mod(n, 36)
+		text = strsub(DIGITS, digit + 1, digit + 1) .. text
+		n = math.floor(n / 36)
+	end
+	return text
+end
+
+local function Decode(text)
+	if text and strfind(text, "^[0-9A-Z]+$") and strlen(text) <= 6 then
+		return tonumber(text, 36)
+	end
+end
+
+-- A four-character fingerprint of a look.
+local function Fingerprint(look)
+	local h = 5381
+	for i = 1, strlen(look) do
+		h = math.mod(h * 33 + string.byte(look, i), 1679609)
+	end
+	return Encode(h)
+end
+
+-- Our look's three parts, as the others should see it.
+local function OwnParts()
+	if not Sharing() then
+		return "0", "0", "-"
+	end
 	local display, items, mount = M.GetSharedLook()
 	local parts = {}
 	for slot = 1, 19 do
 		if items[slot] then
-			table.insert(parts, slot .. ":" .. items[slot])
+			table.insert(parts, string.char(96 + slot) .. Encode(items[slot]))
 		end
 	end
 	local itemText = "-"
 	if table.getn(parts) > 0 then
-		itemText = table.concat(parts, ",")
+		itemText = table.concat(parts)
 	end
-	return (display or 0) .. " " .. (mount or 0) .. " " .. itemText, mount
+	return Encode(display), Encode(mount), itemText
+end
+
+local function OwnLook()
+	local d, m, it = OwnParts()
+	return d .. " " .. m .. " " .. it
 end
 
 -- SuperWoW's UnitExists also returns the unit's GUID.
@@ -69,6 +138,8 @@ local function GUIDOf(unit)
 		return guid
 	end
 end
+
+-- Ways to reach players ------------------------------------------------------------
 
 local function GroupChannel()
 	for i = 1, (MAX_BATTLEFIELD_QUEUES or 3) do
@@ -84,49 +155,180 @@ local function GroupChannel()
 	end
 end
 
-local function ChannelID()
-	local id = GetChannelName(CHANNEL)
+-- The quietest way to reach a player: their group or guild, or the channel.
+local function Way(name)
+	local group = GroupChannel()
+	if group == "BATTLEGROUND" or (group and inGroup[name]) then
+		return group
+	elseif inGuild[name] then
+		return "GUILD"
+	end
+	return "CHANNEL"
+end
+
+local function ChannelID(name)
+	local id = GetChannelName(name or CHANNEL)
 	if id and id > 0 then
 		return id
 	end
 end
 
--- Sends to the channel (everyone online with DMorph) and/or the group.
-local function Send(text, toChannel, toGroup)
-	local id = toChannel and ChannelID()
-	if id then
-		pcall(SendChatMessage, TAG .. " " .. text, "CHANNEL", nil, id)
+local function Send(text, way)
+	if way == "CHANNEL" then
+		local id = ChannelID()
+		if id and pcall(SendChatMessage, TAG .. " " .. text, "CHANNEL", nil, id) then
+			counts.channel = counts.channel + 1
+		end
+	elseif way then
+		if pcall(SendAddonMessage, TAG, text, way) then
+			counts.hidden = counts.hidden + 1
+		end
 	end
-	local group = toGroup and GroupChannel()
+	-- The server is slower to forgive the channel.
+	local gap = ADDON_GAP
+	if way == "CHANNEL" then
+		gap = CHANNEL_GAP
+	end
+	timers.next = math.max(timers.next or 0, clock + gap)
+end
+
+-- Where a change of ours has to go: the group always, and whoever else is
+-- around with DMorph, through their guild if all of them are guild mates.
+local function ChangeWays()
+	local ways = {}
+	local group = GroupChannel()
 	if group then
-		pcall(SendAddonMessage, TAG, text, group)
+		ways[group] = true
+	end
+	for name, at in pairs(audience) do
+		if clock - at > AUDIENCE then
+			audience[name] = nil
+		else
+			ways[Way(name)] = true
+		end
+	end
+	if ways.CHANNEL then
+		return { CHANNEL = true } -- everyone with DMorph is on it
+	end
+	return ways
+end
+
+local function OurChannel(name)
+	if type(name) ~= "string" then
+		return false
+	end
+	name = strupper((string.gsub(name, "^%d+%.%s*", "")))
+	return name == strupper(CHANNEL) or name == strupper(OLD_CHANNEL)
+end
+
+-- No chat window shows DMorph's channel: its messages, joins and notices are
+-- dropped before the chat frames see them, whatever channels they listen to.
+local function HideChannel()
+	if M.shareChatHooked or type(ChatFrame_OnEvent) ~= "function" then
+		return
+	end
+	M.shareChatHooked = true
+	local original = ChatFrame_OnEvent
+	ChatFrame_OnEvent = function(event)
+		if type(event) == "string" and strsub(event, 1, 16) == "CHAT_MSG_CHANNEL"
+			and (OurChannel(arg9) or OurChannel(arg4)) then
+			return
+		end
+		return original(event)
 	end
 end
 
-local function SendLook(toChannel, toGroup)
-	local look = "0 0 -"
-	if Sharing() then
-		look = OwnLook()
-	end
-	Send("L " .. look .. " " .. (GUIDOf("player") or "-"), toChannel, toGroup)
-end
-
--- Keeps the hidden channel out of every chat window.
 local function JoinChannel()
+	HideChannel()
+	if ChannelID(OLD_CHANNEL) and LeaveChannelByName then
+		pcall(LeaveChannelByName, OLD_CHANNEL)
+	end
 	if not ChannelID() then
-		pcall(JoinChannelByName, CHANNEL)
+		pcall(JoinChannelByName, CHANNEL, PASSWORD)
 	end
 	for i = 1, (NUM_CHAT_WINDOWS or 7) do
 		local chatFrame = getglobal("ChatFrame" .. i)
 		if chatFrame and chatFrame.channelList and ChatFrame_RemoveChannel then
-			for _, name in pairs(chatFrame.channelList) do
-				if strupper(name) == strupper(CHANNEL) then
-					ChatFrame_RemoveChannel(chatFrame, CHANNEL)
-					break
+			local found = true
+			while found do
+				found = nil
+				for _, name in pairs(chatFrame.channelList) do
+					if OurChannel(name) then
+						ChatFrame_RemoveChannel(chatFrame, name)
+						found = true
+						break
+					end
 				end
 			end
 		end
 	end
+end
+
+local function ReadGuild()
+	inGuild = {}
+	if not (IsInGuild and IsInGuild()) then
+		return
+	end
+	local ok, count = pcall(GetNumGuildMembers)
+	for i = 1, (ok and count or 0) do
+		local name = GetGuildRosterInfo(i)
+		if name then
+			inGuild[name] = true
+		end
+	end
+end
+
+-- Rebuilds the group's names; a newcomer hears our look.
+local function ReadGroup()
+	local before = inGroup
+	inGroup = {}
+	local raid = GetNumRaidMembers()
+	if raid > 0 then
+		for i = 1, 40 do
+			local name = UnitName("raid" .. i)
+			if name then
+				inGroup[name] = true
+			end
+		end
+	else
+		for i = 1, 4 do
+			local name = UnitName("party" .. i)
+			if name then
+				inGroup[name] = true
+			end
+		end
+	end
+	if timers.introduced then
+		for name in pairs(inGroup) do
+			if not before[name] then
+				timers.group = timers.group or clock + 1
+				break
+			end
+		end
+	end
+end
+
+-- Remembered looks -----------------------------------------------------------------
+
+local function Cache()
+	if not cache then
+		local account = M.GetAccount()
+		if type(account.peerCache) ~= "table" then
+			account.peerCache = {}
+		end
+		local realm = (GetRealmName and GetRealmName()) or "?"
+		if type(account.peerCache[realm]) ~= "table" then
+			account.peerCache[realm] = {}
+		end
+		cache = account.peerCache[realm]
+		local now = time()
+		for name, entry in pairs(cache) do
+			if type(entry) ~= "table" or type(entry.look) ~= "string" or now - (tonumber(entry.seen) or 0) > KEEP then
+				cache[name] = nil
+			end
+		end
+	end
+	return cache
 end
 
 -- Putting looks on other players -------------------------------------------
@@ -135,10 +337,29 @@ local NONE = { items = {} }
 
 -- Only display IDs the client has (a bad one could break its model).
 local function Display(text)
-	local id = tonumber(text)
+	local id = Decode(text)
 	if id and id > 0 and M.GetDisplayName(id) then
 		return id
 	end
+end
+
+-- A look from its three parts, or nil if they don't read as one.
+local function MakeLook(d, m, it)
+	if not (Decode(d) and Decode(m) and it and (it == "-" or strfind(it, "^[a-s][0-9A-Z]+[a-s0-9A-Z]*$"))) then
+		return nil
+	end
+	local look = { display = Display(d), mount = Display(m), items = {}, d = d, m = m, it = it }
+	if it ~= "-" then
+		for letter, id in string.gfind(it, "([a-s])([0-9A-Z]+)") do
+			local item = Decode(id)
+			if item and item > 0 and item < 1000000 then
+				look.items[string.byte(letter) - 96] = item
+			end
+		end
+	end
+	look.look = d .. " " .. m .. " " .. it
+	look.print = Fingerprint(look.look)
+	return look
 end
 
 local function IsGUID(token)
@@ -214,10 +435,66 @@ local function ApplyTo(name, token)
 	end
 end
 
-local function Ask(name)
+-- Asks a player for their look; with the fingerprint we have, they only
+-- send it all if it changed.
+local function Ask(name, print)
 	if not queued[name] then
-		queued[name] = true
 		table.insert(queue, name)
+	end
+	queued[name] = print or true
+end
+
+local function Unask(name)
+	if queued[name] then
+		queued[name] = nil
+		for i = 1, table.getn(queue) do
+			if queue[i] == name then
+				table.remove(queue, i)
+				break
+			end
+		end
+	end
+end
+
+-- Stores a player's look (new or remembered); returns the peer.
+local function SetPeer(name, look, guid, confirmed)
+	local peer = peers[name]
+	if not peer then
+		if peerCount >= MAX_PEERS then
+			return
+		end
+		peerCount = peerCount + 1
+	end
+	look.guid = guid or (peer and peer.guid)
+	look.version = (peer and peer.version or 0) + 1
+	look.heard = confirmed and clock or -1000
+	look.confirmed = confirmed
+	peers[name] = look
+	if confirmed then
+		Cache()[name] = { look = look.look, guid = look.guid, seen = time() }
+	end
+	return look
+end
+
+local function DropPeer(name)
+	if peers[name] then
+		peers[name] = nil
+		peerCount = peerCount - 1
+	end
+	Cache()[name] = nil
+	audience[name] = nil
+end
+
+-- A player we heard from earlier, maybe in another session.
+local function Remembered(name)
+	local entry = Cache()[name]
+	if entry then
+		local _, _, d, m, it = strfind(entry.look, "^(%S+) (%S+) (%S+)$")
+		local look = MakeLook(d, m, it)
+		if look then
+			return SetPeer(name, look, entry.guid, false)
+		end
+		Cache()[name] = nil
 	end
 end
 
@@ -237,10 +514,18 @@ local function Visit(token)
 		return
 	end
 	local peer = peers[name]
+	if not peer and Seeing() and UnitCanAssist("player", token) then
+		peer = Remembered(name)
+	end
 	if peer or applied[name] then
+		local back = not applied[name] or applied[name].away
 		ApplyTo(name, token)
-		if peer and clock - peer.heard > REFRESH and clock - (asked[name] or -1000) > REFRESH then
-			Ask(name) -- in case we missed a change
+		if peer then
+			audience[name] = clock -- they can see us too
+			if (back or not peer.confirmed) and clock - peer.heard > RECHECK
+				and clock - (asked[name] or -1000) > RECHECK then
+				Ask(name, peer.print) -- in case they changed while away
+			end
 		end
 	elseif Seeing() and UnitCanAssist("player", token)
 		and (not asked[name] or clock - asked[name] > ASK_AGAIN) then
@@ -253,6 +538,7 @@ local function Scan()
 		return
 	end
 	scanID = scanID + 1
+	ReadGroup()
 	Visit("target")
 	Visit("mouseover")
 	Visit("targettarget")
@@ -284,91 +570,206 @@ local function Scan()
 	end
 end
 
+-- Sends the waiting questions, one message per way.
 local function AskQueued()
-	local names = {}
-	while table.getn(queue) > 0 and table.getn(names) < MAX_ASK do
+	local byWay, n = {}, 0
+	while table.getn(queue) > 0 and n < MAX_ASK do
 		local name = table.remove(queue, 1)
+		local print = queued[name]
 		queued[name] = nil
 		asked[name] = clock
-		table.insert(names, name)
+		local way = Way(name)
+		byWay[way] = byWay[way] or {}
+		if print == true then
+			table.insert(byWay[way], name)
+		else
+			table.insert(byWay[way], name .. ":" .. print)
+		end
+		n = n + 1
 	end
-	if table.getn(names) > 0 then
-		Send("Q " .. table.concat(names, ","), true, false)
+	for way, names in pairs(byWay) do
+		Send("Q " .. table.concat(names, ","), way)
 	end
 end
 
 -- Messages from other clients ---------------------------------------------------
 
 local function ReadLook(sender, rest)
-	local _, _, d, m, itemText, guid = strfind(rest, "^(%d+) (%d+) (%S+) ?(%S*)")
-	if not d then
+	local _, _, d, m, it, guid = strfind(rest, "^(%S+) (%S+) (%S+) ?(%S*)")
+	local look = MakeLook(d, m, it)
+	if not look then
 		return
 	end
-	local key = d .. " " .. m .. " " .. itemText
-	local peer = peers[sender]
+	if not strfind(guid or "", "^0x%x+$") then
+		guid = nil
+	end
+	Unask(sender)
 	asked[sender] = clock
-	if peer and peer.key == key then
-		peer.heard = clock
+	local peer = peers[sender]
+	if peer and peer.look == look.look then
+		peer.heard, peer.guid = clock, guid or peer.guid
+		if not peer.confirmed then
+			peer.confirmed = true
+			Cache()[sender] = { look = peer.look, guid = peer.guid, seen = time() }
+		end
 		return
 	end
-	if not peer then
-		if peerCount >= MAX_PEERS then
-			return
-		end
-		peerCount = peerCount + 1
+	if SetPeer(sender, look, guid, true) then
+		Scan()
 	end
-	local look = { display = Display(d), mount = Display(m), items = {}, key = key, heard = clock }
-	if itemText ~= "-" then
-		for slot, item in string.gfind(itemText, "(%d+):(%d+)") do
-			slot, item = tonumber(slot), tonumber(item)
-			if slot >= 1 and slot <= 19 and item > 0 and item < 1000000 then
-				look.items[slot] = item
-			end
-		end
-	end
-	if strfind(guid, "^0x%x+$") then
-		look.guid = guid
-	end
-	look.version = (peer and peer.version or 0) + 1
-	peers[sender] = look
-	Scan()
 end
 
-local function Receive(sender, text)
+-- Mounting or dismounting: only the mount part changed.
+local function ReadMount(sender, m)
+	local peer = peers[sender]
+	if not (peer and peer.confirmed) then
+		return
+	end
+	local look = MakeLook(peer.d, m, peer.it)
+	if look and look.look ~= peer.look then
+		SetPeer(sender, look, nil, true)
+		Scan()
+	end
+end
+
+-- "Nothing changed": confirms what we remember, else we ask for it all.
+local function ReadPrint(sender, print, guid)
+	Unask(sender)
+	asked[sender] = clock
+	local peer = peers[sender]
+	if peer and peer.print == print then
+		peer.heard = clock
+		if strfind(guid or "", "^0x%x+$") then
+			peer.guid = guid
+		end
+		if not peer.confirmed then
+			peer.confirmed = true
+			Cache()[sender] = { look = peer.look, guid = peer.guid, seen = time() }
+		end
+	else
+		asked[sender] = nil
+		Ask(sender)
+	end
+end
+
+local function ReadQuestion(sender, rest, way)
+	local me = UnitName("player")
+	for entry in string.gfind(rest, "[^,]+") do
+		local _, _, name, print = strfind(entry, "^([^:]+):?(.*)$")
+		if name == me then
+			if Sharing() then
+				audience[sender] = clock
+				if print ~= "" and print == Fingerprint(OwnLook()) then
+					replies[way] = replies[way] or "H"
+				else
+					replies[way] = "L"
+				end
+				local at = math.max(clock + 0.2 + math.random() * 0.8, (timers.replied or -100) + REPLY_GAP)
+				if not timers.reply or timers.reply > at then
+					timers.reply = at
+				end
+			end
+		elseif way == "CHANNEL" and queued[name] and Way(name) == "CHANNEL" then
+			-- Someone else asked first: the answer comes on the channel anyway.
+			Unask(name)
+			asked[name] = clock
+		end
+	end
+end
+
+local function Receive(sender, text, way)
 	if not sender or sender == "" or sender == UnitName("player") then
 		return
 	end
 	local _, _, kind, rest = strfind(text or "", "^(%u) (.*)$")
 	if kind == "L" then
 		ReadLook(sender, rest)
-	elseif kind == "Q" and Sharing() then
-		local me = UnitName("player")
-		for name in string.gfind(rest, "[^,]+") do
-			if name == me then
-				local at = math.max(clock + 0.2 + math.random() * 0.8, (timers.replied or -100) + REPLY_GAP)
-				if not timers.reply or timers.reply > at then
-					timers.reply = at
-				end
-				return
-			end
+	elseif kind == "M" then
+		ReadMount(sender, rest)
+	elseif kind == "H" then
+		local _, _, print, guid = strfind(rest, "^(%S+) ?(%S*)")
+		if print then
+			ReadPrint(sender, print, guid)
 		end
+	elseif kind == "Q" then
+		ReadQuestion(sender, rest, way)
 	end
 end
 
 -- Your own changes ------------------------------------------------------------
 
 local function OnChange()
-	local key, mount = OwnLook()
-	if not Sharing() or key == lastKey then
+	local d, m, it = OwnParts()
+	-- Mounting and dismounting go out at once; other changes wait until
+	-- they stand still a moment.
+	if m ~= sent.m then
+		timers.mount = timers.mount or clock
+	end
+	if d ~= sent.d or it ~= sent.it then
+		timers.first = timers.first or clock
+		timers.send = math.min(clock + SETTLE, timers.first + MAX_WAIT)
+	elseif timers.send then
+		timers.send, timers.first = nil, nil -- changed back before it went out
+	end
+end
+
+local function LookText()
+	return "L " .. OwnLook() .. " " .. (GUIDOf("player") or "-")
+end
+
+-- Tells everyone who needs it; that answers any waiting question too.
+local function SendLook(ways)
+	sent.d, sent.m, sent.it = OwnParts()
+	timers.send, timers.first, timers.mount = nil, nil, nil
+	local text = LookText()
+	for way in pairs(ways) do
+		Send(text, way)
+		replies[way] = nil
+	end
+	if ways.CHANNEL then
+		replies = {} -- everyone with DMorph is on it
+	end
+end
+
+-- At most one message (to each way it needs) per pass, the most urgent first.
+local function SendNext()
+	if timers.next and clock < timers.next then
 		return
 	end
-	-- Mounting and dismounting go out at once; other changes wait a moment.
-	local at = clock + SEND_DELAY
-	if mount ~= lastMount then
-		at = clock
+	if timers.mount and clock >= timers.mount then
+		timers.mount = nil
+		local _, m = OwnParts()
+		if m ~= sent.m then
+			sent.m = m
+			for way in pairs(ChangeWays()) do
+				Send("M " .. m, way)
+			end
+		end
+	elseif timers.send and clock >= timers.send then
+		SendLook(ChangeWays())
+	elseif timers.reply and clock >= timers.reply then
+		timers.reply, timers.replied = nil, clock
+		local look = OwnLook()
+		for way, kind in pairs(replies) do
+			replies[way] = nil
+			if kind == "L" then
+				Send(LookText(), way)
+			else
+				Send("H " .. Fingerprint(look) .. " " .. (GUIDOf("player") or "-"), way)
+			end
+		end
+	elseif table.getn(queue) > 0 and clock >= (timers.query or 0) then
+		timers.query = clock + QUERY_GAP
+		AskQueued()
 	end
-	if not timers.send or timers.send > at then
-		timers.send = at
+end
+
+-- Remembered players who don't answer have stopped using DMorph.
+local function ForgetSilent()
+	for name, peer in pairs(peers) do
+		if not peer.confirmed and asked[name] and not queued[name] and clock - asked[name] > CONFIRM_WAIT then
+			DropPeer(name)
+		end
 	end
 end
 
@@ -382,28 +783,33 @@ local function Tick()
 		timers.scan = clock + SCAN_GAP
 		Scan()
 	end
+	if clock >= (timers.guild or 0) then
+		timers.guild = clock + GUILD_GAP
+		if IsInGuild and IsInGuild() and GuildRoster then
+			pcall(GuildRoster)
+		end
+	end
 	-- Nothing goes out before the channel is joined.
 	if not (timers.ready and clock >= timers.ready) then
 		return
 	end
-	if timers.send and clock >= timers.send then
-		timers.send = nil
-		lastKey, lastMount = OwnLook()
-		SendLook(true, true)
-		timers.reply = nil -- that answered any question too
+	if not timers.introduced then
+		-- What we look like now is what everyone will learn by asking.
+		timers.introduced = true
+		sent.d, sent.m, sent.it = OwnParts()
+		timers.send, timers.first, timers.mount = nil, nil, nil
+		timers.group = clock
 	end
-	if timers.group and clock >= timers.group then
+	if timers.group and clock >= timers.group and not (timers.next and clock < timers.next) then
+		-- Only the group hears it: anyone else asks when they see us.
 		timers.group = nil
-		SendLook(false, true)
+		local group = GroupChannel()
+		if group then
+			Send(LookText(), group)
+		end
 	end
-	if timers.reply and clock >= timers.reply then
-		timers.reply, timers.replied = nil, clock
-		SendLook(true, false)
-	end
-	if table.getn(queue) > 0 and clock >= (timers.query or 0) then
-		timers.query = clock + QUERY_GAP
-		AskQueued()
-	end
+	SendNext()
+	ForgetSilent()
 end
 
 local frame = CreateFrame("Frame")
@@ -414,37 +820,37 @@ frame:RegisterEvent("PLAYER_TARGET_CHANGED")
 frame:RegisterEvent("UPDATE_MOUSEOVER_UNIT")
 frame:RegisterEvent("PARTY_MEMBERS_CHANGED")
 frame:RegisterEvent("RAID_ROSTER_UPDATE")
+frame:RegisterEvent("GUILD_ROSTER_UPDATE")
 frame:SetScript("OnEvent", function()
 	if event == "CHAT_MSG_CHANNEL" then
 		-- arg9 is the channel's name, arg4 the same with its number.
-		local channel = arg9 or string.gsub(arg4 or "", "^%d+%.%s*", "")
-		if strupper(channel or "") == strupper(CHANNEL) then
+		if OurChannel(arg9) or OurChannel(arg4) then
 			local _, _, text = strfind(arg1 or "", "^" .. TAG .. " (.*)$")
 			if text then
-				Receive(arg2, text)
+				Receive(arg2, text, "CHANNEL")
 			end
 		end
 	elseif event == "CHAT_MSG_ADDON" then
 		if arg1 == TAG then
-			Receive(arg4, arg2)
+			Receive(arg4, arg2, arg3)
 		end
 	elseif event == "PLAYER_TARGET_CHANGED" then
 		Visit("target")
 	elseif event == "UPDATE_MOUSEOVER_UNIT" then
 		Visit("mouseover")
+	elseif event == "GUILD_ROSTER_UPDATE" then
+		ReadGuild()
 	elseif event == "PLAYER_ENTERING_WORLD" then
 		-- After each loading screen everyone around is built afresh, and we
-		-- rejoin if needed. After login we also say who we are.
+		-- rejoin if needed.
 		for _, done in pairs(applied) do
 			done.away = true
 		end
 		timers.join = clock + JOIN_DELAY
-		if not timers.introduced then
-			timers.introduced = true
-			timers.send = clock + JOIN_DELAY + READY_DELAY + 1 + math.random() * 3
-		end
-	elseif GroupChannel() then
-		timers.group = clock + 1
+		timers.guild = clock + 1
+		Cache() -- forgets old looks
+	else
+		ReadGroup()
 	end
 end)
 frame:SetScript("OnUpdate", function()
@@ -461,7 +867,8 @@ M.RegisterListener(OnChange)
 -- Settings and chat command -------------------------------------------------------
 
 -- Whether you share and see, how many players with DMorph you know of, how
--- many of them are morphed, and whether GUIDs work as tokens (nil: untried).
+-- many of them are morphed, whether GUIDs work as tokens (nil: untried), and
+-- how many messages went out on the channel and hidden.
 function M.GetShareStatus()
 	local morphed = 0
 	for _, peer in pairs(peers) do
@@ -469,13 +876,13 @@ function M.GetShareStatus()
 			morphed = morphed + 1
 		end
 	end
-	return Sharing(), Seeing(), peerCount, morphed, guidWorks
+	return Sharing(), Seeing(), peerCount, morphed, guidWorks, counts.channel, counts.hidden
 end
 
 function M.SetSharing(on)
 	M.GetAccount().shareOff = (not on) or nil
-	lastKey = nil
-	-- Tell the others at once, so they take your morph off when you stop.
+	-- The others hear at once, so they take your morph off when you stop.
+	OnChange()
 	timers.send = clock
 	if on then
 		return true, "Other DMorph users now see your morph."
@@ -507,7 +914,7 @@ M.commands.share = function(args)
 	elseif first == "others" and (second == "on" or second == "off") then
 		return Report(M.SetSeeing(second == "on"))
 	end
-	local sharing, seeing, known, morphed, guids = M.GetShareStatus()
+	local sharing, seeing, known, morphed, guids, onChannel, hidden = M.GetShareStatus()
 	local guidText = "not tried yet"
 	if guids == true then
 		guidText = "yes, nearby players show without a target"
@@ -517,5 +924,7 @@ M.commands.share = function(args)
 	Report(true, "Others see your morph: " .. (sharing and "on" or "off") .. ". You see theirs: "
 		.. (seeing and "on" or "off") .. ". DMorph users seen: " .. known .. " (" .. morphed .. " morphed).")
 	Report(true, "SuperWoW GUIDs: " .. guidText .. ".")
+	Report(true, "Messages sent this session: " .. onChannel .. " on the channel, " .. hidden
+		.. " hidden to your group or guild.")
 	Report(true, "Usage: .share on/off, .share others on/off. Only friendly players can be morphed.")
 end

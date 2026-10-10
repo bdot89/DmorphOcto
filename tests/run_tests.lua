@@ -1002,104 +1002,220 @@ say(".gender")
 check(vh.display == 6894, ".gender on a native Goblin female gives Goblin male")
 
 ------------------------------------------------------------------------------
--- Sharing: DMorph users see each other's morphs.
+-- Sharing: DMorph users see each other's morphs, with as few messages as
+-- possible and none in any chat window.
 
 newClient(49)
 DmorphOctoDB, DmorphOctoAccount = nil, nil
+Mock.channels.dmorphocto = 5 -- 1.7's channel, joined last session
 loadUI()
-ChatFrame1.channelList[2] = "DmorphOcto" -- as if someone had /join'ed it
+ChatFrame1.channelList[2] = "DmorphShare" -- as if someone had /join'ed it
 local function wait(seconds)
 	for n = 1, math.ceil(seconds / 0.25) do
 		Mock.Tick(0.25)
 	end
 end
-local function channelSays(part)
+local function said(list, part, distribution)
 	local found, count = nil, 0
-	for i = 1, table.getn(Mock.channelSent) do
-		if contains(Mock.channelSent[i].msg, part) then
-			found, count = Mock.channelSent[i], count + 1
+	for i = 1, table.getn(list) do
+		local m = list[i]
+		if contains(m.msg or m.text, part) and (not distribution or m.distribution == distribution) then
+			found, count = m, count + 1
 		end
 	end
 	return found, count
 end
+local function channelSays(part)
+	return said(Mock.channelSent, part)
+end
+local function addonSays(part, distribution)
+	return said(Mock.addonSent, part, distribution)
+end
+local function quiet()
+	Mock.channelSent, Mock.addonSent = {}, {}
+end
 -- A message on the DMorph channel, with 1.12's CHAT_MSG_CHANNEL arguments.
 local function hear(sender, text)
-	Mock.Fire("CHAT_MSG_CHANNEL", "DMO1 " .. text, sender, "", "6. DmorphOcto", "", "", 0, 6, "DmorphOcto")
+	Mock.Fire("CHAT_MSG_CHANNEL", "DMO2 " .. text, sender, "", "6. DmorphShare", "", "", 0, 6, "DmorphShare")
+end
+local function hearAddon(sender, text, distribution)
+	Mock.Fire("CHAT_MSG_ADDON", "DMO2", text, distribution, sender)
 end
 local function morphOf(guid)
 	return vh.others[guid] or { items = {} }
 end
+-- The same fingerprint Share.lua puts on a look.
+local function fingerprint(look)
+	local h, digits, text = 5381, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", ""
+	for i = 1, string.len(look) do
+		h = math.mod(h * 33 + string.byte(look, i), 1679609)
+	end
+	while h > 0 do
+		text = string.sub(digits, math.mod(h, 36) + 1, math.mod(h, 36) + 1) .. text
+		h = math.floor(h / 36)
+	end
+	return text == "" and "0" or text
+end
+-- 4527 is "3HR" in base 36, 2955 "2A3", 10 "A"; slot 1 is "a", slot 5 "e".
 
 wait(2)
-check(Mock.channels.dmorphocto == nil, "the channel is joined once the login has settled")
+check(Mock.channels.dmorphshare == nil, "the channel is joined once the login has settled")
 wait(10)
-check(Mock.channels.dmorphocto == 6, "DMorph joins its own channel")
+check(Mock.channels.dmorphshare == 6 and Mock.channels.dmorphocto == nil,
+	"DMorph joins its own channel and leaves 1.7's")
 check(ChatFrame1.channelList[2] == nil and ChatFrame1.channelList[1] == "General",
 	"and keeps it out of the chat windows")
-check(channelSays("DMO1 L 0 0 - -"), "after login it says it has DMorph and no morph")
-Mock.channelSent = {}
+check(table.getn(Mock.channelSent) == 0 and table.getn(Mock.addonSent) == 0,
+	"logging in alone sends nothing: anyone who sees you asks")
+
+-- Nothing of the channel reaches a chat window, whatever it listens to.
+Mock.shown = {}
+arg1, arg4, arg9 = "DMO2 L 0 0 - -", "6. DmorphShare", "DmorphShare"
+ChatFrame_OnEvent("CHAT_MSG_CHANNEL")
+arg1 = "YOU_JOINED"
+ChatFrame_OnEvent("CHAT_MSG_CHANNEL_NOTICE")
+arg1, arg4, arg9 = "hello", "1. General", "General"
+ChatFrame_OnEvent("CHAT_MSG_CHANNEL")
+arg1, arg4, arg9 = nil, nil, nil
+check(table.getn(Mock.shown) == 1 and Mock.shown[1].msg == "hello",
+	"the channel's messages and notices are hidden, other channels still show")
+
 say(".morph 4527")
 say(".item head 2955")
 wait(3)
-local sent, count = channelSays("DMO1 L 4527 0 1:2955 -")
-check(sent and sent.channel == 6 and count == 1 and table.getn(Mock.channelSent) == 1,
-	"your changes go to the channel a moment later, in one message")
-check(table.getn(Mock.sent) == 0, "nothing is said in any chat you can see")
+check(table.getn(Mock.channelSent) == 0 and table.getn(Mock.sent) == 0,
+	"with no DMorph users around, your changes go nowhere")
 
 -- Someone else's morph shows on them once you have a unit token for them.
 local ally = "0x00000000000A0001"
 Mock.units.target = { name = "Ally", guid = ally, friendly = true, display = 50 }
-hear("Ally", "L 4527 0 1:2955,5:10 " .. ally)
+hear("Ally", "L 3HR 0 a2A3eA " .. ally)
 check(morphOf(ally).display == 4527 and morphOf(ally).items[1] == 2955 and morphOf(ally).items[5] == 10,
 	"a DMorph user you target shows their morph and items")
-hear("Ally", "L 99999999 0 - " .. ally)
+hear("Ally", "L ZZZZZ 0 - " .. ally)
 wait(1.5)
 check(morphOf(ally).display == nil and morphOf(ally).items[1] == nil,
 	"a display ID the client doesn't have is ignored, and dropped items come off")
-hear("Ally", "L 4527 4527 - " .. ally)
+hear("Ally", "L 3HR 3HR - " .. ally)
 wait(1.5)
 check(morphOf(ally).display == 4527 and morphOf(ally).mount == nil,
 	"a mount skin isn't put on through the target (it couldn't come off when they dismount)")
+hear("Ally", "L 4527 0 1:2955 -")
+wait(0.5)
+check(morphOf(ally).display == 4527, "messages that don't read as a look are ignored")
 Mock.units.mouseover = { name = "Foe", guid = "0x00000000000B0001", friendly = false, display = 50 }
-hear("Foe", "L 4527 0 - -")
+hear("Foe", "L 3HR 0 - -")
 Mock.Fire("UPDATE_MOUSEOVER_UNIT")
 check(vh.others["0x00000000000B0001"] == nil, "hostile players aren't morphed, and nothing errors")
 Mock.units.mouseover = nil
+
+-- Ally is around with DMorph, so your changes now go out: once they stand
+-- still, in one message.
+quiet()
+say(".item head 0")
+wait(0.5)
+say(".item head 2955")
+say(".item chest 10")
+wait(0.75)
+check(table.getn(Mock.channelSent) == 0, "changes wait until they stand still")
+wait(1)
+local sent, count = channelSays("DMO2 L 3HR 0 a2A3eA -")
+check(sent and sent.channel == 6 and count == 1 and table.getn(Mock.channelSent) == 1,
+	"then go to the channel in one short message")
+check(table.getn(Mock.sent) == 0, "nothing is said in any chat you can see")
+quiet()
+for n = 1, 8 do
+	say(".item chest " .. (10 + n))
+	wait(0.5)
+end
+wait(1.5)
+check(table.getn(Mock.channelSent) == 2, "changing gear nonstop still sends at most every few seconds")
+say(".item chest 10")
+wait(2)
 
 -- In a group, party tokens stay put, so mount skins come and go with them.
 local pal = "0x00000000000C0001"
 Mock.party = 1
 Mock.units.party1 = { name = "Pal", guid = pal, friendly = true, display = 51 }
-Mock.Fire("CHAT_MSG_ADDON", "DMO1", "L 0 4527 - -", "PARTY", "Pal")
+hearAddon("Pal", "L 0 3HR - -", "PARTY")
 check(morphOf(pal).mount == 4527 and morphOf(pal).display == nil, "a party member's mount skin shows while they ride")
-Mock.Fire("CHAT_MSG_ADDON", "DMO1", "L 0 0 - -", "PARTY", "Pal")
-check(morphOf(pal).mount == nil, "and comes off when they dismount")
-Mock.addonSent = {}
+hearAddon("Pal", "M 0", "PARTY")
+check(morphOf(pal).mount == nil, "and comes off when they dismount, from a tiny message")
+hearAddon("Pal", "M 3HR", "PARTY")
+check(morphOf(pal).mount == 4527, "and goes on again")
+hearAddon("Pal", "M 0", "PARTY")
+quiet()
 Mock.Fire("PARTY_MEMBERS_CHANGED")
-wait(4)
-local last = Mock.addonSent[table.getn(Mock.addonSent)]
-check(last and last.prefix == "DMO1" and last.distribution == "PARTY" and contains(last.text, "L 4527 0 1:2955"),
-	"joining a group sends your look to it")
+wait(2)
+check(addonSays("L 3HR 0 a2A3eA", "PARTY") and table.getn(Mock.channelSent) == 0,
+	"joining a group sends your look to it, hidden, and not to the channel")
+
+-- With only your group around, changes are hidden addon messages.
+Mock.units.target = nil
+wait(181)
+quiet()
+say(".item chest 0")
+wait(2)
+check(addonSays("L 3HR 0 a2A3", "PARTY") and table.getn(Mock.channelSent) == 0,
+	"with only group members around, changes go to the group alone")
+
+-- Guild mates around you hear through the guild, not the channel.
+Mock.guild = { "Tester", "Guildie" }
+wait(125)
+check(Mock.rosterRequests > 0, "the guild list is asked for")
+Mock.Fire("GUILD_ROSTER_UPDATE")
+local guildie = "0x00000000000F0001"
+Mock.units.mouseover = { name = "Guildie", guid = guildie, friendly = true, display = 54 }
+hearAddon("Guildie", "L 3HR 0 - -", "GUILD")
+Mock.Fire("UPDATE_MOUSEOVER_UNIT")
+check(morphOf(guildie).display == 4527, "a guild mate's morph comes through the guild")
+quiet()
+say(".item chest 10")
+wait(2)
+check(addonSays("L 3HR 0 a2A3eA", "GUILD") and addonSays("L 3HR 0 a2A3eA", "PARTY")
+	and table.getn(Mock.channelSent) == 0, "and they hear your changes through the guild")
+Mock.units.mouseover = nil
 
 -- New faces are asked about, a few at a time, and not again for a while.
-Mock.channelSent = {}
+quiet()
 Mock.units.mouseover = { name = "Stranger", guid = "0x00000000000D0001", friendly = true, display = 52 }
 Mock.Fire("UPDATE_MOUSEOVER_UNIT")
-wait(11)
-check(channelSays("DMO1 Q Stranger"), "a friendly player you don't know is asked about")
-Mock.channelSent = {}
-Mock.Fire("UPDATE_MOUSEOVER_UNIT")
-wait(11)
-check(table.getn(Mock.channelSent) == 0, "and not asked about again soon")
-hear("Someone", "Q Bob,Tester")
-hear("Other", "Q Tester")
 wait(4)
-sent, count = channelSays("DMO1 L 4527 0 1:2955")
-check(sent and count == 1, "a question about you is answered once")
+check(channelSays("DMO2 Q Stranger"), "a friendly player you don't know is asked about")
+quiet()
+Mock.Fire("UPDATE_MOUSEOVER_UNIT")
+wait(4)
+check(table.getn(Mock.channelSent) == 0, "and not asked about again soon")
+Mock.units.mouseover = { name = "Newbie", guid = "0x00000000000D0002", friendly = true, display = 52 }
+Mock.Fire("UPDATE_MOUSEOVER_UNIT")
+hear("Someone", "Q Newbie")
+wait(4)
+check(table.getn(Mock.channelSent) == 0, "nor when someone else just asked the same on the channel")
+Mock.units.mouseover = nil
+
+-- Questions about you: the whole look, or just its fingerprint if the asker
+-- already has it. One answer covers everyone who asked.
+local look = "3HR 0 a2A3eA"
+quiet()
+hear("Someone", "Q Bob,Tester")
+hear("Other", "Q Tester:" .. fingerprint(look))
+wait(4)
+sent, count = channelSays("DMO2 L " .. look)
+check(sent and count == 1 and table.getn(Mock.channelSent) == 1, "a question about you is answered once")
+quiet()
+hear("Other", "Q Tester:" .. fingerprint(look))
+wait(4)
+check(channelSays("DMO2 H " .. fingerprint(look)) and table.getn(Mock.channelSent) == 1,
+	"an asker with your current look gets only its fingerprint")
+quiet()
+hearAddon("Pal", "Q Tester:" .. fingerprint(look), "PARTY")
+wait(4)
+check(addonSays("H " .. fingerprint(look), "PARTY") and table.getn(Mock.channelSent) == 0,
+	"a question from the group is answered in the group")
 
 -- A player who leaves your sight is built afresh without their look when
 -- they come back: it goes straight back on.
-Mock.Fire("CHAT_MSG_ADDON", "DMO1", "L 4527 0 1:2955 -", "PARTY", "Pal")
+hearAddon("Pal", "L 3HR 0 a2A3 -", "PARTY")
 check(morphOf(pal).display == 4527, "a party member's model shows")
 Mock.units.party1.far = true
 wait(0.5)
@@ -1111,37 +1227,71 @@ check(morphOf(pal).display == 4527 and morphOf(pal).items[1] == 2955,
 
 -- Your mount skin goes out the moment it goes on, and when it comes off.
 say(".mount 4527")
-Mock.channelSent = {}
+wait(2)
+quiet()
 vh.serverMount = 10671
 Mock.buffs = { "Interface\\Icons\\Ability_Mount_Undeadhorse" }
 wait(0.3)
-check(channelSays("DMO1 L 4527 4527 1:2955"), "mounting sends your mount skin at once")
-Mock.channelSent = {}
+check(channelSays("DMO2 M 3HR"), "mounting sends your mount skin at once, in a tiny message (players who asked about you hear it)")
+quiet()
 vh.serverMount = 0
 Mock.buffs = {}
 wait(0.3)
-check(channelSays("DMO1 L 4527 0 1:2955"), "and dismounting sends that it's off")
+check(channelSays("DMO2 M 0"), "and dismounting sends that it's off")
 say(".mount 0")
 
 -- SuperWoW: GUIDs work as unit tokens, so players need no target or mouseover.
 Mock.superWoW, Mock.playerGUID = true, "0x0000000000000042"
 local far = "0x00000000000E0001"
 Mock.units.nearby = { name = "Far", guid = far, friendly = true, display = 53 }
-hear("Far", "L 4527 4527 - " .. far)
+hear("Far", "L 3HR 3HR - " .. far)
 check(morphOf(far).display == 4527 and morphOf(far).mount == 4527, "with SuperWoW a player's GUID is enough")
-Mock.channelSent = {}
+quiet()
 say(".item head 0")
 wait(3)
-check(channelSays("DMO1 L 4527 0 - 0x0000000000000042"), "and your messages carry your GUID")
+check(channelSays("DMO2 L 3HR 0 eA 0x0000000000000042"), "and your messages carry your GUID")
 Mock.superWoW = nil
 
+-- Looks are remembered: after a /reload a known player shows at once, and is
+-- only asked whether they changed.
+loadUI()
+quiet()
+Mock.units.target = { name = "Ally", guid = ally, friendly = true, display = 50 }
+Mock.Fire("PLAYER_TARGET_CHANGED")
+check(morphOf(ally).display == 4527, "a remembered player's look goes on at once")
+wait(10)
+check(channelSays("DMO2 Q Ally:" .. fingerprint("3HR 3HR -")), "and they are asked with its fingerprint")
+hear("Ally", "H " .. fingerprint("3HR 3HR -") .. " " .. ally)
+wait(25)
+check(morphOf(ally).display == 4527, "a matching fingerprint keeps it")
+DmorphOctoAccount.peerCache.OctoWoW.Gone = { look = "3HR 0 -", guid = "0x0000000000100001", seen = Mock.now }
+Mock.units.mouseover = { name = "Gone", guid = "0x0000000000100001", friendly = true, display = 55 }
+Mock.Fire("UPDATE_MOUSEOVER_UNIT")
+check(morphOf("0x0000000000100001").display == 4527, "another remembered player shows")
+wait(30)
+Mock.Fire("UPDATE_MOUSEOVER_UNIT")
+check(morphOf("0x0000000000100001").display == nil and DmorphOctoAccount.peerCache.OctoWoW.Gone == nil,
+	"but if they don't answer, they're forgotten and their look comes off")
+Mock.units.mouseover = nil
+hear("Ally", "M 3HR")
+quiet()
+hear("Ally", "H ZZZZ " .. ally)
+wait(4)
+check(channelSays("DMO2 Q Ally") and not channelSays("Q Ally:"), "a fingerprint that doesn't match asks for the whole look")
+Mock.now = Mock.now + 15 * 86400
+loadUI()
+check(DmorphOctoAccount.peerCache.OctoWoW.Ally == nil, "looks are forgotten after two weeks")
+
 -- Switching it off.
-Mock.channelSent = {}
+Mock.units.target = { name = "Ally", guid = ally, friendly = true, display = 50 }
+hear("Ally", "L 3HR 0 - " .. ally)
+wait(12)
+quiet()
 slash("share off")
 wait(2)
-check(DmorphOctoAccount.shareOff == true and channelSays("DMO1 L 0 0 -"),
+check(DmorphOctoAccount.shareOff == true and channelSays("DMO2 L 0 0 -"),
 	".share off tells the others to take your morph off")
-Mock.channelSent = {}
+quiet()
 hear("Someone", "Q Tester")
 wait(8)
 check(table.getn(Mock.channelSent) == 0, "and questions about you go unanswered")
@@ -1149,8 +1299,9 @@ slash("share others off")
 wait(1.5)
 check(morphOf(ally).display == nil, ".share others off takes their morphs off as you see them")
 slash("share")
-check(contains(allChat(), "Others see your morph: off") and contains(allChat(), "DMorph users seen: 4"),
-	".share shows the settings and how many DMorph users you've seen")
+check(contains(allChat(), "Others see your morph: off") and contains(allChat(), "DMorph users seen: 1")
+	and contains(allChat(), "Messages sent this session: 1 on the channel"),
+	".share shows the settings, how many DMorph users you've seen and the messages sent")
 slash("")
 Mock.Click(DmorphOctoShare)
 pickMenu("Others see my morph")
@@ -1161,6 +1312,7 @@ wait(1.5)
 check(DmorphOctoAccount.othersOff == nil and morphOf(ally).display == 4527, "and their morphs come back")
 DmorphOcto_ToggleUI()
 Mock.party = 0
+Mock.guild = nil
 
 ------------------------------------------------------------------------------
 -- Without VanillaHelpers, everything explains what is missing and stays local.
