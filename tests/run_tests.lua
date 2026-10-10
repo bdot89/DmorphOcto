@@ -392,7 +392,7 @@ result, count = DmorphOcto.FilterCatalog(sets, "battlegear of wrath")
 check(sets.count > 300 and count >= 1 and sets.names[result[1]] == "Battlegear of Wrath"
 	and sets.quality[result[1]] == 4, "every item set is listed, with its quality")
 local looks = DmorphOcto.GetLooks(4, 1)
-check(table.getn(looks) > 300 and table.getn(looks[1]) == 7, "Night Elf females have hundreds of NPC looks")
+check(table.getn(looks) > 300 and table.getn(looks[1]) == 8, "Night Elf females have hundreds of NPC looks")
 local skins = DmorphOcto.GetLookValues(4, 1, 1)
 local other = DmorphOcto.FindLook(4, 1, 1, skins[2], 1)
 check(other and looks[other][2] == skins[2], "the creator finds a look with the chosen skin colour")
@@ -555,14 +555,37 @@ Mock.Click(DmorphOctoTabMounts)
 check(DmorphOctoMountListRow1:IsVisible()
 	and contains(catalog.tags[catalog.byID[tonumber(DmorphOctoMountListRow1.info.text)]] or "", "mount"),
 	"the mounts tab lists mount models")
-check(contains(DmorphOctoMountState.text, "Not mounted"), "it says whether you ride")
+check(contains(DmorphOctoMountState.text, "Not riding"), "it says whether you ride")
 local skin = tonumber(DmorphOctoMountListRow1.info.text)
 press(DmorphOctoMountListRow1)
 check(DmorphOctoDB.mount == skin and vh.mount == nil, "clicking a model makes it the skin for all your mounts")
+check(DmorphOctoMountListRow1.tick.shown and DmorphOctoMountListRow1.locked and not DmorphOctoMountListRow2.tick.shown,
+	"the skin you have on is ticked and lit in the list")
+check(DmorphOctoMountSkinID.text == "Display ID " .. skin and DmorphOctoMountSkinFor.text == "For: All my mounts"
+	and DmorphOctoMountPanelModel.displayInfo == skin, "the Your skin box shows it, turning, and which mounts it is for")
+local second = tonumber(DmorphOctoMountListRow2.info.text)
+press(DmorphOctoMountNext)
+check(DmorphOctoDB.mount == second and DmorphOctoMountListRow2.tick.shown, "the down arrow puts on the next model")
+press(DmorphOctoMountPrev)
+check(DmorphOctoDB.mount == skin and DmorphOctoMountListRow1.tick.shown, "the up arrow goes back")
+for n = 1, 20 do
+	press(DmorphOctoMountNext)
+end
+local pickRow
+for i = 1, 15 do
+	if getglobal("DmorphOctoMountListRow" .. i).tick.shown then
+		pickRow = getglobal("DmorphOctoMountListRow" .. i)
+	end
+end
+check(pickRow and tonumber(pickRow.info.text) == DmorphOctoDB.mount, "the list scrolls to keep your skin in view")
+for n = 1, 20 do
+	press(DmorphOctoMountPrev)
+end
+check(DmorphOctoDB.mount == skin, "and back up to the first")
 vh.serverMount = 10671
 Mock.buffs = { "Interface\\Icons\\Ability_Mount_Undeadhorse" }
 Mock.Tick(0.15)
-check(vh.mount == skin and contains(DmorphOctoMountState.text, "Riding"), "riding shows the skin, and the tab says so")
+check(vh.mount == skin and contains(DmorphOctoMountState.text, "riding"), "riding shows the skin, and the tab says so")
 local ownName = DmorphOcto.GetDisplayName(10671) or "Mount 10671"
 Mock.Click(DmorphOctoMountFor)
 pickMenu(ownName)
@@ -682,23 +705,46 @@ local function lookOf(display)
 		end
 	end
 end
-local kept = true
-for n = 1, 6 do
-	local before = lookOf(vh.display)
-	press(DmorphOctoCreatorNext3)
-	local now = lookOf(vh.display)
-	local same = 0
-	for g = 2, 6 do
-		if g ~= 4 and now[g] == before[g] then
-			same = same + 1
+-- Each < > changes only its own row, or nothing (and says why).
+local onlyThat, moved, stuck = true, 0, 0
+for f = 1, 5 do
+	for n = 1, 4 do
+		local before = lookOf(vh.display)
+		press(getglobal("DmorphOctoCreatorNext" .. f))
+		local now = lookOf(vh.display)
+		for g = 1, 5 do
+			if g ~= f and now[g + 1] ~= before[g + 1] then
+				onlyThat = false
+			end
+		end
+		if now[f + 1] ~= before[f + 1] then
+			moved = moved + 1
+			if not contains(DmorphOctoFrameStatus.text, "nothing else") then
+				onlyThat = false
+			end
+		elseif contains(DmorphOctoFrameStatus.text, "has another") then
+			stuck = stuck + 1
 		end
 	end
-	if now[4] == before[4] or same < 3 then
-		kept = false
+end
+check(onlyThat, "each < > click changes only the feature you clicked")
+check(moved + stuck == 20, "every click either changes its feature or says no NPC has another")
+local values = DmorphOcto.GetLookChoices(8, 0, 3, 1)
+local strict = true
+for k = 1, table.getn(trollLooks) do
+	for f = 1, 5 do
+		local to = DmorphOcto.StepLook(8, 0, f, k, 1)
+		if to then
+			for g = 1, 5 do
+				if (g == f) == (trollLooks[to][g + 1] == trollLooks[k][g + 1]) then
+					strict = false
+				end
+			end
+		end
 	end
 end
-check(kept, "each hair style click changes the hair style and keeps the other features (at most one more changes)")
-check(contains(DmorphOctoFrameStatus.text, "Hair style changed"), "the status line says what changed")
+check(strict and table.getn(values) >= 1, "StepLook only ever changes the one feature, for every Troll look")
+check(contains(DmorphOctoCreatorValue3.text, " of "), "each row shows how many choices it has")
 press(DmorphOctoCreatorRandom)
 check(lookOf(vh.display) ~= nil, "the dice rolls a random look of that race")
 press(DmorphOctoCreatorFavourite)

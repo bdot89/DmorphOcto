@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "1.5.0"
+local VERSION = "1.6.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 local MISSING_API = "VanillaHelpers v1.1.0 or newer is not loaded, so morphing is unavailable. "
 	.. "Enable the 'vanillaHelpers' mod in OctoLauncher (or add VanillaHelpers.dll to dlls.txt) "
@@ -397,15 +397,15 @@ end
 
 -- The game's dressed NPCs of a race and gender (Data/Looks.lua), the fewest
 -- clothes first. Each look is { displayID, skin, face, hair style, hair
--- colour, facial hair, pieces of clothing }.
+-- colour, facial hair, pieces of clothing, outfit number }.
 function M.GetLooks(race, gender)
 	local key = race .. ":" .. gender
 	if not looks[key] then
 		local list, n = {}, 0
 		local text = DmorphOcto_LookData and DmorphOcto_LookData[key] or ""
-		for a, b, c, d, e, f, g in string.gfind(text, "(%d+),(%d+),(%d+),(%d+),(%d+),(%d+),(%d+)") do
+		for a, b, c, d, e, f, g, h in string.gfind(text, "(%d+),(%d+),(%d+),(%d+),(%d+),(%d+),(%d+),(%d+)") do
 			n = n + 1
-			list[n] = { tonumber(a), tonumber(b), tonumber(c), tonumber(d), tonumber(e), tonumber(f), tonumber(g) }
+			list[n] = { tonumber(a), tonumber(b), tonumber(c), tonumber(d), tonumber(e), tonumber(f), tonumber(g), tonumber(h) }
 		end
 		looks[key] = list
 	end
@@ -459,75 +459,65 @@ function M.FindLook(race, gender, f, value, from)
 	return best
 end
 
--- Feature f (1-5) of look `from` one value along, in direction step. NPC looks
--- are fixed combinations, so the next value is the next one some look has
--- while keeping as many of the other four features as any look can (all four
--- whenever an NPC has that combination); the clothes stay as close as they can.
--- Returns the new look's position and the features that changed besides f.
-function M.StepLook(race, gender, f, from, step)
+-- The choices for feature f (1-5) that keep look `from`'s other four features
+-- exactly: NPC looks are fixed combinations, so only the values some NPC has
+-- with all of them. For each value, the look in the same outfit if an NPC
+-- wears it, else the closest in clothes. Returns the sorted values (the
+-- current one included) and { [value] = position in the list }.
+function M.GetLookChoices(race, gender, f, from)
 	local list = M.GetLooks(race, gender)
 	local cur = list[from]
+	local values, at, gaps = {}, {}, {}
 	if not cur then
-		return nil
+		return values, at
 	end
-	local best, maxKept = {}, -1
 	for k = 1, table.getn(list) do
 		local look = list[k]
-		local v = look[f + 1]
-		if v ~= cur[f + 1] then
-			local kept = 0
-			for g = 1, 5 do
-				if g ~= f and look[g + 1] == cur[g + 1] then
-					kept = kept + 1
-				end
+		local same = true
+		for g = 1, 5 do
+			if g ~= f and look[g + 1] ~= cur[g + 1] then
+				same = false
+				break
 			end
-			local b = best[v]
+		end
+		if same then
+			local v = look[f + 1]
 			local gap = math.abs(look[7] - cur[7])
-			if not b or kept > b.kept or (kept == b.kept and gap < b.gap) then
-				best[v] = { k = k, kept = kept, gap = gap }
+			if k == from then
+				gap = -2
+			elseif look[8] == cur[8] then
+				gap = -1
 			end
-			if kept > maxKept then
-				maxKept = kept
+			if not at[v] then
+				table.insert(values, v)
+			end
+			if not at[v] or gap < gaps[v] then
+				at[v], gaps[v] = k, gap
 			end
 		end
-	end
-	local values = {}
-	for v, b in pairs(best) do
-		if b.kept == maxKept then
-			table.insert(values, v)
-		end
-	end
-	local n = table.getn(values)
-	if n == 0 then
-		return nil
 	end
 	table.sort(values)
-	local target
-	if step > 0 then
-		target = values[1]
-		for i = 1, n do
-			if values[i] > cur[f + 1] then
-				target = values[i]
-				break
-			end
-		end
-	else
-		target = values[n]
-		for i = n, 1, -1 do
-			if values[i] < cur[f + 1] then
-				target = values[i]
-				break
-			end
+	return values, at
+end
+
+-- Feature f (1-5) of look `from` one choice along, in direction step: only f
+-- changes. Returns the new look's position, or nil when no NPC has another
+-- value of f with the other four features.
+function M.StepLook(race, gender, f, from, step)
+	local values, at = M.GetLookChoices(race, gender, f, from)
+	local n = table.getn(values)
+	if n < 2 then
+		return nil
+	end
+	local cur = M.GetLooks(race, gender)[from][f + 1]
+	local pos = 1
+	for i = 1, n do
+		if values[i] == cur then
+			pos = i
 		end
 	end
-	local k = best[target].k
-	local changed = {}
-	for g = 1, 5 do
-		if g ~= f and list[k][g + 1] ~= cur[g + 1] then
-			table.insert(changed, g)
-		end
-	end
-	return k, changed
+	pos = math.mod(pos - 1 + step + n, n) + 1
+	return at[values[pos]]
 end
 
 -- The positions of the looks with the same face, skin and hair as look

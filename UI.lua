@@ -359,11 +359,12 @@ end
 -- A scrolling list of LIST_ROWS rows over a FauxScrollFrame. fill(row, index)
 -- draws entry `index` (row.text, row.info), click(index, mouseButton) handles
 -- a click, enter(index, row) a hover. infoWidth is the right-hand column.
-local function List(parent, name, x, y, infoWidth, fill, click, enter)
+local function List(parent, name, x, y, infoWidth, fill, click, enter, width)
 	local list = { rows = {}, count = 0 }
+	width = width or LIST_WIDTH
 	local scroll = CreateFrame("ScrollFrame", name, parent, "FauxScrollFrameTemplate")
 	scroll:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
-	scroll:SetWidth(LIST_WIDTH)
+	scroll:SetWidth(width)
 	scroll:SetHeight(LIST_ROWS * ROW_HEIGHT)
 
 	function list.Refresh()
@@ -375,6 +376,7 @@ local function List(parent, name, x, y, infoWidth, fill, click, enter)
 				row.index = index
 				row:UnlockHighlight()
 				row.star:Hide()
+				row.tick:Hide()
 				row.text:SetTextColor(1, 1, 1)
 				fill(row, index)
 				row:Show()
@@ -421,7 +423,7 @@ local function List(parent, name, x, y, infoWidth, fill, click, enter)
 		local row = CreateFrame("Button", name .. "Row" .. i, parent)
 		-- Above the scroll frame, so clicks reach the rows.
 		row:SetFrameLevel(scroll:GetFrameLevel() + 1)
-		row:SetWidth(LIST_WIDTH)
+		row:SetWidth(width)
 		row:SetHeight(ROW_HEIGHT)
 		row:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y - (i - 1) * ROW_HEIGHT)
 		row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
@@ -436,7 +438,7 @@ local function List(parent, name, x, y, infoWidth, fill, click, enter)
 		highlight:SetAllPoints(row)
 		row.text = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 		row.text:SetPoint("LEFT", row, "LEFT", 6, 0)
-		row.text:SetWidth(LIST_WIDTH - infoWidth - 14)
+		row.text:SetWidth(width - infoWidth - 14)
 		row.text:SetHeight(ROW_HEIGHT)
 		row.text:SetJustifyH("LEFT")
 		row.info = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
@@ -451,6 +453,13 @@ local function List(parent, name, x, y, infoWidth, fill, click, enter)
 		row.star:SetHeight(12)
 		row.star:SetPoint("RIGHT", row, "RIGHT", -infoWidth - 10, 0)
 		row.star:Hide()
+		-- The tick marks the entry you have on (the Mounts tab's skin).
+		row.tick = row:CreateTexture(nil, "OVERLAY")
+		row.tick:SetTexture("Interface\\Buttons\\UI-CheckBox-Check")
+		row.tick:SetWidth(16)
+		row.tick:SetHeight(16)
+		row.tick:SetPoint("RIGHT", row, "RIGHT", -infoWidth - 24, 0)
+		row.tick:Hide()
 		row:EnableMouseWheel(true)
 		row:SetScript("OnMouseWheel", function()
 			ui.card:Hide()
@@ -965,14 +974,19 @@ local function BuildCard()
 	return card
 end
 
--- The preview card next to a list row, for a display ID.
-local function ShowCardFor(row, displayID, name, color)
+-- The preview card next to a list row, for a display ID: on its right, or
+-- with `left` set on its left.
+local function ShowCardFor(row, displayID, name, color, left)
 	if not (ui.canPreview and displayID) then
 		return
 	end
 	local card = ui.card
 	card:ClearAllPoints()
-	card:SetPoint("LEFT", row, "RIGHT", 50, 0)
+	if left then
+		card:SetPoint("RIGHT", row, "LEFT", -12, 0)
+	else
+		card:SetPoint("LEFT", row, "RIGHT", 50, 0)
+	end
 	card.title:SetText(name)
 	card.title:SetTextColor(color[1], color[2], color[3])
 	card.idText:SetText("Display ID " .. displayID)
@@ -1331,21 +1345,27 @@ local function RefreshRaces()
 	end
 	for f = 1, 6 do
 		local row = ui.creatorRows[f]
+		-- Each row counts the choices that change only that row.
 		local values
 		if f == 6 then
 			values = look and M.GetLookOutfits(race, gender, index) or {}
-		else
-			values = M.GetLookValues(race, gender, f)
+		elseif look then
+			values = M.GetLookChoices(race, gender, f, index)
 		end
 		local text = "yours"
 		if look and f == 6 then
-			text = Position(values, index) .. " / " .. table.getn(values) .. "  (" .. Count(look[7], "piece") .. ")"
+			text = Position(values, index) .. " of " .. table.getn(values) .. "  (" .. Count(look[7], "piece") .. ")"
 		elseif look then
-			text = Position(values, look[f + 1]) .. " / " .. table.getn(values)
+			text = Position(values, look[f + 1]) .. " of " .. table.getn(values)
 		elseif f == 6 then
 			text = "your gear"
 		end
 		row.value:SetText(text)
+		if look and table.getn(values) < 2 then
+			row.value:SetTextColor(0.5, 0.5, 0.5)
+		else
+			row.value:SetTextColor(1, 1, 1)
+		end
 		if f == 5 then
 			if gender == 1 then
 				row.label:SetText("Features")
@@ -1381,7 +1401,7 @@ local function StepFeature(f, step)
 	end
 	if not index then
 		-- From your own look, start at the plainest NPC look of this race.
-		return WearLook(race, gender, 1, "NPC looks: now step through each feature.")
+		return WearLook(race, gender, 1, "Your own face can't be stepped, so this is the plainest NPC look. Now each < > changes only its row.")
 	end
 	if f == 6 then
 		local outfits = M.GetLookOutfits(race, gender, index)
@@ -1390,21 +1410,19 @@ local function StepFeature(f, step)
 		end
 		return WearLook(race, gender, outfits[Wrap(Position(outfits, index), step, table.getn(outfits))])
 	end
-	local k, changed = M.StepLook(race, gender, f, index, step)
+	local k = M.StepLook(race, gender, f, index, step)
 	if not k then
-		return SetStatus(false, "The game's " .. M.DescribeBody(race, gender) .. " NPCs have only this "
-			.. strlower(M.LOOK_FEATURES[f]) .. ".")
-	end
-	local message = M.LOOK_FEATURES[f] .. " changed."
-	if table.getn(changed) > 0 then
-		local names = {}
-		for i = 1, table.getn(changed) do
-			table.insert(names, strlower(M.LOOK_FEATURES[changed[i]]))
+		-- Only f may change, and no NPC has another one with these features.
+		local others = {}
+		for g = 1, 5 do
+			if g ~= f then
+				table.insert(others, strlower(M.LOOK_FEATURES[g]))
+			end
 		end
-		message = M.LOOK_FEATURES[f] .. " changed. No NPC has it with your other choices, so the "
-			.. table.concat(names, " and ") .. " changed too."
+		return SetStatus(false, "No " .. M.DescribeBody(race, gender) .. " NPC has another " .. strlower(M.LOOK_FEATURES[f])
+			.. " with this " .. table.concat(others, ", ") .. ". Change one of those first, or roll the dice.")
 	end
-	WearLook(race, gender, k, message)
+	WearLook(race, gender, k, M.LOOK_FEATURES[f] .. " changed, nothing else.")
 end
 
 local function BuildRacesPage(page)
@@ -1497,7 +1515,7 @@ local function BuildRacesPage(page)
 	end)
 	star:SetScript("OnLeave", HideTooltip)
 	Label(page, "Portraits keep your own face, skin and hair, and your item morphs show.", "GameFontDisableSmall", 14, -340)
-	Label(page, "< > use the game's NPC looks of that race: item morphs don't show on those.", "GameFontDisableSmall", 14, -354)
+	Label(page, "< > change only that row. \"2 of 5\": 5 NPC choices. Grey: no other choice yet.", "GameFontDisableSmall", 14, -354)
 end
 
 -- Mounts tab -------------------------------------------------------------------------
@@ -1505,6 +1523,9 @@ end
 -- Pick a skin for your mount: any model, shown only while you ride, so you
 -- mount and dismount as usual. "Skin for" picks all your mounts or one you've
 -- ridden on this character.
+
+-- The list leaves room on its right for the "Your skin" box.
+local MOUNT_LIST_W = 290
 
 local MOUNT_FILTERS = {
 	{ text = "Mount models", tag = "mount" },
@@ -1516,26 +1537,76 @@ local function MountName(displayID)
 	return M.GetDisplayName(displayID) or ("Mount " .. displayID)
 end
 
+-- The skin you picked last for the "Skin for" choice: the one on, or the one
+-- a click waiting at the gate is putting on.
+local function MountPick()
+	local pick = ui.mountPick
+	if pick and pick.target == ui.mountFor then
+		return pick.id
+	end
+	return M.GetMountSkin(ui.mountFor)
+end
+
+-- The position of a display ID in the filtered mount list, or nil.
+local function MountPosition(displayID)
+	if not (displayID and ui.mountResult) then
+		return nil
+	end
+	local catalog = M.GetCreatureCatalog()
+	for index = 1, ui.mountTotal or 0 do
+		if catalog.ids[ui.mountResult[index]] == displayID then
+			return index
+		end
+	end
+end
+
+-- Scrolls the skin you have on into view (about the middle of the list).
+local function ShowMountPick()
+	local pos = MountPosition(MountPick())
+	if not pos then
+		ui.mountList.Refresh()
+		return
+	end
+	local top = ui.mountList.GetOffset() + 1
+	if pos < top or pos > top + LIST_ROWS - 1 then
+		ui.mountList.ScrollTo(pos - math.floor(LIST_ROWS / 2))
+	else
+		ui.mountList.Refresh()
+	end
+end
+
+local function PickMount(displayID)
+	ui.mountPick = { target = ui.mountFor, id = displayID }
+	Morph(M.SetMountSkin, displayID, ui.mountFor)
+end
+
 local function RefreshMountState()
 	local riding, real, skin = M.GetMountState()
 	local target = ui.mountFor and MountName(ui.mountFor) or "All my mounts"
 	ui.mountForButton:SetText(target)
-	local chosen = M.GetMountSkin(ui.mountFor)
-	local text
-	if riding then
-		text = "Riding " .. MountName(real)
-		if skin then
-			text = text .. ", skin: " .. MountName(skin)
-		end
+	if riding and skin then
+		ui.mountState:SetText("You're riding |cffffffff" .. MountName(real) .. "|r, shown as |cffffd100" .. MountName(skin) .. "|r.")
+	elseif riding then
+		ui.mountState:SetText("You're riding |cffffffff" .. MountName(real) .. "|r, with no skin on it.")
 	else
-		text = "Not mounted."
+		ui.mountState:SetText("Not riding. The skin goes on when you mount and comes off when you dismount.")
 	end
+	local panel, chosen = ui.mountPanel, MountPick()
+	panel.target:SetText("For: " .. target)
 	if chosen then
-		text = text .. "  Skin for " .. strlower(string.sub(target, 1, 1)) .. string.sub(target, 2) .. ": " .. MountName(chosen) .. "."
+		panel.title:SetText(MountName(chosen))
+		panel.idText:SetText("Display ID " .. chosen)
 	else
-		text = text .. "  No skin set for this choice."
+		panel.title:SetText("No skin")
+		panel.idText:SetText("Your mount looks as usual.")
 	end
-	ui.mountState:SetText(text)
+	if not chosen then
+		panel.view.displayID = nil
+		panel.view.wait = nil
+		panel.view.model:SetFrameLevel(panel.view.low)
+	elseif ui.canPreview and panel.view.displayID ~= chosen then
+		LoadView(panel.view, chosen)
+	end
 end
 
 local function FilterMounts(keep)
@@ -1543,13 +1614,36 @@ local function FilterMounts(keep)
 	local count
 	ui.mountResult, count = M.FilterCatalog(M.GetCreatureCatalog(), ui.mountSearch:GetText(),
 		MOUNT_FILTERS[prefs.mountFilter or 1], nil, prefs.sortMounts)
+	ui.mountTotal = count
 	ui.mountCount:SetText(Count(count, "model"))
 	ui.mountList.SetCount(count, keep)
+	if not keep then
+		ShowMountPick()
+	end
 	RefreshMountState()
 end
 
 local function RefreshMounts()
 	ui.mountList.Refresh()
+	RefreshMountState()
+end
+
+-- The next (step 1) or previous (-1) model in the list as your skin.
+local function StepMount(step)
+	local count = ui.mountTotal or 0
+	if count == 0 then
+		return SetStatus(false, "No models in the list: clear the search or pick another filter.")
+	end
+	local pos = MountPosition(MountPick())
+	if pos then
+		pos = Wrap(pos, step, count)
+	elseif step > 0 then
+		pos = 1
+	else
+		pos = count
+	end
+	PickMount(M.GetCreatureCatalog().ids[ui.mountResult[pos]])
+	ShowMountPick()
 	RefreshMountState()
 end
 
@@ -1569,7 +1663,8 @@ local function MountForMenu()
 	end
 	OpenMenu(this, options, function(option)
 		ui.mountFor = option.real
-		RefreshMounts()
+		ShowMountPick()
+		RefreshMountState()
 	end)
 end
 
@@ -1585,6 +1680,70 @@ local function MountFilterMenu()
 	end)
 end
 
+-- An up or down arrow like a scroll bar's.
+local function ArrowButton(parent, name, direction, onClick, title, line)
+	local button = CreateFrame("Button", name, parent)
+	button:SetWidth(30)
+	button:SetHeight(30)
+	local file = "Interface\\Buttons\\UI-ScrollBar-Scroll" .. direction .. "Button-"
+	button:SetNormalTexture(file .. "Up")
+	button:SetPushedTexture(file .. "Down")
+	button:SetHighlightTexture(file .. "Highlight")
+	button:SetScript("OnClick", onClick)
+	button:SetScript("OnEnter", function()
+		Tooltip(this, title, line)
+	end)
+	button:SetScript("OnLeave", HideTooltip)
+	return button
+end
+
+-- The box beside the list: the skin you have on, turning, with arrows to put
+-- on the previous or next model in the list.
+local function BuildMountPanel(page)
+	local width = PAGE_W - MOUNT_LIST_W - 40
+	local panel = CreateFrame("Frame", "DmorphOctoMountPanel", page)
+	panel:SetPoint("TOPLEFT", page, "TOPLEFT", MOUNT_LIST_W + 32, -82)
+	panel:SetWidth(width)
+	panel:SetHeight(LIST_ROWS * ROW_HEIGHT)
+	Panel(panel, 0.06, 0.06, 0.07)
+	local base = panel:GetFrameLevel()
+	panel.view = NewView(panel, "DmorphOctoMountPanelModel", base + 1, base + 3)
+	panel.view.model:SetPoint("TOPLEFT", panel, "TOPLEFT", 5, -24)
+	panel.view.model:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -5, 96)
+	local cover = Layer(panel, 2)
+	cover:SetAllPoints(panel.view.model)
+	Gradient(cover, "BACKGROUND", 0.05, 0.05, 0.06, 1, 0.12, 0.11, 0.09, 1):SetAllPoints(cover)
+	local text = Layer(panel, 4)
+	text:SetAllPoints(panel)
+	local heading = text:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+	heading:SetPoint("TOP", panel, "TOP", 0, -7)
+	heading:SetText("Your skin")
+	panel.title = text:CreateFontString("DmorphOctoMountSkinName", "OVERLAY", "GameFontHighlight")
+	panel.title:SetPoint("BOTTOM", panel, "BOTTOM", 0, 68)
+	panel.title:SetWidth(width - 10)
+	panel.title:SetHeight(26)
+	panel.title:SetTextColor(1, 0.82, 0)
+	panel.idText = text:CreateFontString("DmorphOctoMountSkinID", "OVERLAY", "GameFontDisableSmall")
+	panel.idText:SetPoint("BOTTOM", panel, "BOTTOM", 0, 56)
+	panel.idText:SetWidth(width - 10)
+	panel.target = text:CreateFontString("DmorphOctoMountSkinFor", "OVERLAY", "GameFontHighlightSmall")
+	panel.target:SetPoint("BOTTOM", panel, "BOTTOM", 0, 42)
+	panel.target:SetWidth(width - 10)
+	panel:SetScript("OnUpdate", function()
+		TickView(this.view, arg1, true)
+	end)
+	ui.mountPanel = panel
+
+	local up = ArrowButton(text, "DmorphOctoMountPrev", "Up", function()
+		StepMount(-1)
+	end, "Previous model", "Puts on the model above yours in the list.")
+	up:SetPoint("BOTTOMRIGHT", panel, "BOTTOM", -4, 6)
+	local down = ArrowButton(text, "DmorphOctoMountNext", "Down", function()
+		StepMount(1)
+	end, "Next model", "Puts on the model below yours in the list.")
+	down:SetPoint("BOTTOMLEFT", panel, "BOTTOM", 4, 6)
+end
+
 local function BuildMountsPage(page)
 	local prefs = Prefs()
 	if not MOUNT_FILTERS[prefs.mountFilter] then
@@ -1598,6 +1757,7 @@ local function BuildMountsPage(page)
 	end)
 	ui.mountForButton:SetScript("OnLeave", HideTooltip)
 	Button(page, "Remove skin", 110, 282, -7, function()
+		ui.mountPick = { target = ui.mountFor }
 		Morph(M.SetMountSkin, 0, ui.mountFor)
 	end, "DmorphOctoMountReset")
 	ui.mountState = Label(page, "", "GameFontHighlightSmall", 10, -34, "DmorphOctoMountState")
@@ -1615,15 +1775,18 @@ local function BuildMountsPage(page)
 	ui.mountFilter = Button(page, MOUNT_FILTERS[prefs.mountFilter].text, 150, 212, -55, MountFilterMenu, "DmorphOctoMountFilter")
 	SortButton(page, "DmorphOctoMountSort", 368, -55, "sortMounts", FilterMounts)
 
-	ui.mountList = List(page, "DmorphOctoMountList", 8, -82, 60, function(row, index)
+	ui.mountList = List(page, "DmorphOctoMountList", 8, -82, 44, function(row, index)
 		local catalog = M.GetCreatureCatalog()
 		local i = ui.mountResult[index]
 		local color = KindColor(catalog.kind[i])
 		row.text:SetText(catalog.names[i])
 		row.text:SetTextColor(color[1], color[2], color[3])
 		row.info:SetText(catalog.ids[i])
-		if catalog.ids[i] == M.GetMountSkin(ui.mountFor) then
+		if catalog.ids[i] == MountPick() then
+			-- The skin you have on: ticked, lit and gold.
 			row:LockHighlight()
+			row.tick:Show()
+			row.text:SetTextColor(1, 0.82, 0)
 		end
 		if M.IsFavourite(catalog.ids[i], true) then
 			row.star:Show()
@@ -1634,17 +1797,19 @@ local function BuildMountsPage(page)
 			SetStatus(M.ToggleFavourite(displayID, true))
 			ui.mountList.Refresh()
 		else
-			Morph(M.SetMountSkin, displayID, ui.mountFor)
+			PickMount(displayID)
+			RefreshMounts()
 		end
 	end, function(index, row)
 		local catalog = M.GetCreatureCatalog()
 		local i = ui.mountResult[index]
 		if i then
-			ShowCardFor(row, catalog.ids[i], catalog.names[i], KindColor(catalog.kind[i]))
+			ShowCardFor(row, catalog.ids[i], catalog.names[i], KindColor(catalog.kind[i]), true)
 		end
-	end)
+	end, MOUNT_LIST_W)
+	BuildMountPanel(page)
 	ui.mountCount = Label(page, "", "GameFontDisableSmall", 10, -362, "DmorphOctoMountCount")
-	Label(page, "Click: use as the skin. Right-click: star it. Mount and dismount as usual.",
+	Label(page, "Click: use as the skin. Right-click: star it. Arrows: previous / next.",
 		"GameFontDisableSmall", 110, -362)
 end
 

@@ -22,9 +22,9 @@ Pick any creature, race or item, see it on your character straight away, and sav
 
 - 🐉 **Every creature model in the client:** 16,000+ entries covering all 13,423 usable display IDs, including the **2,894 models OctoWoW added** (named after their Turtle WoW creatures where there is one).
 - 🖼️ **3D previews**, eight to a page, or a list that previews the row under your mouse. Filter **Bosses, Rare creatures, Mounts** or OctoWoW's new models, search by name or ID, sort **A-Z or by ID**.
-- 🐎 **Mount skins:** give your mount any model's look, for all your mounts or one of them. It only shows while you ride, so you mount and dismount with your keys as usual.
+- 🐎 **Mount skins:** give your mount any model's look, for all your mounts or one of them. It only shows while you ride, so you mount and dismount with your keys as usual. A **Your skin** box shows the one you have on, turning, and the â–² â–¼ arrows go to the previous or next model.
 - ⭐ **Favourites:** right-click any model (Models tab) or mount skin (Mounts tab) to star it, then pick it from the Favourites tab every time you log in.
-- 🎭 **Races and looks:** pick a race portrait to keep your own face, or step through skin colour, face, hair style, hair colour and facial hair one at a time from the game's NPC looks (8,068 of them), or roll the dice.
+- 🎭 **Races and looks:** pick a race portrait to keep your own face, or step through skin colour, face, hair style, hair colour and facial hair from the game's NPC looks (8,068 of them): each click changes only the row you click. Or roll the dice.
 - ⚔️ **12,000+ weapons and armour pieces:** everything in 1.12 plus Turtle WoW's and OctoWoW's, from the Tower of Karazhan sets and the tier variants to the Warglaives of Azzinoth. Filter by quality (**Rare, Epic, Legendary** ...).
 - 🛡️ **352 item sets:** wear a whole set in one click.
 - 👗 **Wardrobe:** save outfits and put them back on with one click. Shared by all your characters.
@@ -74,10 +74,10 @@ Not using OctoLauncher? Put `VanillaHelpers.dll` (v1.1.0+, [releases](https://gi
 | **Models** tab | Grid of previews (mouse wheel turns pages) or list view. Gold frame = the model you wear. **Right-click** stars a model. |
 | Models: **filter** | All models · Creatures · Bosses · Rare creatures · Mounts · Other models (named after their model file, blue) · New in OctoWoW (green). |
 | Models: **Sort** | List A-Z or by ID. |
-| **Mounts** tab | **Skin for:** all your mounts, or one you've ridden. Click a mount model to use it as the skin, right-click to star it, **Remove skin** takes it off. The skin shows only while you ride. |
+| **Mounts** tab | **Skin for:** all your mounts, or one you've ridden. Click a mount model to use it as the skin, right-click to star it, **Remove skin** takes it off. The skin you have on is ticked in the list and shown in the **Your skin** box; â–² â–¼ put on the previous / next model. The line at the top says which mount you're riding and what it shows as. The skin shows only while you ride. |
 | Models: **Display ID** | Type any ID and press Morph, or step through every ID with < and >. |
 | **Favourites** tab | Your starred models and mounts, shared by all your characters. Click to wear, right-click to unstar, hover for a 3D preview. Filter models / mounts, sort A-Z or ID. |
-| **Races** tab | A portrait = that race with your own face, skin and hair (your item morphs show). The < > rows step one feature at a time through the game's NPC looks of that race; when no NPC has that exact combination, the fewest other features change and the status line says which. Dice = random look, **My own look** goes back, **Favourite** stars the look. |
+| **Races** tab | A portrait = that race with your own face, skin and hair (your item morphs show). The < > rows step through the game's NPC looks of that race, and each click changes only that row. "2 of 5" means five choices with your other features; grey means no NPC has another (change another row first, or roll the dice). Dice = random look, **My own look** goes back, **Favourite** stars the look. |
 | **Items** tab | Click the slot name for any slot. Items are coloured by quality; the filter picks all / 1.12 / new and a quality. **Item ID** + **Apply** takes any item. |
 | **Sets** tab | Every item set. Hover to see the pieces, click to wear them all. Same filters as Items. |
 | **Wardrobe** tab | Save, load and delete outfits (your mount skin included). Loading puts on the whole outfit. |
@@ -105,7 +105,7 @@ Slots: `1` head, `3` shoulder, `4` shirt, `5` chest, `6` waist, `7` legs, `8` fe
 
 - **Only you see morphs.** They change your own client's picture, nothing else.
 - **Invisible after a morph?** That display ID has no model in the game. Press **Reset model**. The lists only have IDs whose model exists.
-- **NPC looks are fixed combinations.** No DLL can change your own character's skin, face or hair, so the < > rows morph you into the game's dressed NPCs of that race. Each click changes the feature you picked; if no NPC has it with all your other choices, one more feature changes (the status line says which). Item morphs don't show on an NPC look: for your own face with gear, use a portrait. Only the customisations in this 1.12 client exist, not later expansions'.
+- **NPC looks are fixed combinations.** No DLL can change your own character's skin, face or hair, so the < > rows morph you into the game's dressed NPCs of that race. Each click changes only the feature you picked, among the NPCs that share all your other choices, so some rows have only one choice until you change another row. Item morphs don't show on an NPC look: for your own face with gear, use a portrait. Only the customisations in this 1.12 client exist, not later expansions'.
 - **Mount skins wait for you to mount.** VanillaHelpers would otherwise keep you on a mount after you dismount, so the skin goes on when you mount (the addon sees your mount's buff) and comes off when that buff goes.
 - **OctoWoW-only items** that no list knows yet are looked up in the background after you log in (with ClassicAPI, a few a second, once per account). The Items and Sets tabs say how many are left. Any item also works by its ID.
 - **Fast clicking is safe:** the game rebuilds your character after each change, so a click within a third of a second of the last one waits its turn instead of mixing two looks' textures.
