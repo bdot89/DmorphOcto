@@ -285,7 +285,7 @@ end
 -- A drop-down menu shared by every filter button. options: a list of
 -- { text = ..., checked = true/nil, header = true/nil }; pick(option) runs when
 -- one is clicked. Clicking the same button again closes it.
-local function OpenMenu(anchor, options, pick)
+local function OpenMenu(anchor, options, pick, above)
 	local menu = ui.menu
 	if menu:IsShown() and menu.anchor == anchor then
 		menu:Hide()
@@ -317,7 +317,11 @@ local function OpenMenu(anchor, options, pick)
 	end
 	menu:SetHeight(count * 18 + 12)
 	menu:ClearAllPoints()
-	menu:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -2)
+	if above then
+		menu:SetPoint("BOTTOMLEFT", anchor, "TOPLEFT", 0, 2)
+	else
+		menu:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -2)
+	end
 	menu:Show()
 end
 
@@ -2453,6 +2457,22 @@ local function BuildTabs()
 	BuildWardrobePage(ui.pages.wardrobe)
 end
 
+-- Sharing (Share.lua): whether others see your morph and you see theirs.
+local function ShareMenu()
+	local sharing, seeing = M.GetShareStatus()
+	local options = {
+		{ text = "Others see my morph", key = "share", checked = sharing },
+		{ text = "I see their morphs", key = "see", checked = seeing },
+	}
+	OpenMenu(this, options, function(option)
+		if option.key == "share" then
+			SetStatus(M.SetSharing(not sharing))
+		else
+			SetStatus(M.SetSeeing(not seeing))
+		end
+	end, true)
+end
+
 local function Build()
 	frame = CreateFrame("Frame", "DmorphOctoFrame", UIParent)
 	frame:Hide()
@@ -2545,8 +2565,15 @@ local function Build()
 	ui.status = Label(frame, "", "GameFontHighlightSmall", 22, -462, "DmorphOctoFrameStatus")
 	ui.status:SetWidth(W - 44)
 	ui.status:SetHeight(30)
-	Label(frame, "Morphs only change what you see. Type /dmorph help for chat commands.",
+	Label(frame, "Other DMorph users see your morph, and you see theirs (friendly players). /dmorph help: chat commands.",
 		"GameFontDisableSmall", 22, -500)
+	local share = Button(frame, "Sharing", 80, W - 230, -495, ShareMenu, "DmorphOctoShare")
+	share:SetScript("OnEnter", function()
+		local _, _, known, morphed = M.GetShareStatus()
+		Tooltip(this, "Sharing with DMorph users", "Who sees whose morph. Only friendly players can be morphed.",
+			"DMorph users seen: " .. known .. " (" .. morphed .. " morphed).")
+	end)
+	share:SetScript("OnLeave", HideTooltip)
 	local version = frame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	version:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -34, -500)
 	version:SetText("v" .. M.VERSION)

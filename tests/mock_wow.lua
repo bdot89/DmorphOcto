@@ -325,7 +325,61 @@ function Mock.ResetUI()
 	Minimap = NewWidget("Frame", "Minimap", UIParent)
 	GameTooltip = NewWidget("Frame", "GameTooltip", UIParent)
 	DEFAULT_CHAT_FRAME = { AddMessage = function(self, msg) table.insert(Mock.chat, msg) end }
-	function SendChatMessage(msg) table.insert(Mock.sent, msg) end
+	-- Channel messages (Share.lua) are kept apart from what you type.
+	Mock.channelSent, Mock.addonSent, Mock.channels = {}, {}, {}
+	function SendChatMessage(msg, chatType, language, channel)
+		if chatType == "CHANNEL" then
+			table.insert(Mock.channelSent, { msg = msg, channel = channel })
+		else
+			table.insert(Mock.sent, msg)
+		end
+	end
+	function SendAddonMessage(prefix, text, distribution)
+		assert(distribution == "PARTY" or distribution == "RAID" or distribution == "GUILD" or distribution == "BATTLEGROUND",
+			"SendAddonMessage: 1.12 has no " .. tostring(distribution))
+		table.insert(Mock.addonSent, { prefix = prefix, text = text, distribution = distribution })
+	end
+	function JoinChannelByName(name)
+		Mock.channels[strlower(name)] = 6
+	end
+	function GetChannelName(name)
+		local id = Mock.channels[strlower(name)]
+		if id then
+			return id, name
+		end
+		return 0
+	end
+	NUM_CHAT_WINDOWS = 7
+	ChatFrame1 = { channelList = { "General" }, zoneChannelList = {} }
+	function ChatFrame_RemoveChannel(chatFrame, channel)
+		for index, value in pairs(chatFrame.channelList) do
+			if strupper(value) == strupper(channel) then
+				chatFrame.channelList[index] = nil
+			end
+		end
+	end
+	-- Other players: Mock.units[token] = { name, guid, friendly }. With
+	-- Mock.superWoW set, GUIDs work as unit tokens too.
+	Mock.units = {}
+	Mock.party, Mock.raid = 0, 0
+	function GetNumPartyMembers() return Mock.party end
+	function GetNumRaidMembers() return Mock.raid end
+	MAX_BATTLEFIELD_QUEUES = 3
+	function GetBattlefieldStatus() return "none" end
+	function UnitExists(unit)
+		if unit == "player" then
+			return 1, Mock.superWoW and Mock.playerGUID or nil
+		end
+		local u = Mock.Unit(unit)
+		if u then
+			return 1, Mock.superWoW and u.guid or nil
+		end
+	end
+	function UnitIsPlayer(unit) return unit == "player" or Mock.Unit(unit) ~= nil end
+	function UnitCanAssist(unit, other)
+		local u = Mock.Unit(other)
+		return u and u.friendly and 1 or nil
+	end
 	SlashCmdList, UISpecialFrames, StaticPopupDialogs = {}, {}, {}
 	function StaticPopup_Show(which, a1) table.insert(Mock.popups, { which = which, arg = a1 }) end
 	YES, NO = "Yes", "No"
@@ -333,7 +387,13 @@ function Mock.ResetUI()
 	function PlaySound() end
 	function GetCursorPosition() return Mock.cursorX or 0, Mock.cursorY or 0 end
 	function UnitRace() return "Human", "Human" end
-	function UnitName() return "Tester" end
+	function UnitName(unit)
+		if unit == "player" then
+			return "Tester"
+		end
+		local u = Mock.Unit(unit)
+		return u and u.name
+	end
 	function UnitBuff(unit, index) return Mock.buffs and Mock.buffs[index] end
 	function UnitSex() return 2 end
 	function GetInventoryItemTexture(unit, slot)
@@ -380,14 +440,31 @@ function Mock.LoadAddon(toc)
 	end
 end
 
-function Mock.Fire(name, a1, a2)
+-- The unit a token (or, with SuperWoW, a GUID) stands for, or nil.
+function Mock.Unit(token)
+	if type(token) ~= "string" then
+		return nil
+	end
+	if Mock.units[token] then
+		return Mock.units[token]
+	end
+	if Mock.superWoW then
+		for _, u in pairs(Mock.units) do
+			if u.guid == token then
+				return u
+			end
+		end
+	end
+end
+
+function Mock.Fire(name, a1, a2, a3, a4, a5, a6, a7, a8, a9)
 	local frames = Mock.frames
 	for i = 1, table.getn(frames) do
 		local frame = frames[i]
 		if frame.events[name] then
-			event, arg2 = name, a2
+			event, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9 = name, a2, a3, a4, a5, a6, a7, a8, a9
 			RunScript(frame, "OnEvent", a1)
-			arg2 = nil
+			arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9 = nil, nil, nil, nil, nil, nil, nil, nil
 		end
 	end
 end

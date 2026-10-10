@@ -22,12 +22,13 @@ Pick any creature, race or item, see it on your character straight away, and sav
 
 - 🐉 **Every creature model in the client:** 16,000+ entries covering all 13,423 usable display IDs, including the **2,894 models OctoWoW added** (named after their Turtle WoW creatures where there is one).
 - 🖼️ **3D previews**, eight to a page, or a list that previews the row under your mouse. Filter **Bosses, Rare creatures, Mounts** or OctoWoW's new models, search by name or ID, sort **A-Z or by ID**.
-- 🐎 **Mount skins:** give your mount any model's look, for all your mounts or one of them. It only shows while you ride, so you mount and dismount with your keys as usual. A **Your skin** box shows the one you have on, turning, and the â–² â–¼ arrows go to the previous or next model.
+- 🐎 **Mount skins:** give your mount any model's look, for all your mounts or one of them. It only shows while you ride, so you mount and dismount with your keys as usual. A **Your skin** box shows the one you have on, turning, and the ▲ ▼ arrows go to the previous or next model.
 - ⭐ **Favourites:** right-click any model (Models tab) or mount skin (Mounts tab) to star it, then pick it from the Favourites tab every time you log in.
 - 🎭 **Races and looks:** pick a race portrait to keep your own face, or step through skin colour, face, hair style, hair colour and facial hair from the game's NPC looks (8,068 of them): each click changes only the row you click. Or roll the dice.
 - ⚔️ **12,000+ weapons and armour pieces:** everything in 1.12 plus Turtle WoW's and OctoWoW's, from the Tower of Karazhan sets and the tier variants to the Warglaives of Azzinoth. Filter by quality (**Rare, Epic, Legendary** ...).
 - 🛡️ **352 item sets:** wear a whole set in one click.
 - 👗 **Wardrobe:** save outfits and put them back on with one click. Shared by all your characters.
+- 👥 **See each other's morphs:** players with DMorph see each other's model, item morphs and mount skins (friendly players). Switch either side off under **Sharing**.
 - 💬 **DMorph's chat commands:** `.morph`, `.race`, `.gender`, `.item`, `.mount`, `.demorph`, `.outfit`.
 - 🔁 **Your look stays** after `/reload`, loading screens and logging in. The window resizes and remembers how you left it.
 
@@ -70,11 +71,12 @@ Not using OctoLauncher? Put `VanillaHelpers.dll` (v1.1.0+, [releases](https://gi
 | **Dressing room** (left) | Your character in your race's dress-up room. Drag to turn it. The plate underneath names your look. |
 | **Slots** around the model | Left-click: browse items for that slot. Right-click: back to your own gear. Morphed slots glow green. |
 | **Reset model** / **Reset everything** | Your own body back (items stay) / clear every morph, mount skins too. |
+| **Sharing** (bottom) | **Others see my morph** / **I see their morphs**: both on to start with. Hover it to see how many DMorph users you've met. |
 | **Corner grip** (bottom right) | Drag to make the window bigger or smaller. It remembers the size. |
 | **Models** tab | Grid of previews (mouse wheel turns pages) or list view. Gold frame = the model you wear. **Right-click** stars a model. |
 | Models: **filter** | All models · Creatures · Bosses · Rare creatures · Mounts · Other models (named after their model file, blue) · New in OctoWoW (green). |
 | Models: **Sort** | List A-Z or by ID. |
-| **Mounts** tab | **Skin for:** all your mounts, or one you've ridden. Click a mount model to use it as the skin, right-click to star it, **Remove skin** takes it off. The skin you have on is ticked in the list and shown in the **Your skin** box; â–² â–¼ put on the previous / next model. The line at the top says which mount you're riding and what it shows as. The skin shows only while you ride. |
+| **Mounts** tab | **Skin for:** all your mounts, or one you've ridden. Click a mount model to use it as the skin, right-click to star it, **Remove skin** takes it off. The skin you have on is ticked in the list and shown in the **Your skin** box; ▲ ▼ put on the previous / next model. The line at the top says which mount you're riding and what it shows as. The skin shows only while you ride. |
 | Models: **Display ID** | Type any ID and press Morph, or step through every ID with < and >. |
 | **Favourites** tab | Your starred models and mounts, shared by all your characters. Click to wear, right-click to unstar, hover for a 3D preview. Filter models / mounts, sort A-Z or ID. |
 | **Races** tab | A portrait = that race with your own face, skin and hair (your item morphs show). The < > rows step through the game's NPC looks of that race, and each click changes only that row. "2 of 5" means five choices with your other features; grey means no NPC has another (change another row first, or roll the dice). Dice = random look, **My own look** goes back, **Favourite** stars the look. |
@@ -97,13 +99,15 @@ Type them in the chat box like in DMorph. They never reach the server. Each also
 | `.mount <displayID>` | Skin for all your mounts: any creature, shown while you ride. `.mount 0` removes it. |
 | `.demorph` / `.demorph all` | Reset your model / your model, items and mount skins. |
 | `.outfit`, `.outfit <name>`, `.outfit save <name>`, `.outfit delete <name>` | List, put on, save or delete outfits. |
+| `.share on/off` / `.share others on/off` | Whether other DMorph users see your morph / whether you see theirs. `.share` shows both and how many DMorph users you've met. |
 | `.dmorph status` / `/dmorph help` | What's morphed and which VanillaHelpers is loaded / all commands. |
 
 Slots: `1` head, `3` shoulder, `4` shirt, `5` chest, `6` waist, `7` legs, `8` feet, `9` wrist, `10` hands, `15` back, `16` main hand, `17` off hand, `18` ranged, `19` tabard.
 
 ## Good to know
 
-- **Only you see morphs.** They change your own client's picture, nothing else.
+- **Who sees your morph:** you, and other players running DMorph with VanillaHelpers. Everyone else, and the server, sees your real character.
+- **Sharing works on friendly players.** VanillaHelpers can't morph the other faction. A DMorph user's morph shows once your game has a handle on them: when you target or mouse over them, when you're grouped, or straight away if you run SuperWoW. Mount skins show on group members (and with SuperWoW), because DMorph has to take them off the moment that player dismounts. The addon talks over its own hidden chat channel, *DmorphOcto*, which no chat window shows, and over addon messages in groups.
 - **Invisible after a morph?** That display ID has no model in the game. Press **Reset model**. The lists only have IDs whose model exists.
 - **NPC looks are fixed combinations.** No DLL can change your own character's skin, face or hair, so the < > rows morph you into the game's dressed NPCs of that race. Each click changes only the feature you picked, among the NPCs that share all your other choices, so some rows have only one choice until you change another row. Item morphs don't show on an NPC look: for your own face with gear, use a portrait. Only the customisations in this 1.12 client exist, not later expansions'.
 - **Mount skins wait for you to mount.** VanillaHelpers would otherwise keep you on a mount after you dismount, so the skin goes on when you mount (the addon sees your mount's buff) and comes off when that buff goes.
@@ -119,7 +123,7 @@ Slots: `1` head, `3` shoulder, `4` shirt, `5` chest, `6` waist, `7` legs, `8` fe
 
 DMorph itself is a DLL for WotLK 3.3.5a and can't run on the 1.12 client. This addon uses **VanillaHelpers**, a 1.12 client mod that OctoLauncher ships, through its `SetUnitDisplayID`, `SetUnitVisibleItemID`, `SetUnitMountDisplayID` and `UnitDisplayInfo` functions. The previews use ClassicAPI's `Model:SetDisplayInfo`. Each new model loads out of sight and only shows once it's ready, so nothing flashes white.
 
-- `DmorphOcto.lua`: morph state, wardrobe, search, item lookup and chat commands. `UI.lua`: the window and minimap button.
+- `DmorphOcto.lua`: morph state, wardrobe, search, item lookup and chat commands. `Share.lua`: sharing morphs with other DMorph users. `UI.lua`: the window and minimap button.
 - `Data/Creatures.lua` and `Data/Items.lua`: the [cmangos classic-db](https://github.com/cmangos/classic-db) 1.12.1 database. `Data/Models.lua`, `ModelTags.lua` and `Looks.lua`: every other display ID in the client's own data, its boss / rare / mount tags, and the NPC looks per race. `Data/ItemsExtra.lua` and `ItemSets.lua`: Turtle WoW's and OctoWoW's items and the client's item sets.
 - Saved data: `WTF\Account\<account>\SavedVariables\DmorphOcto.lua` (outfits, favourites, window settings, looked-up items, minimap button) and each character's `SavedVariables\DmorphOcto.lua` (current look).
 
@@ -127,7 +131,7 @@ DMorph itself is a DLL for WotLK 3.3.5a and can't run on the 1.12 client. This a
 
 Written for the client's Lua 5.0: no `#`, no `%`, no `string.match`.
 
-- **Tests:** `tests/run_tests.lua` drives the addon (chat, window, previews, filters, races and looks, mount skins, favourites, sets, item lookup, wardrobe, `/reload`, logins) inside `tests/mock_wow.lua`, a strict mock of the 1.12 UI and of VanillaHelpers. Run `lua tests/run_tests.lua` with Lua 5.0, or on Windows `powershell -ExecutionPolicy Bypass -File tools\run_tests.ps1` (builds `tools/LuaHost`, .NET 8, and uses the Lua runtime OBS Studio installs; `LUA51_DLL` picks another).
+- **Tests:** `tests/run_tests.lua` drives the addon (chat, window, previews, filters, races and looks, mount skins, favourites, sets, item lookup, wardrobe, sharing with other users, `/reload`, logins) inside `tests/mock_wow.lua`, a strict mock of the 1.12 UI and of VanillaHelpers. Run `lua tests/run_tests.lua` with Lua 5.0, or on Windows `powershell -ExecutionPolicy Bypass -File tools\run_tests.ps1` (builds `tools/LuaHost`, .NET 8, and uses the Lua runtime OBS Studio installs; `LUA51_DLL` picks another).
 - **Catalogue:** `python3 tools/build_data.py <ClassicDB_1_12_1_*.sql.gz>` rebuilds `Creatures.lua` and `Items.lua`. Then, on Windows with the game installed, `tools\build_models.ps1` rebuilds the model files and `tools\build_items.ps1` the extra items and sets, from the client's MPQs, its item cache, Atlas-CFM's loot tables and `tools/data` (Turtle WoW data exported from [ShellLab](https://github.com/oplancelot/ShellLab)). Run them after a client patch.
 - **Pictures:** `docs/src` has the banner and gallery as HTML (rendered with headless Edge) and the in-game crops they use.
 

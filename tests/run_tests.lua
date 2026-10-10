@@ -34,14 +34,32 @@ local function newClient(serverDisplay)
 	vh = {
 		serverDisplay = serverDisplay, serverNative = serverDisplay,
 		display = serverDisplay, native = serverDisplay,
-		items = {}, calls = 0,
+		items = {}, calls = 0, others = {},
 	}
+end
+
+-- Another player (Mock.units): VanillaHelpers keeps their morph on their GUID
+-- and refuses players it can't see or can't assist.
+local function otherUnit(unit)
+	local u = Mock.Unit(unit)
+	if not u then
+		error("Unit not found.")
+	end
+	if not u.friendly then
+		error("Unit is not friendly.")
+	end
+	vh.others[u.guid] = vh.others[u.guid] or { items = {} }
+	return vh.others[u.guid]
 end
 
 local function installMorphAPI()
 	function SetUnitDisplayID(unit, displayID)
 		if type(unit) ~= "string" then
 			error("Usage: SetUnitDisplayID(unitToken [, displayID])")
+		end
+		if unit ~= "player" then
+			otherUnit(unit).display = type(displayID) == "number" and displayID or nil
+			return
 		end
 		vh.calls = vh.calls + 1
 		if type(displayID) == "number" then
@@ -64,6 +82,10 @@ local function installMorphAPI()
 		if slot < 1 or slot > 19 then
 			error("Unknown inventory slot.")
 		end
+		if unit ~= "player" then
+			otherUnit(unit).items[slot] = type(itemID) == "number" and itemID or nil
+			return
+		end
 		vh.calls = vh.calls + 1
 		if type(itemID) == "number" then
 			vh.items[slot] = itemID
@@ -78,11 +100,23 @@ local function installMorphAPI()
 		if type(unit) ~= "string" then
 			error("Usage: SetUnitMountDisplayID(unitToken [, mountDisplayID])")
 		end
+		if unit ~= "player" then
+			otherUnit(unit).mount = displayID
+			return
+		end
 		vh.calls = vh.calls + 1
 		vh.mount = displayID
 	end
 
 	function UnitDisplayInfo(unit)
+		if unit ~= "player" then
+			local u = Mock.Unit(unit)
+			if not u then
+				error("Unit not found.")
+			end
+			local o = vh.others[u.guid] or {}
+			return o.display or u.display, u.display, o.mount or 0
+		end
 		return vh.display, vh.native, vh.mount or vh.serverMount or 0
 	end
 
@@ -966,6 +1000,141 @@ DmorphOctoDB = nil
 loadUI()
 say(".gender")
 check(vh.display == 6894, ".gender on a native Goblin female gives Goblin male")
+
+------------------------------------------------------------------------------
+-- Sharing: DMorph users see each other's morphs.
+
+newClient(49)
+DmorphOctoDB, DmorphOctoAccount = nil, nil
+loadUI()
+ChatFrame1.channelList[2] = "DmorphOcto" -- as if someone had /join'ed it
+local function wait(seconds)
+	for n = 1, math.ceil(seconds / 0.25) do
+		Mock.Tick(0.25)
+	end
+end
+local function channelSays(part)
+	local found, count = nil, 0
+	for i = 1, table.getn(Mock.channelSent) do
+		if contains(Mock.channelSent[i].msg, part) then
+			found, count = Mock.channelSent[i], count + 1
+		end
+	end
+	return found, count
+end
+-- A message on the DMorph channel, with 1.12's CHAT_MSG_CHANNEL arguments.
+local function hear(sender, text)
+	Mock.Fire("CHAT_MSG_CHANNEL", "DMO1 " .. text, sender, "", "6. DmorphOcto", "", "", 0, 6, "DmorphOcto")
+end
+local function morphOf(guid)
+	return vh.others[guid] or { items = {} }
+end
+
+wait(4)
+check(Mock.channels.dmorphocto == nil, "the channel is joined once the login has settled")
+wait(22)
+check(Mock.channels.dmorphocto == 6, "DMorph joins its own channel")
+check(ChatFrame1.channelList[2] == nil and ChatFrame1.channelList[1] == "General",
+	"and keeps it out of the chat windows")
+check(channelSays("DMO1 L 0 0 - -"), "after login it says it has DMorph and no morph")
+Mock.channelSent = {}
+say(".morph 4527")
+say(".item head 2955")
+wait(3)
+local sent, count = channelSays("DMO1 L 4527 0 1:2955 -")
+check(sent and sent.channel == 6 and count == 1 and table.getn(Mock.channelSent) == 1,
+	"your changes go to the channel a moment later, in one message")
+check(table.getn(Mock.sent) == 0, "nothing is said in any chat you can see")
+
+-- Someone else's morph shows on them once you have a unit token for them.
+local ally = "0x00000000000A0001"
+Mock.units.target = { name = "Ally", guid = ally, friendly = true, display = 50 }
+hear("Ally", "L 4527 0 1:2955,5:10 " .. ally)
+check(morphOf(ally).display == 4527 and morphOf(ally).items[1] == 2955 and morphOf(ally).items[5] == 10,
+	"a DMorph user you target shows their morph and items")
+hear("Ally", "L 99999999 0 - " .. ally)
+wait(1.5)
+check(morphOf(ally).display == nil and morphOf(ally).items[1] == nil,
+	"a display ID the client doesn't have is ignored, and dropped items come off")
+hear("Ally", "L 4527 4527 - " .. ally)
+wait(1.5)
+check(morphOf(ally).display == 4527 and morphOf(ally).mount == nil,
+	"a mount skin isn't put on through the target (it couldn't come off when they dismount)")
+Mock.units.mouseover = { name = "Foe", guid = "0x00000000000B0001", friendly = false, display = 50 }
+hear("Foe", "L 4527 0 - -")
+Mock.Fire("UPDATE_MOUSEOVER_UNIT")
+check(vh.others["0x00000000000B0001"] == nil, "hostile players aren't morphed, and nothing errors")
+Mock.units.mouseover = nil
+
+-- In a group, party tokens stay put, so mount skins come and go with them.
+local pal = "0x00000000000C0001"
+Mock.party = 1
+Mock.units.party1 = { name = "Pal", guid = pal, friendly = true, display = 51 }
+Mock.Fire("CHAT_MSG_ADDON", "DMO1", "L 0 4527 - -", "PARTY", "Pal")
+check(morphOf(pal).mount == 4527 and morphOf(pal).display == nil, "a party member's mount skin shows while they ride")
+Mock.Fire("CHAT_MSG_ADDON", "DMO1", "L 0 0 - -", "PARTY", "Pal")
+check(morphOf(pal).mount == nil, "and comes off when they dismount")
+Mock.addonSent = {}
+Mock.Fire("PARTY_MEMBERS_CHANGED")
+wait(4)
+local last = Mock.addonSent[table.getn(Mock.addonSent)]
+check(last and last.prefix == "DMO1" and last.distribution == "PARTY" and contains(last.text, "L 4527 0 1:2955"),
+	"joining a group sends your look to it")
+
+-- New faces are asked about, a few at a time, and not again for a while.
+Mock.channelSent = {}
+Mock.units.mouseover = { name = "Stranger", guid = "0x00000000000D0001", friendly = true, display = 52 }
+Mock.Fire("UPDATE_MOUSEOVER_UNIT")
+wait(11)
+check(channelSays("DMO1 Q Stranger"), "a friendly player you don't know is asked about")
+Mock.channelSent = {}
+Mock.Fire("UPDATE_MOUSEOVER_UNIT")
+wait(11)
+check(table.getn(Mock.channelSent) == 0, "and not asked about again soon")
+hear("Someone", "Q Bob,Tester")
+hear("Other", "Q Tester")
+wait(4)
+sent, count = channelSays("DMO1 L 4527 0 1:2955")
+check(sent and count == 1, "a question about you is answered once")
+
+-- SuperWoW: GUIDs work as unit tokens, so players need no target or mouseover.
+Mock.superWoW, Mock.playerGUID = true, "0x0000000000000042"
+local far = "0x00000000000E0001"
+Mock.units.nearby = { name = "Far", guid = far, friendly = true, display = 53 }
+hear("Far", "L 4527 4527 - " .. far)
+check(morphOf(far).display == 4527 and morphOf(far).mount == 4527, "with SuperWoW a player's GUID is enough")
+Mock.channelSent = {}
+say(".item head 0")
+wait(3)
+check(channelSays("DMO1 L 4527 0 - 0x0000000000000042"), "and your messages carry your GUID")
+Mock.superWoW = nil
+
+-- Switching it off.
+Mock.channelSent = {}
+slash("share off")
+wait(2)
+check(DmorphOctoAccount.shareOff == true and channelSays("DMO1 L 0 0 -"),
+	".share off tells the others to take your morph off")
+Mock.channelSent = {}
+hear("Someone", "Q Tester")
+wait(8)
+check(table.getn(Mock.channelSent) == 0, "and questions about you go unanswered")
+slash("share others off")
+wait(1.5)
+check(morphOf(ally).display == nil, ".share others off takes their morphs off as you see them")
+slash("share")
+check(contains(allChat(), "Others see your morph: off") and contains(allChat(), "DMorph users seen: 4"),
+	".share shows the settings and how many DMorph users you've seen")
+slash("")
+Mock.Click(DmorphOctoShare)
+pickMenu("Others see my morph")
+check(DmorphOctoAccount.shareOff == nil, "the window's Sharing menu switches it back on")
+Mock.Click(DmorphOctoShare)
+pickMenu("I see their morphs")
+wait(1.5)
+check(DmorphOctoAccount.othersOff == nil and morphOf(ally).display == 4527, "and their morphs come back")
+DmorphOcto_ToggleUI()
+Mock.party = 0
 
 ------------------------------------------------------------------------------
 -- Without VanillaHelpers, everything explains what is missing and stays local.

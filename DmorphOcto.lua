@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "1.6.0"
+local VERSION = "1.7.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 local MISSING_API = "VanillaHelpers v1.1.0 or newer is not loaded, so morphing is unavailable. "
 	.. "Enable the 'vanillaHelpers' mod in OctoLauncher (or add VanillaHelpers.dll to dlls.txt) "
@@ -869,6 +869,9 @@ function InitDB()
 		end
 	end
 	account.favourites = favourites
+	-- Sharing with other DMorph users (Share.lua): on unless switched off.
+	account.shareOff = account.shareOff == true or nil
+	account.othersOff = account.othersOff == true or nil
 end
 
 function M.GetState()
@@ -1102,6 +1105,18 @@ function M.GetMountSkin(real)
 		return db.mountSkins[real]
 	end
 	return db.mount
+end
+
+-- What other DMorph users should see: your body's display ID (nil when you
+-- aren't morphed), your item morphs (slot -> item ID), and the mount skin
+-- showing now (nil on foot or without a skin).
+function M.GetSharedLook()
+	InitDB()
+	local mount
+	if watch.active then
+		mount = watch.skin
+	end
+	return BodyDisplayID(), db.items, mount
 end
 
 local function ApplySaved()
@@ -1466,6 +1481,7 @@ local function ShowHelp()
 	Print(".demorph - reset your model (DMorph's F5); .demorph all - reset model and items (F10)")
 	Print(".outfit [name] - list or put on saved outfits; .outfit save <name>; .outfit delete <name>")
 	Print(".mount <displayID> - morph your mount (.mount 0 resets)")
+	Print(".share on/off - whether other DMorph users see your morph; .share others on/off - whether you see theirs")
 	Print(".dmorph status - show what is morphed. Keys: Key Bindings > DMorph.")
 	if not HasMorphAPI() then
 		Print(MISSING_API)
@@ -1511,6 +1527,8 @@ local function ShowStatus()
 end
 
 local commands = {}
+-- Other files (Share.lua) add their own chat commands here.
+M.commands = commands
 
 function commands.morph(args)
 	local displayID = ParseID(args[1] or "0")
