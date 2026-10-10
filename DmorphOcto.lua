@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "1.3.0"
+local VERSION = "1.4.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 local MISSING_API = "VanillaHelpers v1.1.0 or newer is not loaded, so morphing is unavailable. "
 	.. "Enable the 'vanillaHelpers' mod in OctoLauncher (or add VanillaHelpers.dll to dlls.txt) "
@@ -772,6 +772,23 @@ function InitDB()
 			account.outfits[name] = nil
 		end
 	end
+	-- Favourites: { id = displayID, mount = true or nil }, oldest first, each once.
+	local favourites, seen = {}, {}
+	if type(account.favourites) == "table" then
+		for i = 1, table.getn(account.favourites) do
+			local fav = account.favourites[i]
+			local id = type(fav) == "table" and ParseID(fav.id)
+			if id and id > 0 then
+				local mount = fav.mount and true or nil
+				local key = (mount and "mount" or "model") .. id
+				if not seen[key] then
+					seen[key] = true
+					table.insert(favourites, { id = id, mount = mount })
+				end
+			end
+		end
+	end
+	account.favourites = favourites
 end
 
 function M.GetState()
@@ -1089,6 +1106,51 @@ function M.WearSet(index)
 		count = "1 piece"
 	end
 	return Result(ok, err, "Wearing " .. catalog.names[index] .. " (" .. count .. ")." .. later)
+end
+
+-- Favourites ----------------------------------------------------------------
+
+-- Models and mounts kept at hand, shared by all your characters: a list of
+-- { id = displayID, mount = true or nil }, oldest first.
+function M.GetFavourites()
+	InitDB()
+	return account.favourites
+end
+
+local function FindFavourite(displayID, mount)
+	local list = account.favourites
+	for i = 1, table.getn(list) do
+		if list[i].id == displayID and list[i].mount == mount then
+			return i
+		end
+	end
+end
+
+function M.IsFavourite(displayID, mount)
+	InitDB()
+	return FindFavourite(displayID, mount and true or nil) ~= nil
+end
+
+-- Adds the model (or, with mount set, the mount) to the favourites, or takes
+-- it off if it's there already.
+function M.ToggleFavourite(displayID, mount)
+	InitDB()
+	displayID = ParseID(displayID)
+	if not displayID or displayID == 0 then
+		return false, "Pick a model first."
+	end
+	mount = mount and true or nil
+	local what = "favourite models"
+	if mount then
+		what = "favourite mounts"
+	end
+	local index = FindFavourite(displayID, mount)
+	if index then
+		table.remove(account.favourites, index)
+		return true, "Removed " .. M.DescribeDisplay(displayID) .. " from your " .. what .. "."
+	end
+	table.insert(account.favourites, { id = displayID, mount = mount })
+	return true, "Added " .. M.DescribeDisplay(displayID) .. " to your " .. what .. "."
 end
 
 -- Wardrobe ------------------------------------------------------------------

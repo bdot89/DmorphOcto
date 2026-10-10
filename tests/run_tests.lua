@@ -528,6 +528,50 @@ Mock.Click(DmorphOctoModelFilter)
 pickMenu("All models")
 check(DmorphOctoModelFilter.text == "All models", "back to all models")
 
+-- Favourites: right-click stars a model (or, with the Mount switch, a mount).
+Mock.Type(modelSearch, "thrall")
+Mock.Click(DmorphOctoTile1, "RightButton")
+check(DmorphOcto.IsFavourite(4527) and DmorphOctoTile1.star.shown and contains(DmorphOctoFrameStatus.text, "favourite models"),
+	"right-clicking a model stars it")
+Mock.RunScript(DmorphOctoTile1, "OnEnter")
+check(contains(table.concat(GameTooltip.lines, "\n"), "Right-click to take it off"), "the tooltip says a right-click unstars it")
+Mock.RunScript(DmorphOctoTile1, "OnLeave")
+Mock.Click(DmorphOctoModelTarget)
+check(not DmorphOctoTile1.star.shown, "with the Mount switch, the stars show favourite mounts")
+Mock.Click(DmorphOctoTile1, "RightButton")
+check(DmorphOcto.IsFavourite(4527, true) and DmorphOctoTile1.star.shown, "and a right-click stars it as a mount")
+Mock.Click(DmorphOctoModelTarget)
+Mock.Type(modelSearch, "ragnaros")
+Mock.Click(DmorphOctoTile1, "RightButton")
+Mock.Click(DmorphOctoTile1, "RightButton")
+check(not DmorphOcto.IsFavourite(11121) and not DmorphOctoTile1.star.shown, "a second right-click takes the star off")
+Mock.Click(DmorphOctoTile1, "RightButton")
+Mock.Type(modelSearch, "")
+
+Mock.Click(DmorphOctoTabFavourites)
+check(DmorphOctoFavListRow1:IsVisible() and DmorphOctoFavCount.text == "3 favourites"
+	and DmorphOctoFavListRow1.text.text == "Ragnaros", "the favourites tab lists them, A-Z")
+Mock.Click(DmorphOctoFavFilter)
+pickMenu("Mounts")
+check(DmorphOctoFavCount.text == "1 favourite" and DmorphOctoFavListRow1.info.text == "Mount 4527", "the filter shows only mounts")
+press(DmorphOctoFavListRow1)
+check(vh.mount == 4527, "clicking a favourite mount morphs your mount")
+Mock.Click(DmorphOctoFavFilter)
+pickMenu("Models")
+press(DmorphOctoFavListRow1)
+check(vh.display == 11121, "clicking a favourite model morphs you")
+Mock.RunScript(DmorphOctoFavListRow1, "OnEnter")
+check(DmorphOctoPreviewCard:IsVisible() and DmorphOctoPreviewCardModel.displayInfo == 11121, "hovering a favourite previews it")
+Mock.RunScript(DmorphOctoFavListRow1, "OnLeave")
+Mock.Click(DmorphOctoFavListRow1, "RightButton")
+check(not DmorphOcto.IsFavourite(11121) and DmorphOctoFavCount.text == "1 favourite", "right-clicking a favourite takes it off")
+Mock.Click(DmorphOctoFavFilter)
+pickMenu("All favourites")
+Mock.Click(DmorphOctoFavSort)
+check(DmorphOctoFavSort.text == "Sort: ID", "favourites sort by ID too")
+Mock.Click(DmorphOctoFavSort)
+Mock.Click(DmorphOctoTabModels)
+
 -- List view, with a preview card for the row under the mouse.
 Mock.Click(DmorphOctoModelView)
 check(not DmorphOctoModelGrid:IsVisible() and DmorphOctoModelListRow1:IsVisible(), "list view swaps the grid for a list")
@@ -594,6 +638,8 @@ for i = 1, table.getn(trollLooks) do
 	end
 end
 check(isTroll and contains(DmorphOctoCreatorLook.text, "Look "), "the dice rolls a random look of that race")
+press(DmorphOctoCreatorFavourite)
+check(DmorphOcto.IsFavourite(vh.display), "the creator can star the look you wear")
 
 -- Items: click the head slot next to the model, search and pick.
 press(DmorphOctoSlot1)
@@ -717,6 +763,7 @@ check(vh.display == 55 and vh.items[1] == 2955, "the look survives /reload")
 slash("")
 check(DmorphOctoModelGrid:IsVisible(), "the window opens in the view you left it in")
 check(DmorphOctoFrame.scale == 0.6, "and at the size you left it")
+check(DmorphOcto.IsFavourite(4527) and DmorphOcto.IsFavourite(4527, true), "favourites survive /reload")
 Mock.Click(DmorphOctoTabWardrobe)
 check(DmorphOctoOutfitListRow1:IsVisible() and DmorphOctoOutfitListRow1.text.text == "Elf Pirate",
 	"saved outfits survive /reload")
@@ -783,7 +830,8 @@ DmorphOcto_ToggleUI()
 
 newClient(49)
 DmorphOctoDB = { display = "x", race = 42, gender = 7, items = { [2] = 5, [1] = -3, [5] = 10 } }
-DmorphOctoAccount = { outfits = { good = { race = 2, items = { [1] = "2955" } }, [3] = {}, bad = "x" } }
+DmorphOctoAccount = { outfits = { good = { race = 2, items = { [1] = "2955" } }, [3] = {}, bad = "x" },
+	favourites = { { id = "4527" }, { id = 4527 }, { id = 0 }, "x", { id = 5, mount = 1 } } }
 loadUI()
 check(DmorphOctoDB.display == nil and DmorphOctoDB.race == nil, "bad body values are dropped")
 check(DmorphOctoDB.items[2] == nil and DmorphOctoDB.items[1] == nil and DmorphOctoDB.items[5] == 10,
@@ -791,6 +839,8 @@ check(DmorphOctoDB.items[2] == nil and DmorphOctoDB.items[1] == nil and DmorphOc
 check(vh.items[5] == 10 and vh.display == 49, "valid saved items are applied")
 check(DmorphOctoAccount.outfits.good.items[1] == 2955 and DmorphOctoAccount.outfits[3] == nil
 	and DmorphOctoAccount.outfits.bad == nil, "bad outfits are dropped, good ones cleaned up")
+check(table.getn(DmorphOctoAccount.favourites) == 2 and DmorphOctoAccount.favourites[1].id == 4527
+	and DmorphOctoAccount.favourites[2].mount == true, "favourites are cleaned up: numbers, once each")
 
 newClient(49)
 DmorphOctoDB = { display = "4527", items = { [1] = "2955" } }

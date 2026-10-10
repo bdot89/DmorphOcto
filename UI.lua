@@ -72,13 +72,21 @@ local KIND_NOTES = {
 
 local TABS = {
 	{ key = "models", text = "Models" },
+	{ key = "favourites", text = "Favourites" },
 	{ key = "races", text = "Races" },
 	{ key = "creator", text = "Creator" },
 	{ key = "items", text = "Items" },
 	{ key = "sets", text = "Sets" },
 	{ key = "wardrobe", text = "Wardrobe" },
 }
-local TAB_W = 74
+local TAB_W, TAB_GAP = 64, 4
+-- The gold star of the raid target icons marks favourites.
+local STAR = "Interface\\TargetingFrame\\UI-RaidTargetingIcons"
+local FAV_FILTERS = {
+	{ text = "All favourites" },
+	{ text = "Models", mount = false },
+	{ text = "Mounts", mount = true },
+}
 
 local frame -- the window, built the first time it opens
 local ui = {
@@ -147,6 +155,9 @@ local function Prefs()
 	end
 	if not M.QUALITY_FILTERS[p.setQuality] then
 		p.setQuality = 1
+	end
+	if not FAV_FILTERS[p.favFilter] then
+		p.favFilter = 1
 	end
 	if type(p.scale) ~= "number" or p.scale < MIN_SCALE or p.scale > MAX_SCALE then
 		p.scale = 1
@@ -363,6 +374,7 @@ local function List(parent, name, x, y, infoWidth, fill, click, enter)
 			if index <= list.count then
 				row.index = index
 				row:UnlockHighlight()
+				row.star:Hide()
 				row.text:SetTextColor(1, 1, 1)
 				fill(row, index)
 				row:Show()
@@ -432,6 +444,13 @@ local function List(parent, name, x, y, infoWidth, fill, click, enter)
 		row.info:SetWidth(infoWidth)
 		row.info:SetHeight(ROW_HEIGHT)
 		row.info:SetJustifyH("RIGHT")
+		row.star = row:CreateTexture(nil, "OVERLAY")
+		row.star:SetTexture(STAR)
+		row.star:SetTexCoord(0, 0.25, 0, 0.25)
+		row.star:SetWidth(12)
+		row.star:SetHeight(12)
+		row.star:SetPoint("RIGHT", row, "RIGHT", -infoWidth - 10, 0)
+		row.star:Hide()
 		row:EnableMouseWheel(true)
 		row:SetScript("OnMouseWheel", function()
 			ui.card:Hide()
@@ -729,6 +748,11 @@ local function FillTiles()
 			tile.title:SetText(catalog.names[entry])
 			tile.title:SetTextColor(color[1], color[2], color[3])
 			tile.idText:SetText(id)
+			if M.IsFavourite(id, ui.target == "mount") then
+				tile.star:Show()
+			else
+				tile.star:Hide()
+			end
 			if tile.view.displayID ~= id then
 				LoadView(tile.view, id)
 			end
@@ -845,7 +869,20 @@ local function ModelTooltip(owner, entry)
 	else
 		GameTooltip:AddLine("Click to morph into it.", 0.6, 1, 0.6)
 	end
+	local what = ui.target == "mount" and "favourite mounts" or "favourite models"
+	if M.IsFavourite(catalog.ids[entry], ui.target == "mount") then
+		GameTooltip:AddLine("Right-click to take it off your " .. what .. ".", 1, 0.82, 0)
+	else
+		GameTooltip:AddLine("Right-click to add it to your " .. what .. ".", 1, 0.82, 0)
+	end
 	GameTooltip:Show()
+end
+
+-- Right-click on a model: star it (as a model, or as a mount with the Mount
+-- switch on), or take the star off.
+local function ToggleFavourite(displayID)
+	SetStatus(M.ToggleFavourite(displayID, ui.target == "mount"))
+	RefreshModels()
 end
 
 local function NewTile(parent, i)
@@ -873,12 +910,27 @@ local function NewTile(parent, i)
 	tile.idText = text:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	tile.idText:SetPoint("TOPRIGHT", tile, "TOPRIGHT", -6, -6)
 	tile.idText:SetJustifyH("RIGHT")
+	tile.star = text:CreateTexture(nil, "OVERLAY")
+	tile.star:SetTexture(STAR)
+	tile.star:SetTexCoord(0, 0.25, 0, 0.25)
+	tile.star:SetWidth(16)
+	tile.star:SetHeight(16)
+	tile.star:SetPoint("TOPLEFT", tile, "TOPLEFT", 5, -5)
+	tile.star:Hide()
+	tile:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 	tile:EnableMouseWheel(true)
 	tile:SetScript("OnMouseWheel", function()
 		TurnPage(-arg1)
 	end)
 	tile:SetScript("OnClick", function()
-		MorphInto(this.displayID)
+		if arg1 == "RightButton" then
+			ToggleFavourite(this.displayID)
+			if this.hover then
+				ModelTooltip(this, this.entry)
+			end
+		else
+			MorphInto(this.displayID)
+		end
 	end)
 	tile:SetScript("OnEnter", function()
 		this.hover = true
@@ -927,21 +979,28 @@ local function BuildCard()
 	return card
 end
 
-local function ShowCard(index, row)
-	local entry = ui.modelResult[index]
-	if not (ui.canPreview and entry) then
+-- The preview card next to a list row, for a display ID.
+local function ShowCardFor(row, displayID, name, color)
+	if not (ui.canPreview and displayID) then
 		return
 	end
-	local catalog = M.GetCreatureCatalog()
-	local card, color = ui.card, KindColor(catalog.kind[entry])
+	local card = ui.card
 	card:ClearAllPoints()
 	card:SetPoint("LEFT", row, "RIGHT", 50, 0)
-	card.title:SetText(catalog.names[entry])
+	card.title:SetText(name)
 	card.title:SetTextColor(color[1], color[2], color[3])
-	card.idText:SetText("Display ID " .. catalog.ids[entry])
+	card.idText:SetText("Display ID " .. displayID)
 	card:Show()
-	if card.view.displayID ~= catalog.ids[entry] then
-		LoadView(card.view, catalog.ids[entry])
+	if card.view.displayID ~= displayID then
+		LoadView(card.view, displayID)
+	end
+end
+
+local function ShowCard(index, row)
+	local entry = ui.modelResult[index]
+	if entry then
+		local catalog = M.GetCreatureCatalog()
+		ShowCardFor(row, catalog.ids[entry], catalog.names[entry], KindColor(catalog.kind[entry]))
 	end
 end
 
@@ -1051,8 +1110,16 @@ local function BuildModelsPage(page)
 		if catalog.ids[i] == TargetDisplay() then
 			row:LockHighlight()
 		end
-	end, function(index)
-		MorphInto(M.GetCreatureCatalog().ids[ui.modelResult[index]])
+		if M.IsFavourite(catalog.ids[i], ui.target == "mount") then
+			row.star:Show()
+		end
+	end, function(index, button)
+		local displayID = M.GetCreatureCatalog().ids[ui.modelResult[index]]
+		if button == "RightButton" then
+			ToggleFavourite(displayID)
+		else
+			MorphInto(displayID)
+		end
 	end, ShowCard)
 
 	-- Any display ID, including ones no list has.
@@ -1094,6 +1161,117 @@ local function BuildModelsPage(page)
 	end
 	ui.listMode = nil
 	SetListMode(prefs.list)
+end
+
+-- Favourites tab --------------------------------------------------------------------
+
+local MOUNT_COLOR = { 1, 0.82, 0.4 }
+
+local function FilterFavourites(keep)
+	local prefs = Prefs()
+	local filter = FAV_FILTERS[prefs.favFilter]
+	local query = strlower(ui.favSearch:GetText() or "")
+	query = string.gsub(query, "^%s+", "")
+	query = string.gsub(query, "%s+$", "")
+	local favourites, list, n = M.GetFavourites(), {}, 0
+	for i = 1, table.getn(favourites) do
+		local fav = favourites[i]
+		if filter.mount == nil or filter.mount == (fav.mount == true) then
+			local name = M.GetDisplayName(fav.id) or ("Display " .. fav.id)
+			if query == "" or tostring(fav.id) == query or strfind(strlower(name), query, 1, true) then
+				n = n + 1
+				list[n] = { id = fav.id, mount = fav.mount, name = name, lower = strlower(name) }
+			end
+		end
+	end
+	if prefs.sortFavs then
+		table.sort(list, function(a, b)
+			return a.id < b.id or (a.id == b.id and a.lower < b.lower)
+		end)
+	else
+		table.sort(list, function(a, b)
+			return a.lower < b.lower or (a.lower == b.lower and a.id < b.id)
+		end)
+	end
+	ui.favResult = list
+	ui.favCount:SetText(Count(n, "favourite"))
+	ui.favList.SetCount(n, keep)
+	if table.getn(favourites) == 0 then
+		ui.favEmpty:Show()
+	else
+		ui.favEmpty:Hide()
+	end
+end
+
+local function RefreshFavourites()
+	FilterFavourites(true)
+end
+
+local function FavouriteMenu()
+	local prefs, options = Prefs(), {}
+	for i = 1, table.getn(FAV_FILTERS) do
+		table.insert(options, { text = FAV_FILTERS[i].text, index = i, checked = prefs.favFilter == i })
+	end
+	OpenMenu(this, options, function(option)
+		Prefs().favFilter = option.index
+		ui.favFilter:SetText(option.text)
+		FilterFavourites()
+	end)
+end
+
+local function BuildFavouritesPage(page)
+	local prefs = Prefs()
+	Label(page, "Search:", nil, 10, -12)
+	ui.favSearch = EditBox(page, "DmorphOctoFavSearch", 140, 58, -8)
+	ui.favSearch:SetScript("OnTextChanged", function()
+		Debounce(ui.searchTimer, 0.25, FilterFavourites)
+	end)
+	ui.favSearch:SetScript("OnEnterPressed", function()
+		this:ClearFocus()
+		FilterFavourites()
+	end)
+	ui.favFilter = Button(page, FAV_FILTERS[prefs.favFilter].text, 150, 212, -7, FavouriteMenu, "DmorphOctoFavFilter")
+	SortButton(page, "DmorphOctoFavSort", 368, -7, "sortFavs", FilterFavourites)
+
+	ui.favList = List(page, "DmorphOctoFavList", 8, -36, 90, function(row, index)
+		local fav = ui.favResult[index]
+		local state = M.GetState()
+		row.text:SetText(fav.name)
+		if fav.mount then
+			row.text:SetTextColor(MOUNT_COLOR[1], MOUNT_COLOR[2], MOUNT_COLOR[3])
+			row.info:SetText("Mount " .. fav.id)
+			if state.mount == fav.id then
+				row:LockHighlight()
+			end
+		else
+			row.info:SetText("Model " .. fav.id)
+			if state.display == fav.id then
+				row:LockHighlight()
+			end
+		end
+	end, function(index, button)
+		local fav = ui.favResult[index]
+		if button == "RightButton" then
+			SetStatus(M.ToggleFavourite(fav.id, fav.mount))
+			ui.card:Hide()
+			FilterFavourites(true)
+		elseif fav.mount then
+			Morph(M.SetMount, fav.id)
+		else
+			Morph(M.SetDisplay, fav.id)
+		end
+	end, function(index, row)
+		local fav = ui.favResult[index]
+		if fav then
+			ShowCardFor(row, fav.id, fav.name, fav.mount and MOUNT_COLOR or KIND_COLORS[0])
+		end
+	end)
+	ui.favCount = Label(page, "", "GameFontDisableSmall", 10, -314, "DmorphOctoFavCount")
+	ui.favEmpty = Label(page, "No favourites yet. Right-click a model in the Models tab to star it.",
+		"GameFontDisableSmall", 14, -44)
+	Label(page, "Click to wear it. Right-click to take it off the list.", "GameFontDisableSmall", 10, -340)
+	Label(page, "In the Models tab, right-click a model to star it (with \"Morph: mount\", as a mount).",
+		"GameFontDisableSmall", 10, -354)
 end
 
 -- Races tab ------------------------------------------------------------------------
@@ -1350,6 +1528,19 @@ local function BuildCreatorPage(page)
 	end)
 	dice:SetScript("OnLeave", HideTooltip)
 	ui.creatorLook = Label(page, "", "GameFontHighlightSmall", 52, -315, "DmorphOctoCreatorLook")
+	local star = Button(page, "Favourite", 92, PAGE_W - 102, -309, function()
+		local c = ui.creator
+		local race, gender = CreatorTarget()
+		local look = c.index and M.GetLooks(race, gender)[c.index]
+		if not look then
+			return SetStatus(false, "Pick a look first.")
+		end
+		SetStatus(M.ToggleFavourite(look[1]))
+	end, "DmorphOctoCreatorFavourite")
+	star:SetScript("OnEnter", function()
+		Tooltip(this, "Favourite this look", "Adds it to the Favourites tab (or takes it off).")
+	end)
+	star:SetScript("OnLeave", HideTooltip)
 	Label(page, "These are NPC looks, so your item morphs don't show on them.", "GameFontDisableSmall", 14, -346)
 	Label(page, "For your own face with gear, use the Races tab.", "GameFontDisableSmall", 14, -360)
 end
@@ -1680,6 +1871,7 @@ StaticPopupDialogs["DMORPHOCTO_DELETE_OUTFIT"] = {
 
 local REFRESH = {
 	models = RefreshModels,
+	favourites = RefreshFavourites,
 	races = RefreshRaces,
 	creator = RefreshCreator,
 	items = RefreshItems,
@@ -1752,6 +1944,8 @@ ShowTab = function(key)
 		FilterItems()
 	elseif key == "sets" and not ui.setResult then
 		FilterSets()
+	elseif key == "favourites" then
+		FilterFavourites()
 	end
 	UpdateSlots()
 	REFRESH[key]()
@@ -1956,9 +2150,9 @@ local function BuildTabs()
 		local tab = CreateFrame("Button", "DmorphOctoTab" .. info.text, frame)
 		tab:SetWidth(TAB_W)
 		tab:SetHeight(26)
-		tab:SetPoint("TOPLEFT", frame, "TOPLEFT", PAGE_X + (i - 1) * (TAB_W + 6), -38)
+		tab:SetPoint("TOPLEFT", frame, "TOPLEFT", PAGE_X + (i - 1) * (TAB_W + TAB_GAP), -38)
 		Panel(tab, 0.08, 0.08, 0.09)
-		tab.label = tab:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+		tab.label = tab:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
 		tab.label:SetPoint("CENTER", tab, "CENTER", 0, 0)
 		tab.label:SetText(info.text)
 		local highlight = tab:CreateTexture(nil, "HIGHLIGHT")
@@ -1981,6 +2175,7 @@ local function BuildTabs()
 		ui.pages[info.key] = page
 	end
 	BuildModelsPage(ui.pages.models)
+	BuildFavouritesPage(ui.pages.favourites)
 	BuildRacesPage(ui.pages.races)
 	BuildCreatorPage(ui.pages.creator)
 	BuildItemsPage(ui.pages.items)

@@ -23,6 +23,7 @@ Pick any creature, race or item, see it on your character straight away, and sav
 - 🐉 **Every creature model in the client:** 16,000+ entries covering all 13,423 usable display IDs, including the **2,894 models OctoWoW added** (named after their Turtle WoW creatures where there is one).
 - 🖼️ **3D previews**, eight to a page, or a list that previews the row under your mouse. Filter **Bosses, Rare creatures, Mounts** or OctoWoW's new models, search by name or ID, sort **A-Z or by ID**.
 - 🐎 **Morph your mount** into any model, not just yourself.
+- ⭐ **Favourites:** right-click any model or mount to star it, then pick it from the Favourites tab every time you log in.
 - 🧝 **All 10 races**, male and female. Your own face, skin and hair carry over.
 - 🎭 **Character creator:** pick a race, then step through every skin colour, face, hair style, hair colour and facial hair the game's NPCs have (8,068 looks), or roll the dice.
 - ⚔️ **12,000+ weapons and armour pieces:** everything in 1.12 plus Turtle WoW's and OctoWoW's, from the Tower of Karazhan sets and the tier variants to the Warglaives of Azzinoth. Filter by quality (**Rare, Epic, Legendary** ...).
@@ -71,12 +72,13 @@ Not using OctoLauncher? Put `VanillaHelpers.dll` (v1.1.0+, [releases](https://gi
 | **Slots** around the model | Left-click: browse items for that slot. Right-click: back to your own gear. Morphed slots glow green. |
 | **Reset model** / **Reset everything** | Your own body back (items stay) / clear every morph, mount too. |
 | **Corner grip** (bottom right) | Drag to make the window bigger or smaller. It remembers the size. |
-| **Models** tab | Grid of previews (mouse wheel turns pages) or list view. Gold frame = the model you wear. |
+| **Models** tab | Grid of previews (mouse wheel turns pages) or list view. Gold frame = the model you wear. **Right-click** stars a model (with "Morph: mount", as a mount). |
 | Models: **filter** | All models · Creatures · Bosses · Rare creatures · Mounts · Other models (named after their model file, blue) · New in OctoWoW (green). |
 | Models: **Sort** / **Morph: you / mount** | List A-Z or by ID / whether a click morphs you or your mount. |
 | Models: **Display ID** | Type any ID and press Morph, or step through every ID with < and >. |
+| **Favourites** tab | Your starred models and mounts, shared by all your characters. Click to wear, right-click to unstar, hover for a 3D preview. Filter models / mounts, sort A-Z or ID. |
 | **Races** tab | Male and female portraits for all 10 races, with your own face, skin and hair. **Swap gender** flips the current one. |
-| **Creator** tab | Pick a race portrait, then < > through skin colour, face, hair style, hair colour, facial hair and outfit. The dice picks a random look. |
+| **Creator** tab | Pick a race portrait, then < > through skin colour, face, hair style, hair colour, facial hair and outfit. The dice picks a random look. **Favourite** stars the look. |
 | **Items** tab | Click the slot name for any slot. Items are coloured by quality; the filter picks all / 1.12 / new and a quality. **Item ID** + **Apply** takes any item. |
 | **Sets** tab | Every item set. Hover to see the pieces, click to wear them all. Same filters as Items. |
 | **Wardrobe** tab | Save, load and delete outfits (your mount morph included). Loading puts on the whole outfit. |
@@ -119,7 +121,7 @@ DMorph itself is a DLL for WotLK 3.3.5a and can't run on the 1.12 client. This a
 
 - `DmorphOcto.lua`: morph state, wardrobe, search, item lookup and chat commands. `UI.lua`: the window and minimap button.
 - `Data/Creatures.lua` and `Data/Items.lua`: the [cmangos classic-db](https://github.com/cmangos/classic-db) 1.12.1 database. `Data/Models.lua`, `ModelTags.lua` and `Looks.lua`: every other display ID in the client's own data, its boss / rare / mount tags, and the NPC looks per race. `Data/ItemsExtra.lua` and `ItemSets.lua`: Turtle WoW's and OctoWoW's items and the client's item sets.
-- Saved data: `WTF\Account\<account>\SavedVariables\DmorphOcto.lua` (outfits, window settings, looked-up items, minimap button) and each character's `SavedVariables\DmorphOcto.lua` (current look).
+- Saved data: `WTF\Account\<account>\SavedVariables\DmorphOcto.lua` (outfits, favourites, window settings, looked-up items, minimap button) and each character's `SavedVariables\DmorphOcto.lua` (current look).
 
 ## Development
 

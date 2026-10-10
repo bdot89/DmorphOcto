@@ -18,6 +18,7 @@ The live copy is the game's `Interface\AddOns\DmorphOcto` folder, a git checkout
 - `Data/Looks.lua`: per "race:gender" the CreatureDisplayInfoExtra looks "id,skin,face,hair,hairColour,facial,pieces;" deduped, fewest clothes first. The creator morphs into these NPC displays: no DLL here can write PLAYER_BYTES (checked VanillaHelpers, ClassicAPI, SuperWoW, nampower, UnitXP strings), and item morphs don't show on NPC displays.
 - `Data/ItemsExtra.lua` (tools/build_items.ps1): Turtle wearables from tools/data/turtle_items.tsv (ShellLab export) + the game's WDB itemcache, per slot, plus `DmorphOcto_ItemPending` (Atlas-CFM loot IDs and set pieces with unknown slot). OctoWoW has items beyond Turtle (e.g. 33000+ "Prophecy" tier variants, Atlas-CFM's "Vanilla Plus" ranges). The core looks pending IDs up after login (GetItemInfo, or ClassicAPI C_Item.RequestLoadItemDataByID + ITEM_DATA_LOAD_RESULT), 4 in flight, saved in DmorphOctoAccount.itemInfo.
 - `Data/ItemSets.lua`: the client's ItemSet.dbc (patch-4), 352 sets with visible pieces.
+- Favourites (1.4.0): DmorphOctoAccount.favourites = { { id = displayID, mount = true|nil } }, sanitized in InitDB. Right-click a tile or models-list row toggles one for the current "Morph: you/mount" target; the Favourites tab wears (SetDisplay / SetMount) or unstars them.
 - Item data strings are kept after parsing (catalogs are rebuilt when looked-up items arrive); creature data strings are dropped.
 
 ## Previews (ClassicAPI)
