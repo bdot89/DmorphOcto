@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "1.4.0"
+local VERSION = "1.5.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 local MISSING_API = "VanillaHelpers v1.1.0 or newer is not loaded, so morphing is unavailable. "
 	.. "Enable the 'vanillaHelpers' mod in OctoLauncher (or add VanillaHelpers.dll to dlls.txt) "
@@ -459,6 +459,77 @@ function M.FindLook(race, gender, f, value, from)
 	return best
 end
 
+-- Feature f (1-5) of look `from` one value along, in direction step. NPC looks
+-- are fixed combinations, so the next value is the next one some look has
+-- while keeping as many of the other four features as any look can (all four
+-- whenever an NPC has that combination); the clothes stay as close as they can.
+-- Returns the new look's position and the features that changed besides f.
+function M.StepLook(race, gender, f, from, step)
+	local list = M.GetLooks(race, gender)
+	local cur = list[from]
+	if not cur then
+		return nil
+	end
+	local best, maxKept = {}, -1
+	for k = 1, table.getn(list) do
+		local look = list[k]
+		local v = look[f + 1]
+		if v ~= cur[f + 1] then
+			local kept = 0
+			for g = 1, 5 do
+				if g ~= f and look[g + 1] == cur[g + 1] then
+					kept = kept + 1
+				end
+			end
+			local b = best[v]
+			local gap = math.abs(look[7] - cur[7])
+			if not b or kept > b.kept or (kept == b.kept and gap < b.gap) then
+				best[v] = { k = k, kept = kept, gap = gap }
+			end
+			if kept > maxKept then
+				maxKept = kept
+			end
+		end
+	end
+	local values = {}
+	for v, b in pairs(best) do
+		if b.kept == maxKept then
+			table.insert(values, v)
+		end
+	end
+	local n = table.getn(values)
+	if n == 0 then
+		return nil
+	end
+	table.sort(values)
+	local target
+	if step > 0 then
+		target = values[1]
+		for i = 1, n do
+			if values[i] > cur[f + 1] then
+				target = values[i]
+				break
+			end
+		end
+	else
+		target = values[n]
+		for i = n, 1, -1 do
+			if values[i] < cur[f + 1] then
+				target = values[i]
+				break
+			end
+		end
+	end
+	local k = best[target].k
+	local changed = {}
+	for g = 1, 5 do
+		if g ~= f and list[k][g + 1] ~= cur[g + 1] then
+			table.insert(changed, g)
+		end
+	end
+	return k, changed
+end
+
 -- The positions of the looks with the same face, skin and hair as look
 -- `from`: its outfits, the fewest clothes first.
 function M.GetLookOutfits(race, gender, from)
@@ -749,6 +820,25 @@ function InitDB()
 		DmorphOctoDB = {}
 	end
 	db = SanitizeOutfit(DmorphOctoDB)
+	-- Mount skins per mount (own display -> skin) and the mounts ridden.
+	if type(db.mountSkins) ~= "table" then
+		db.mountSkins = {}
+	end
+	for real, skin in pairs(db.mountSkins) do
+		if type(real) ~= "number" or not ParseID(skin) or ParseID(skin) == 0 then
+			db.mountSkins[real] = nil
+		end
+	end
+	local ridden = {}
+	if type(db.ridden) == "table" then
+		for i = 1, table.getn(db.ridden) do
+			local id = ParseID(db.ridden[i])
+			if id and id > 0 then
+				table.insert(ridden, id)
+			end
+		end
+	end
+	db.ridden = ridden
 	if type(DmorphOctoAccount) ~= "table" then
 		DmorphOctoAccount = {}
 	end
@@ -850,6 +940,10 @@ local function EnsureSession()
 	if db.display or db.race then
 		Morph(SetUnitDisplayID, "player", nil)
 	end
+	-- The mount skin is put back on by the mount watcher once you ride.
+	if type(SetUnitMountDisplayID) == "function" and (db.mount or next(db.mountSkins)) then
+		Morph(SetUnitMountDisplayID, "player", nil)
+	end
 	CaptureNative()
 	sessionReady = true
 end
@@ -888,11 +982,136 @@ local function HasMountAPI()
 end
 M.HasMountAPI = HasMountAPI
 
-local function ApplyMount()
-	if not HasMountAPI() then
-		return true
+-- Mount skins -----------------------------------------------------------------
+
+-- A skin is a display ID your mount shows instead of its own: db.mount for all
+-- your mounts, db.mountSkins[real display] for one of them. VanillaHelpers'
+-- mount override holds the model whatever the server says, so it would keep
+-- you on a mount after you dismount. So the skin is only put on while you
+-- ride: when the mount field turns non-zero you mounted, and the buff that
+-- came with it is the mount's; when that buff goes, you dismounted and the
+-- override comes off, which lets the game's own mount and dismount through.
+local watch = {}
+
+local function BuffTextures()
+	local set, any = {}, false
+	for i = 1, 32 do
+		local ok, texture = pcall(UnitBuff, "player", i)
+		if not (ok and texture) then
+			break
+		end
+		set[texture], any = true, true
 	end
-	return Morph(SetUnitMountDisplayID, "player", db.mount)
+	return set, any
+end
+
+local function SkinFor(real)
+	return db.mountSkins[real] or db.mount
+end
+
+local function StopSkin()
+	if watch.active then
+		watch.active, watch.skin = nil, nil
+		Morph(SetUnitMountDisplayID, "player", nil)
+	end
+end
+
+local function RememberRidden(real)
+	for i = 1, table.getn(db.ridden) do
+		if db.ridden[i] == real then
+			return
+		end
+	end
+	table.insert(db.ridden, real)
+	if table.getn(db.ridden) > 20 then
+		table.remove(db.ridden, 1)
+	end
+end
+
+-- Runs every tenth of a second.
+local function WatchMount()
+	if not (sessionReady and HasMountAPI()) then
+		return
+	end
+	if watch.active then
+		local buffs = BuffTextures()
+		for texture in pairs(watch.candidates) do
+			if not buffs[texture] then
+				-- The mount's buff is gone: you dismounted.
+				StopSkin()
+				watch.last, watch.real = buffs, nil
+				Notify()
+				return
+			end
+		end
+		local skin = SkinFor(watch.real)
+		if not skin then
+			StopSkin()
+		elseif skin ~= watch.skin then
+			watch.skin = skin
+			Morph(SetUnitMountDisplayID, "player", skin)
+		end
+		return
+	end
+	local ok, _, _, field = pcall(UnitDisplayInfo, "player")
+	if not ok then
+		return
+	end
+	if field and field > 0 then
+		if watch.real ~= field then
+			watch.real = field
+			RememberRidden(field)
+			Notify()
+		end
+		local skin = SkinFor(field)
+		if skin and skin ~= field then
+			local buffs, any = BuffTextures()
+			local candidates, found = {}, false
+			for texture in pairs(buffs) do
+				if not (watch.last and watch.last[texture]) then
+					candidates[texture], found = true, true
+				end
+			end
+			if not found then
+				candidates = buffs -- mounted before we could look: any buff going counts
+			end
+			if any then
+				watch.candidates, watch.skin, watch.active = candidates, skin, true
+				Morph(SetUnitMountDisplayID, "player", skin)
+			end
+		end
+	else
+		if watch.real then
+			watch.real = nil
+			Notify()
+		end
+		if db.mount or next(db.mountSkins) then
+			watch.last = BuffTextures()
+		end
+	end
+end
+
+-- Whether you ride, the display ID of your own mount, and the skin it shows.
+function M.GetMountState()
+	InitDB()
+	if watch.real then
+		return true, watch.real, watch.skin
+	end
+	return false
+end
+
+-- The mounts you've ridden on this character (their own display IDs).
+function M.GetRiddenMounts()
+	InitDB()
+	return db.ridden
+end
+
+function M.GetMountSkin(real)
+	InitDB()
+	if real then
+		return db.mountSkins[real]
+	end
+	return db.mount
 end
 
 local function ApplySaved()
@@ -901,9 +1120,6 @@ local function ApplySaved()
 	end
 	if BodyDisplayID() then
 		ApplyBody()
-	end
-	if db.mount then
-		ApplyMount()
 	end
 	for slot in pairs(db.items) do
 		ApplyItem(slot)
@@ -937,10 +1153,8 @@ function M.ResetAll()
 	end
 	db.display, db.race, db.gender = nil, nil, 0
 	local ok, err = ApplyBody()
-	if db.mount then
-		db.mount = nil
-		ApplyMount()
-	end
+	db.mount, db.mountSkins = nil, {}
+	StopSkin()
 	for i = 1, table.getn(SLOT_ORDER) do
 		local slot = SLOT_ORDER[i]
 		db.items[slot] = nil
@@ -1032,9 +1246,10 @@ function M.SetItem(slot, itemID)
 	return Result(ok, err, SLOT_NAMES[slot] .. " reset.")
 end
 
--- Morphs your mount (any creature model) the next time and every time you
--- ride. displayID 0 puts your own mount back.
-function M.SetMount(displayID)
+-- Gives your mount a skin: any creature model, shown whenever you ride. real
+-- (a display ID from GetRiddenMounts) sets it for that mount only, else for
+-- all your mounts. displayID 0 takes the skin off.
+function M.SetMountSkin(displayID, real)
 	if not Begin() then
 		return false, MISSING_API
 	end
@@ -1048,12 +1263,28 @@ function M.SetMount(displayID)
 	if displayID == 0 then
 		displayID = nil
 	end
-	db.mount = displayID
-	local ok, err = ApplyMount()
-	if displayID then
-		return Result(ok, err, "Your mount looks like " .. M.DescribeDisplay(displayID) .. ".")
+	local target = "all your mounts"
+	if real then
+		db.mountSkins[real] = displayID
+		target = M.DescribeDisplay(real)
+	else
+		db.mount = displayID
 	end
-	return Result(ok, err, "Mount reset.")
+	WatchMount()
+	Notify()
+	if not displayID then
+		return true, "Skin for " .. target .. " removed."
+	end
+	local when = " It shows when you mount."
+	if watch.active then
+		when = ""
+	end
+	return true, "Skin for " .. target .. ": " .. M.DescribeDisplay(displayID) .. "." .. when
+end
+
+-- The skin for all your mounts (.mount, favourites).
+function M.SetMount(displayID)
+	return M.SetMountSkin(displayID)
 end
 
 -- Puts on every piece of set `index` (its position in GetSetCatalog) whose
@@ -1220,10 +1451,7 @@ function M.LoadOutfit(name)
 			ok, err = slotOK, slotErr
 		end
 	end
-	if outfit.mount or db.mount then
-		db.mount = outfit.mount
-		ApplyMount()
-	end
+	db.mount = outfit.mount
 	return Result(ok, err, "Loaded outfit \"" .. name .. "\".")
 end
 
@@ -1285,7 +1513,10 @@ local function ShowStatus()
 		Print("Items: " .. strsub(list, 3) .. ".")
 	end
 	if db.mount then
-		Print("Mount: " .. M.DescribeDisplay(db.mount) .. ".")
+		Print("Mount skin: " .. M.DescribeDisplay(db.mount) .. ".")
+	end
+	for real, skin in pairs(db.mountSkins) do
+		Print("Skin for " .. M.DescribeDisplay(real) .. ": " .. M.DescribeDisplay(skin) .. ".")
 	end
 end
 
@@ -1495,4 +1726,14 @@ loginFrame:SetScript("OnEvent", function()
 	end
 	lookupFrame.elapsed = -15 -- let the login settle first
 	lookupFrame:Show()
+end)
+
+-- The mount watcher: puts the mount skin on while you ride (see Mount skins).
+local mountFrame = CreateFrame("Frame")
+mountFrame:SetScript("OnUpdate", function()
+	this.wait = (this.wait or 0) - arg1
+	if this.wait <= 0 then
+		this.wait = 0.1
+		WatchMount()
+	end
 end)

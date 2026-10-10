@@ -19,6 +19,8 @@ The live copy is the game's `Interface\AddOns\DmorphOcto` folder, a git checkout
 - `Data/ItemsExtra.lua` (tools/build_items.ps1): Turtle wearables from tools/data/turtle_items.tsv (ShellLab export) + the game's WDB itemcache, per slot, plus `DmorphOcto_ItemPending` (Atlas-CFM loot IDs and set pieces with unknown slot). OctoWoW has items beyond Turtle (e.g. 33000+ "Prophecy" tier variants, Atlas-CFM's "Vanilla Plus" ranges). The core looks pending IDs up after login (GetItemInfo, or ClassicAPI C_Item.RequestLoadItemDataByID + ITEM_DATA_LOAD_RESULT), 4 in flight, saved in DmorphOctoAccount.itemInfo.
 - `Data/ItemSets.lua`: the client's ItemSet.dbc (patch-4), 352 sets with visible pieces.
 - Favourites (1.4.0): DmorphOctoAccount.favourites = { { id = displayID, mount = true|nil } }, sanitized in InitDB. Right-click a tile or models-list row toggles one for the current "Morph: you/mount" target; the Favourites tab wears (SetDisplay / SetMount) or unstars them.
+- 1.5.0, from the user's in-game report: SetUnitMountDisplayID held the mount model even on foot (the override rewrites the server's 0 on dismount), so mount skins are now applied by WatchMount only while riding: mount field > 0 without override = mounted (that moment's new buff textures = the mount buff), buff gone = dismounted, override cleared. db.mount = skin for all mounts, db.mountSkins[real] per mount, db.ridden. ClassicAPI IsMounted() reads the same field, so it can't see dismounts.
+- Races + Creator are one tab; < > uses M.StepLook (next value reachable with the most other features kept). The user had reported that every click changed all numbers.
 - Item data strings are kept after parsing (catalogs are rebuilt when looked-up items arrive); creature data strings are dropped.
 
 ## Previews (ClassicAPI)
@@ -49,6 +51,6 @@ The live copy is the game's `Interface\AddOns\DmorphOcto` folder, a git checkout
 
 ## Not verified in game yet (1.3.0)
 
-- Whether the gate stops the texture mix-ups; the grid tiles' portrait framing; SetUnitMountDisplayID on this server.
+- Whether the gate stops the texture mix-ups; the grid tiles' portrait framing; mount buff detection (UnitBuff textures) and that clearing the override dismounts you visually.
 - The new tabs' layout (6 tabs of 74 px), the drop-down menu, the resize grip (SetScale keeping the top-left corner).
 - RegisterEvent("ITEM_DATA_LOAD_RESULT") and the server's answers for unknown item IDs (pcall'd; timeouts retry next session).

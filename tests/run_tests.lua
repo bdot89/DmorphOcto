@@ -72,6 +72,8 @@ local function installMorphAPI()
 		end
 	end
 
+	-- The mount field: what the server says (vh.serverMount, 0 = on foot),
+	-- unless the override holds a model in place whatever the server says.
 	function SetUnitMountDisplayID(unit, displayID)
 		if type(unit) ~= "string" then
 			error("Usage: SetUnitMountDisplayID(unitToken [, mountDisplayID])")
@@ -81,7 +83,7 @@ local function installMorphAPI()
 	end
 
 	function UnitDisplayInfo(unit)
-		return vh.display, vh.native, 0
+		return vh.display, vh.native, vh.mount or vh.serverMount or 0
 	end
 
 	VANILLAHELPERS_VERSION = 10102
@@ -247,22 +249,50 @@ check(contains(lastChat(), "no outfit"), "loading a missing outfit says so")
 DmorphOcto_ResetAll()
 
 
--- Mounts from chat.
+-- Mount skins from chat: shown only while you ride, so mounting and
+-- dismounting work as usual.
+local function mountUp(display)
+	vh.serverMount = display
+	Mock.buffs = { "Interface\\Icons\\Spell_Holy_WordFortitude", "Interface\\Icons\\Ability_Mount_Undeadhorse" }
+	Mock.Tick(0.15)
+end
+local function dismount()
+	vh.serverMount = 0
+	Mock.buffs = { "Interface\\Icons\\Spell_Holy_WordFortitude" }
+	Mock.Tick(0.15)
+end
+Mock.buffs = { "Interface\\Icons\\Spell_Holy_WordFortitude" }
+Mock.Tick(0.15)
 say(".mount 14334")
-check(vh.mount == 14334 and DmorphOctoDB.mount == 14334, ".mount morphs your mount")
+check(DmorphOctoDB.mount == 14334 and vh.mount == nil, ".mount sets a skin but doesn't put you on a mount")
+check(contains(lastChat(), "shows when you mount"), "it says the skin shows when you mount")
+mountUp(10671)
+check(vh.mount == 14334, "mounting shows the skin")
+dismount()
+check(vh.mount == nil, "dismounting takes the skin off, so you're on foot")
+mountUp(10671)
+check(vh.mount == 14334, "and mounting again puts it back")
+check(DmorphOctoDB.ridden[1] == 10671, "the mounts you ride are remembered")
+DmorphOcto.SetMountSkin(15677, 10671)
+Mock.Tick(0.15)
+check(vh.mount == 15677, "a skin for one mount beats the skin for all mounts")
+dismount()
+mountUp(14348)
+check(vh.mount == 14334, "other mounts keep the skin for all mounts")
 say(".outfit save Rider")
 DmorphOcto_ResetAll()
-check(vh.mount == nil and DmorphOctoDB.mount == nil, "reset-all puts your own mount back")
+Mock.Tick(0.15)
+check(vh.mount == nil and DmorphOctoDB.mount == nil and next(DmorphOctoDB.mountSkins) == nil,
+	"reset-all takes every skin off")
 say(".outfit rider")
-check(vh.mount == 14334, "outfits keep the mount")
-vh.mount = nil
-Mock.Fire("PLAYER_ENTERING_WORLD")
-Mock.Tick(0.6)
-check(vh.mount == 14334, "the mount morph comes back after a loading screen")
+Mock.Tick(0.15)
+check(vh.mount == 14334, "outfits keep the skin")
+dismount()
 say(".mount 0")
-check(vh.mount == nil and DmorphOctoDB.mount == nil, ".mount 0 resets the mount")
+check(DmorphOctoDB.mount == nil, ".mount 0 removes the skin")
 say(".outfit delete rider")
 DmorphOcto_ResetAll()
+vh.serverMount = 0
 
 ------------------------------------------------------------------------------
 -- Catalogue
@@ -499,7 +529,7 @@ Mock.Tick(0.4)
 check(vh.display == DmorphOctoTile3.displayID, "then only the latest click is applied")
 Mock.Tick(0.4)
 
--- Categories, sorting, and your mount.
+-- Categories and sorting.
 Mock.Click(DmorphOctoModelFilter)
 check(DmorphOctoMenu:IsVisible(), "the filter button opens a menu")
 pickMenu("Bosses")
@@ -512,14 +542,6 @@ check(contains(catalog.tags[DmorphOctoTile1.entry], "mount") and DmorphOctoAccou
 Mock.Click(DmorphOctoModelSort)
 check(DmorphOctoModelSort.text == "Sort: ID" and DmorphOctoTile1.displayID <= DmorphOctoTile2.displayID,
 	"the sort button lists by ID")
-local worn = vh.display
-Mock.Click(DmorphOctoModelTarget)
-check(DmorphOctoModelTarget.text == "Morph: mount", "the switch makes clicks morph your mount")
-press(DmorphOctoTile1)
-check(vh.mount == DmorphOctoTile1.displayID and vh.display == worn,
-	"clicking a model with the switch on morphs only your mount")
-check(DmorphOctoTile1.border[2] == 0.82, "the mount you ride has the gold frame")
-Mock.Click(DmorphOctoModelTarget)
 Mock.Click(DmorphOctoModelSort)
 Mock.Click(DmorphOctoModelFilter)
 pickMenu("New in OctoWoW")
@@ -528,7 +550,44 @@ Mock.Click(DmorphOctoModelFilter)
 pickMenu("All models")
 check(DmorphOctoModelFilter.text == "All models", "back to all models")
 
--- Favourites: right-click stars a model (or, with the Mount switch, a mount).
+-- Mounts tab: skins for your mount.
+Mock.Click(DmorphOctoTabMounts)
+check(DmorphOctoMountListRow1:IsVisible()
+	and contains(catalog.tags[catalog.byID[tonumber(DmorphOctoMountListRow1.info.text)]] or "", "mount"),
+	"the mounts tab lists mount models")
+check(contains(DmorphOctoMountState.text, "Not mounted"), "it says whether you ride")
+local skin = tonumber(DmorphOctoMountListRow1.info.text)
+press(DmorphOctoMountListRow1)
+check(DmorphOctoDB.mount == skin and vh.mount == nil, "clicking a model makes it the skin for all your mounts")
+vh.serverMount = 10671
+Mock.buffs = { "Interface\\Icons\\Ability_Mount_Undeadhorse" }
+Mock.Tick(0.15)
+check(vh.mount == skin and contains(DmorphOctoMountState.text, "Riding"), "riding shows the skin, and the tab says so")
+local ownName = DmorphOcto.GetDisplayName(10671) or "Mount 10671"
+Mock.Click(DmorphOctoMountFor)
+pickMenu(ownName)
+check(DmorphOctoMountFor.text == ownName, "the mount you ride can get its own skin")
+press(DmorphOctoMountListRow2)
+check(DmorphOctoDB.mountSkins[10671] == tonumber(DmorphOctoMountListRow2.info.text)
+	and vh.mount == DmorphOctoDB.mountSkins[10671], "its own skin shows at once")
+Mock.Click(DmorphOctoMountListRow3, "RightButton")
+check(DmorphOcto.IsFavourite(tonumber(DmorphOctoMountListRow3.info.text), true) and DmorphOctoMountListRow3.star.shown,
+	"right-clicking a mount model stars it as a mount")
+Mock.Click(DmorphOctoMountListRow3, "RightButton")
+check(not DmorphOctoMountListRow3.star.shown, "a second right-click takes the star off")
+press(Mock.FindButton("Remove skin"))
+check(DmorphOctoDB.mountSkins[10671] == nil and vh.mount == skin, "removing its own skin goes back to the skin for all")
+vh.serverMount = 0
+Mock.buffs = {}
+Mock.Tick(0.15)
+check(vh.mount == nil, "dismounting takes the skin off")
+Mock.Click(DmorphOctoMountFor)
+pickMenu("All my mounts")
+press(Mock.FindButton("Remove skin"))
+check(DmorphOctoDB.mount == nil, "the skin for all mounts can be removed too")
+Mock.Click(DmorphOctoTabModels)
+
+-- Favourites: right-click stars a model.
 Mock.Type(modelSearch, "thrall")
 Mock.Click(DmorphOctoTile1, "RightButton")
 check(DmorphOcto.IsFavourite(4527) and DmorphOctoTile1.star.shown and contains(DmorphOctoFrameStatus.text, "favourite models"),
@@ -536,11 +595,8 @@ check(DmorphOcto.IsFavourite(4527) and DmorphOctoTile1.star.shown and contains(D
 Mock.RunScript(DmorphOctoTile1, "OnEnter")
 check(contains(table.concat(GameTooltip.lines, "\n"), "Right-click to take it off"), "the tooltip says a right-click unstars it")
 Mock.RunScript(DmorphOctoTile1, "OnLeave")
-Mock.Click(DmorphOctoModelTarget)
-check(not DmorphOctoTile1.star.shown, "with the Mount switch, the stars show favourite mounts")
-Mock.Click(DmorphOctoTile1, "RightButton")
-check(DmorphOcto.IsFavourite(4527, true) and DmorphOctoTile1.star.shown, "and a right-click stars it as a mount")
-Mock.Click(DmorphOctoModelTarget)
+DmorphOcto.ToggleFavourite(4527, true)
+check(DmorphOcto.IsFavourite(4527, true) and DmorphOcto.IsFavourite(4527), "a model and a mount can both be starred")
 Mock.Type(modelSearch, "ragnaros")
 Mock.Click(DmorphOctoTile1, "RightButton")
 Mock.Click(DmorphOctoTile1, "RightButton")
@@ -555,7 +611,7 @@ Mock.Click(DmorphOctoFavFilter)
 pickMenu("Mounts")
 check(DmorphOctoFavCount.text == "1 favourite" and DmorphOctoFavListRow1.info.text == "Mount 4527", "the filter shows only mounts")
 press(DmorphOctoFavListRow1)
-check(vh.mount == 4527, "clicking a favourite mount morphs your mount")
+check(DmorphOctoDB.mount == 4527, "clicking a favourite mount makes it your mount skin")
 Mock.Click(DmorphOctoFavFilter)
 pickMenu("Models")
 press(DmorphOctoFavListRow1)
@@ -599,47 +655,56 @@ Mock.Click(DmorphOctoModelView)
 check(DmorphOctoModelGrid:IsVisible() and DmorphOctoTile1Model.displayInfo == catalog.ids[9],
 	"the grid opens on the page the list was showing")
 
--- Races tab.
+-- Races tab: portraits for your own face, < > for the game's NPC looks.
 Mock.Click(DmorphOctoTabRaces)
 check(not DmorphOctoModelGrid:IsVisible(), "switching tabs hides the models")
 check(DmorphOctoTabRaces.label.color[2] == 0.82, "the open tab is lit")
 press(DmorphOctoRace4Female)
-check(vh.display == 56, "the races tab morphs into Night Elf female")
+check(vh.display == 56, "a portrait morphs into that race (Night Elf female)")
 check(DmorphOctoRace4Female.ring.shown and not DmorphOctoRace4Male.ring.shown, "the race you wear is ringed")
 check(DmorphOctoRace1Male.ring.shown == false, "other races aren't")
+check(DmorphOctoCreatorValue1.text == "yours" and contains(DmorphOctoCreatorTitle.text, "your own face"),
+	"with a portrait you keep your own face, skin and hair")
 Mock.Tick(0.15)
 check(DmorphOctoArt1.texture == "Interface\\DressUpFrame\\DressUpBackground-NightElf1", "the room follows the race")
 press(Mock.FindButton("Swap gender"))
 check(vh.display == 55, "swap gender works from the window")
 
--- Character creator: pick a race, then step through faces, skin and hair.
-Mock.Click(DmorphOctoTabCreator)
 local trollLooks = DmorphOcto.GetLooks(8, 0)
-press(DmorphOctoCreator8Male)
-check(vh.display == trollLooks[1][1] and DmorphOctoCreator8Male.ring.shown, "picking a race wears its plainest look")
-check(contains(DmorphOctoCreatorTitle.text, "Troll male") and contains(DmorphOctoCreatorValue1.text, " / "),
-	"the creator shows the race and each choice")
-local hairValues = DmorphOcto.GetLookValues(8, 0, 3)
-local before = vh.display
+press(DmorphOctoRace8Male)
 press(DmorphOctoCreatorNext3)
-local now
-for i = 1, table.getn(trollLooks) do
-	if trollLooks[i][1] == vh.display then
-		now = trollLooks[i]
+check(vh.display == trollLooks[1][1] and contains(DmorphOctoCreatorTitle.text, "NPC look 1 of"),
+	"the first < > starts at the race's plainest NPC look")
+local function lookOf(display)
+	for i = 1, table.getn(trollLooks) do
+		if trollLooks[i][1] == display then
+			return trollLooks[i]
+		end
 	end
 end
-check(vh.display ~= before and now and now[4] ~= trollLooks[1][4] and contains(DmorphOctoCreatorValue3.text, "/ " .. table.getn(hairValues)),
-	"the next hair style wears a look with another hair style")
+local kept = true
+for n = 1, 6 do
+	local before = lookOf(vh.display)
+	press(DmorphOctoCreatorNext3)
+	local now = lookOf(vh.display)
+	local same = 0
+	for g = 2, 6 do
+		if g ~= 4 and now[g] == before[g] then
+			same = same + 1
+		end
+	end
+	if now[4] == before[4] or same < 3 then
+		kept = false
+	end
+end
+check(kept, "each hair style click changes the hair style and keeps the other features (at most one more changes)")
+check(contains(DmorphOctoFrameStatus.text, "Hair style changed"), "the status line says what changed")
 press(DmorphOctoCreatorRandom)
-local isTroll = false
-for i = 1, table.getn(trollLooks) do
-	if trollLooks[i][1] == vh.display then
-		isTroll = true
-	end
-end
-check(isTroll and contains(DmorphOctoCreatorLook.text, "Look "), "the dice rolls a random look of that race")
+check(lookOf(vh.display) ~= nil, "the dice rolls a random look of that race")
 press(DmorphOctoCreatorFavourite)
-check(DmorphOcto.IsFavourite(vh.display), "the creator can star the look you wear")
+check(DmorphOcto.IsFavourite(vh.display), "the NPC look you wear can be starred")
+press(DmorphOctoOwnLook)
+check(vh.display == 1478, "My own look goes back to the race with your own face")
 
 -- Items: click the head slot next to the model, search and pick.
 press(DmorphOctoSlot1)

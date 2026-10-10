@@ -334,6 +334,7 @@ function Mock.ResetUI()
 	function GetCursorPosition() return Mock.cursorX or 0, Mock.cursorY or 0 end
 	function UnitRace() return "Human", "Human" end
 	function UnitName() return "Tester" end
+	function UnitBuff(unit, index) return Mock.buffs and Mock.buffs[index] end
 	function UnitSex() return 2 end
 	function GetInventoryItemTexture(unit, slot)
 		if slot == 5 then
