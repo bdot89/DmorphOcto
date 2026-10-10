@@ -99,6 +99,14 @@ local function Commas(n)
 	return text .. out
 end
 
+-- 1 -> "1 item", 1234 -> "1,234 items"
+local function Count(n, word)
+	if n == 1 then
+		return "1 " .. word
+	end
+	return Commas(n) .. " " .. word .. "s"
+end
+
 -- Window settings shared by all characters: list or grid, model filter.
 local function Prefs()
 	local account = M.GetAccount()
@@ -471,7 +479,7 @@ local function PageCount()
 end
 
 local function UpdatePager()
-	local total = Commas(ui.modelTotal or 0) .. " models"
+	local total = Count(ui.modelTotal or 0, "model")
 	if ui.listMode then
 		ui.pagerText:SetText(total)
 		ui.prevPage:Hide()
@@ -946,7 +954,11 @@ local function FilterItems()
 	local count
 	ui.itemResult, count = M.FilterCatalog(M.GetItemCatalog(itemSlot), ui.itemSearch:GetText())
 	ui.itemSlotLabel:SetText(M.SLOT_NAMES[itemSlot])
-	ui.itemCount:SetText(Commas(count) .. " items")
+	local note = Count(count, "item")
+	if itemSlot >= 16 and itemSlot <= 18 then
+		note = note .. ", NPC weapons included"
+	end
+	ui.itemCount:SetText(note)
 	local _, empty = GetInventorySlotInfo(SLOT_KEYS[itemSlot])
 	ui.itemSlotIcon:SetTexture(empty)
 	ui.itemList.SetCount(count)
@@ -975,7 +987,7 @@ local function BuildItemsPage(page)
 	ui.itemSlotIcon:SetHeight(26)
 	ui.itemSlotIcon:SetPoint("TOPLEFT", page, "TOPLEFT", 8, -6)
 	ui.itemSlotLabel = Label(page, "", "GameFontNormal", 40, -8, "DmorphOctoItemSlotLabel")
-	ui.itemCount = Label(page, "", "GameFontDisableSmall", 40, -22)
+	ui.itemCount = Label(page, "", "GameFontDisableSmall", 40, -22, "DmorphOctoItemCount")
 	Button(page, "<", 26, PAGE_W - 64, -8, function()
 		CycleSlot(-1)
 	end)
@@ -1020,7 +1032,6 @@ local function BuildItemsPage(page)
 		ui.itemBox:SetText("")
 		SetStatus(M.SetItem(itemSlot, 0))
 	end)
-	Label(page, "Weapon slots list NPC weapons too.", "GameFontDisableSmall", 10, -370)
 end
 
 -- Wardrobe tab ------------------------------------------------------------------------
