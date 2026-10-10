@@ -1030,9 +1030,9 @@ local function morphOf(guid)
 	return vh.others[guid] or { items = {} }
 end
 
-wait(4)
+wait(2)
 check(Mock.channels.dmorphocto == nil, "the channel is joined once the login has settled")
-wait(22)
+wait(10)
 check(Mock.channels.dmorphocto == 6, "DMorph joins its own channel")
 check(ChatFrame1.channelList[2] == nil and ChatFrame1.channelList[1] == "General",
 	"and keeps it out of the chat windows")
@@ -1096,6 +1096,32 @@ hear("Other", "Q Tester")
 wait(4)
 sent, count = channelSays("DMO1 L 4527 0 1:2955")
 check(sent and count == 1, "a question about you is answered once")
+
+-- A player who leaves your sight is built afresh without their look when
+-- they come back: it goes straight back on.
+Mock.Fire("CHAT_MSG_ADDON", "DMO1", "L 4527 0 1:2955 -", "PARTY", "Pal")
+check(morphOf(pal).display == 4527, "a party member's model shows")
+Mock.units.party1.far = true
+wait(0.5)
+vh.others[pal] = nil -- the game drops their model while they're away
+Mock.units.party1.far = nil
+wait(0.3)
+check(morphOf(pal).display == 4527 and morphOf(pal).items[1] == 2955,
+	"back in sight, their look is on again within a fifth of a second")
+
+-- Your mount skin goes out the moment it goes on, and when it comes off.
+say(".mount 4527")
+Mock.channelSent = {}
+vh.serverMount = 10671
+Mock.buffs = { "Interface\\Icons\\Ability_Mount_Undeadhorse" }
+wait(0.3)
+check(channelSays("DMO1 L 4527 4527 1:2955"), "mounting sends your mount skin at once")
+Mock.channelSent = {}
+vh.serverMount = 0
+Mock.buffs = {}
+wait(0.3)
+check(channelSays("DMO1 L 4527 0 1:2955"), "and dismounting sends that it's off")
+say(".mount 0")
 
 -- SuperWoW: GUIDs work as unit tokens, so players need no target or mouseover.
 Mock.superWoW, Mock.playerGUID = true, "0x0000000000000042"

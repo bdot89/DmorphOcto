@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "1.7.0"
+local VERSION = "1.7.1"
 local PREFIX = "|cff33ff99DMorph|r: "
 local MISSING_API = "VanillaHelpers v1.1.0 or newer is not loaded, so morphing is unavailable. "
 	.. "Enable the 'vanillaHelpers' mod in OctoLauncher (or add VanillaHelpers.dll to dlls.txt) "
@@ -1037,12 +1037,16 @@ local function WatchMount()
 				return
 			end
 		end
+		-- Each change tells the listeners (the window, and Share.lua so other
+		-- DMorph users see the skin come and go).
 		local skin = SkinFor(watch.real)
 		if not skin then
 			StopSkin()
+			Notify()
 		elseif skin ~= watch.skin then
 			watch.skin = skin
 			Morph(SetUnitMountDisplayID, "player", skin)
+			Notify()
 		end
 		return
 	end
@@ -1071,6 +1075,7 @@ local function WatchMount()
 			if any then
 				watch.candidates, watch.skin, watch.active = candidates, skin, true
 				Morph(SetUnitMountDisplayID, "player", skin)
+				Notify()
 			end
 		end
 	else

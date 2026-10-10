@@ -376,6 +376,11 @@ function Mock.ResetUI()
 		end
 	end
 	function UnitIsPlayer(unit) return unit == "player" or Mock.Unit(unit) ~= nil end
+	-- A group member out of sight has a token but no model (u.far).
+	function UnitIsVisible(unit)
+		local u = Mock.Unit(unit)
+		return u and not u.far and 1 or nil
+	end
 	function UnitCanAssist(unit, other)
 		local u = Mock.Unit(other)
 		return u and u.friendly and 1 or nil
