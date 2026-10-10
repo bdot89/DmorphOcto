@@ -21,10 +21,13 @@ This project brings DMorph's commands to OctoWoW as a normal 1.12 addon instead.
 
 ## Install
 
-1. Put this repository in `Interface\AddOns\DmorphOcto\` inside your OctoWoW folder, so that `Interface\AddOns\DmorphOcto\DmorphOcto.toc` exists.
-   - With git: `git clone https://github.com/bdot89/DmorphOcto.git Interface/AddOns/DmorphOcto`
-   - From a GitHub ZIP, rename the extracted folder (for example `DmorphOcto-main`) to `DmorphOcto`. 1.12 only loads an addon whose folder name matches its `.toc`.
-2. Start the game and log in. Type `/dmorph status`. It should say `VanillaHelpers v1.x.x is loaded`.
+1. Close the game.
+2. Put the addon in `Interface\AddOns\DmorphOcto\` inside your OctoWoW folder, so that `Interface\AddOns\DmorphOcto\DmorphOcto.toc` exists. Pick one:
+   - **Package ZIP** (`DmorphOcto-1.0.0.zip`): extract it into `Interface\AddOns\`. It already contains the `DmorphOcto` folder.
+   - **GitHub ZIP** (*Code > Download ZIP*): extract it, then rename the folder (for example `DmorphOcto-main`) to `DmorphOcto`. 1.12 only loads an addon whose folder name matches its `.toc`.
+   - **git**: `git clone https://github.com/bdot89/DmorphOcto.git Interface/AddOns/DmorphOcto`
+3. Start the game. On the character screen, open *AddOns* and check that **DMorph (OctoWoW)** is enabled.
+4. Log in and type `/dmorph status`. It should say `VanillaHelpers v1.x.x is loaded`.
 
 ## Commands
 

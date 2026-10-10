@@ -1,7 +1,8 @@
 ## Interface: 11200
 ## Title: DMorph |cff33ff99(OctoWoW)|r
-## Notes: DMorph's chat commands (.morph, .race, .gender, .item) for the OctoWoW 1.12 client. Requires VanillaHelpers v1.1.0+.
+## Notes: DMorph's morph commands for OctoWoW: .morph, .race, .gender and .item. Type /dmorph for help. Needs VanillaHelpers v1.1.0+ (OctoLauncher's vanillaHelpers mod).
 ## Author: bdot89
 ## Version: 1.0.0
+## X-Website: https://github.com/bdot89/DmorphOcto
 ## SavedVariablesPerCharacter: DmorphOctoDB
 DmorphOcto.lua
