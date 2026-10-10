@@ -1,0 +1,663 @@
+# Turtle WoW creatures that are bosses (rank 3) or rares (rank 2 rare elite, 4 rare), and the models NPCs ride:
+# displayID<TAB>rank<TAB>name (rank "mount" = a model used as a mount). Exported from ShellLab (github.com/oplancelot/ShellLab).
+38	4	Strider Clutchmother
+40	3	Avatar of Pompa
+152	4	Lost One Cook
+160	4	Magosh
+165	4	Mist Howler
+175	4	Fedfennel
+175	4	Gruff Swiftbite
+207	mount	
+221	3	Nolin
+262	3	An Unknown Entity
+262	3	Poison Cloud
+275	4	Snagglespear
+286	2	Dave "Ozy" Norton
+360	2	Sludge Beast
+368	4	Krethis Shadowspinner
+383	4	Sergeant Brashclaw
+388	4	Spiteflayer
+391	4	Burgle Eye
+418	4	Sri'skulk
+441	4	Fingat
+487	2	Taskmaster Whipfang
+491	4	Ro'Bark
+497	4	Snarlflare
+500	4	Ribchaser
+507	4	Vultros
+511	4	Gibblesnik
+519	4	Foulmane
+522	4	Terrowulf Packlord
+525	4	Seeker Aqualon
+536	4	Molok the Crusher
+540	4	Scargil
+540	4	Slark
+543	4	Gnawbone
+548	4	Foe Reaper 4000
+610	4	Kovork
+616	2	Whitestripe Tiger
+631	4	Drogoth the Roamer
+631	4	Mirelow
+652	4	Brack
+682	4	The Ongar
+706	4	Big Samras
+706	4	Old Grizzlegut
+706	4	Ursol'lok
+720	4	Ghost Howl
+774	4	Grizlak
+774	4	Master Digger
+774	4	Narg the Taskmaster
+780	4	Snarler
+788	4	Dart
+800	3	Lord Skwol
+821	4	Chatter
+830	4	Hammerspine
+831	4	Large Loch Crocolisk
+837	4	Highvale Silverback
+903	4	Graypaw Alpha
+904	4	Threggil
+913	4	Bjarn
+931	4	Edan the Howler
+955	4	Leech Widow
+963	2	Naraxis
+965	4	Snarlmane
+982	4	Old Vicejaw
+985	4	Lost Soul
+1011	4	Grimmaw
+1012	4	Gatekeeper Rageroar
+1012	4	Ragepaw
+1015	3	Grizikil
+1018	4	Terrorspark
+1019	4	Ravenclaw Regent
+1043	4	Dishu
+1065	4	Leprithus
+1078	4	Skhowl
+1091	4	Creepthess
+1092	2	Trigore the Lasher
+1103	4	Shanda the Spinner
+1104	4	Gretheer
+1162	4	Stone Fury
+1194	4	Boss Galgosh
+1204	4	Scald
+1210	2	Zaricotl
+1248	4	Stoneshell
+1267	4	Deviate Faerie Dragon
+1269	4	Dysfunctional Shreddertron 1200
+1305	4	Flagglemurk the Cruel
+1306	4	The Reak
+1308	2	Brontus
+1337	2	Takk the Leaper
+1346	2	Captain Flat Tusk
+1397	2	Gesharahan
+1508	4	Zebrian the Mad
+1531	mount	
+1534	4	Murderous Blisterpaw
+1542	3	Arch Druid Fandral Staghelm
+1549	4	Blackmoss the Fetid
+1817	4	Diamond Head
+1912	4	Akkrilus
+1933	4	Araga
+1951	mount	
+1961	4	Mazzranache
+1973	4	The Rake
+1994	4	Deeb
+2076	2	Ironeye the Invincible
+2076	4	Hissperak
+2142	2	Bruegal Ironknuckle
+2163	4	Sister Hatelash
+2168	4	Gnarl Leafbrother
+2172	3	Pyroguard Emberseer
+2174	4	Deatheye
+2240	4	Magister Hawkhelm
+2296	4	Fury Shelda
+2326	mount	
+2327	mount	
+2328	mount	
+2346	4	Shleipnarr
+2402	mount	
+2404	mount	
+2405	mount	
+2410	mount	
+2491	4	Death Flayer
+2537	4	Darkmist Widow
+2541	4	Mother Fang
+2549	4	Ripscale
+2582	4	Gravis Slipknot
+2597	4	Muad
+2606	2	Skul
+2687	4	Master Feardred
+2702	4	Azzere the Skyblade
+2703	4	Hayoc
+2713	4	Snort the Heckler
+2714	4	Giggler
+2719	3	Anachronos
+2719	3	Chronormu
+2786	mount	
+2850	4	Sewer Beast
+2879	4	Alshirr Banebreath
+2970	3	Lady Jaina Proudmoore
+3019	3	Heroic Training Dummy
+3030	4	Shadowclaw
+3186	4	Kurmokk
+3189	2	Emogg the Crusher
+3193	4	Bonecruncher
+3208	2	Mezzir the Howler
+3212	4	Antilos
+3320	4	Morgaine the Sly
+3341	4	Thuros Lightfingers
+3387	3	Arch Hydromancer Lapidis
+3535	4	Farmer Solliden
+3589	4	Dalaran Spellscribe
+3590	4	Dalaran Spellscribe
+3597	3	King Magni Bronzebeard
+3616	4	Jimmy the Bleeder
+3763	2	Tamra Stormpike
+3764	2	Tamra Stormpike
+3898	4	Harb Foulmountain
+3995	4	Witch Doctor Tan'zo
+4003	4	Zalas Witherbark
+4026	4	Singer
+4027	2	Darbel Montrose
+4033	4	Nimar the Slayer
+4083	3	Sen'jin Guardian
+4084	3	Sen'jin Guardian
+4156	4	Apothecary Falthis
+4212	4	Boahn
+4307	3	Cairne Bloodhoof
+4345	2	Aean Swiftriver
+4346	2	Thora Feathermoon
+4347	2	Marcus Bel
+4348	2	Hannah Bladeleaf
+4424	2	Humar the Pridelord
+4458	4	Rekk'tilac
+4527	3	Thrall
+4582	2	Kin'Tozo
+4585	4	Pridewing Patriarch
+4592	4	Watch Commander Zalaphil
+4593	4	Foreman Grills
+4594	2	Felweaver Scornn
+4595	4	Heggin Stonewhisker
+4596	4	Digger Flameforge
+4597	4	Malgin Barleybrew
+4598	2	Captain Gerogg Hammertoe
+4599	2	Brother Ravenoak
+4600	2	Foreman Rigger
+4607	4	Blazespark
+4618	2	Kathy Wake
+4647	4	Earthcaller Rezengal
+4729	3	Damilara Sunsorrow
+4731	4	Jalinde Summerdrake
+4735	2	Blind Hunter
+4762	4	Lord Sinslayer
+4874	2	Stonearm
+4910	4	Lord Sakrasis
+4912	4	Dragonmaw Battlemaster
+4913	4	Garneg Charskull
+4914	4	Ma'ruk Wyrmscale
+4920	4	Gilmorian
+4937	4	Shadowforge Commander
+4978	4	Lady Zephris
+4979	4	Lady Vespia
+4982	4	Lady Vespira
+5026	4	Cranky Benj
+5047	2	Burning Felguard
+5047	4	Rathorian
+5072	3	Archbishop Benedictus
+5229	4	Boulderheart
+5243	4	Squiddic
+5286	4	Gluggle
+5299	2	Maltimor's Prototype
+5305	2	King Mosh
+5430	4	Fellicent's Shade
+5556	3	Bokkeum
+5561	4	Eck'alom
+5566	3	Highlord Bolvar Fordragon
+5625	4	Great Father Arctikus
+5747	4	War Golem
+5772	4	Firecaller Radison
+5773	4	Carnivous the Breaker
+5773	4	Oakpaw
+5774	4	Lady Moongazer
+5781	2	Lord Roccor
+5781	4	Smoldar
+5782	4	Roloch
+5927	4	Razortalon
+5965	2	Setis
+5988	3	Ostarius
+6041	4	Kazon
+6068	4	Krellack
+6078	2	Razorfen Spearhide
+6080	mount	
+6082	4	Broken Tooth
+6084	2	Swiftmane
+6085	4	Thunderstomp
+6095	2	Elder Mystic Razorsnout
+6102	2	Earthcaller Halmgar
+6113	4	Geolord Mottle
+6114	2	Hagg Taurenbane
+6116	4	Geopriest Gukk'rok
+6117	2	Swinegart Spearhide
+6212	4	Olm the Wise
+6298	2	Azurebeak
+6369	2	Hematos
+6370	2	Brood of Nozdormu
+6371	2	Narillasanz
+6373	2	Azurous
+6374	2	Brimgore
+6377	3	Ebonroc
+6377	3	Firemaw
+6377	3	Flamegor
+6378	3	Teremus the Devourer
+6380	4	Baron Bloodbane
+6479	4	Witherheart the Stalker
+6479	4	Zul'arek Hatefowler
+6512	2	Mith'rethis the Enchanter
+6512	4	Retherokk the Berserker
+6692	4	Enforcer Emilgund
+6693	2	Zekkis
+6695	2	Veyzhak the Cannibal
+6743	4	Prince Kellen
+6763	4	Prince Nazjak
+6800	4	Rorgish Jowl
+6818	4	Uruson
+6889	4	7:XT
+6889	4	M-0L1Y
+7006	3	High Tinker Mekkatorque
+7029	2	Immolatus
+7043	2	Ambassador Bloodrage
+7046	2	Scalebeard
+7049	4	Engineer Whirleygig
+7232	4	Verifonix
+7274	3	Tyrande
+7274	3	Tyrande Whisperwind
+7336	4	Bloodroar the Stalker
+7349	4	Greater Firebird
+7509	4	Kregg Keelhaul
+7555	3	Flameshocker
+7569	4	Arash-ethis
+7691	3	High Marshal Whirlaxis
+7806	3	Ysera
+7807	4	Gibblewilt
+7819	4	Slave Master Blackheart
+7821	4	Jabiry
+7835	2	Highlord Mastrogonde
+7840	4	Ironback
+7844	4	Dreadscorn
+7847	4	Lord Darkscythe
+7848	2	Commander Felstrom
+7856	2	Stonespine
+7856	4	Gish the Unmoving
+7873	3	Korrak the Bloodrager
+7892	4	Bayne
+7919	3	Archlich Enkhraz
+7950	3	Massive Infernal
+7975	4	Jade
+7976	2	Lord Captain Wyrmak
+8129	4	Uhk'loc
+8270	2	Panzor the Invincible
+8389	4	Branch Snapper
+8390	2	The Behemoth
+8390	3	Gri'lek
+8469	mount	
+8471	2	Nal'taszar
+8550	4	Rumbler
+8570	3	Onyxia
+8611	3	Lord Xanvarak
+8711	3	Overlord Wyrmthalak
+8762	2	Pyromancer Loregrain
+8834	4	Sludginn
+8870	4	Grunter
+8900	2	Scarshield Quartermaster
+9013	2	Dessecus
+9013	4	The Husk
+9014	2	Meshlok the Harvester
+9019	2	Verek
+9023	2	Warleader Krazzilak
+9024	2	Jin'Zallah the Sandbringer
+9089	2	Warder Stilgiss
+9135	4	Accursed Slitherblade
+9291	2	Sandarr Dunereaver
+9292	2	Dustwraith
+9293	2	Zerillis
+9372	4	Barnabus
+9418	4	Achellios the Banished
+9444	4	Warlord Kolkanis
+9448	4	Brokespear
+9472	3	Lord Victor Nefarius
+9489	2	General Colbatann
+9491	2	Grizzle Snowpaw
+9533	2	Rocklance
+9534	4	Tormented Spirit
+9562	4	Deathmaw
+9567	3	Goldrinn
+9568	4	Dawnhowl
+9591	4	Vengeful Ancient
+9668	2	Bannok Grimaxe
+9686	2	Jed Runewatcher
+9732	3	Shadow Hunter Vosh'gajin
+9750	4	Ressan the Needler
+9755	2	Crystal Fang
+9778	3	Warchief Rend Blackhand
+9806	3	Gyth
+9991	mount	
+9996	2	Tarangos
+10008	3	Chromie
+10040	2	Anathemus
+10042	2	Monnos the Elder
+10045	3	Crypt Watcher
+10045	3	Fallen Spirit
+10045	3	Waypoint
+10046	2	Aqir Larva
+10054	2	Rak'shiri
+10115	3	General Drakkisath
+10115	3	Razorgore the Untamed
+10169	2	Skarr the Unbreakable
+10193	3	Magmadar
+10193	3	The Beast
+10222	2	Goraluk Anvilcrack
+10278	3	Snowball
+10278	mount	
+10317	2	Kashoch the Reaver
+10340	2	Foreman Jerris
+10342	2	Scarlet High Clerist
+10343	2	Scarlet Interrogator
+10344	2	Scarlet Executioner
+10346	2	Scarlet Smith
+10347	2	Scarlet Smith
+10348	2	Scarlet Smith
+10349	2	Scarlet Smith
+10354	4	Foreman Marcrid
+10355	2	Scarlet Judge
+10356	4	Lord Maldazzar
+10357	3	Vol'jin
+10374	4	Duggan Wildhammer
+10431	2	High General Abbendis
+10431	3	High General Abbendis
+10432	4	Deathspeaker Selendre
+10443	4	Zul'Brin Warpbranch
+10452	4	Warlord Thresh'jin
+10482	2	Hearthsinger Forresten
+10518	2	Mavel Brightwood
+10529	3	Durgen
+10529	3	Jordan
+10529	3	Malor
+10529	3	SECOND_WING_TRASH_PLACEHOLDER
+10529	3	Scarlet Chaplain
+10529	3	Scarlet Sister
+10545	3	Grand Crusader Dathrohan
+10612	4	Putridius
+10626	2	Lord Malathrom
+10709	4	Hed'mush the Rotting
+10718	mount	
+10720	mount	
+10771	4	Varo'then's Ghost
+10792	4	Grimtooth
+10792	4	Rohh the Silent
+10800	4	Faulty War Golem
+10802	4	Malfunctioning Reaver
+10807	4	The Evalcharr
+10819	4	Licillin
+10850	4	Rot Hide Bruiser
+10875	2	Sister Riven
+10876	2	Sister Rathtalon
+10889	4	Antilus the Soarer
+10904	4	Ravage
+10911	4	Geomancer Flintdagger
+10920	4	Akubar the Seer
+10921	4	Lost One Chieftain
+10925	2	Lady Hederine
+10932	2	Gruff
+10983	4	Clack the Reaver
+10988	2	Vile Sting
+11011	2	Heartrazor
+11012	2	Sorrow Wing
+11084	4	Clutchmother Zavas
+11092	4	Haarka the Ravenous
+11096	2	Silithid Harvester
+11099	4	Silithid Ravager
+11106	4	Soriid the Devourer
+11121	3	Ragnaros
+11140	4	The Rot
+11142	4	Qirot
+11172	2	Aquitus
+11179	2	Fenros
+11181	2	Nefaru
+11250	2	Tsu'zee
+11257	4	General Fangferror
+11261	4	Lady Sesspira
+11262	4	Lady Szallah
+11288	3	Bloodlord Mandokir
+11293	4	Mugglefin
+11311	3	Jin'do the Hexxer
+11316	4	Razormaw Matriarch
+11319	4	Ravasaur Matriarch
+11331	4	Prince Raze
+11335	2	Xalvic Blackclaw
+11356	2	Sentinel Amarassan
+11371	4	The Snipper
+11380	3	Nefarian
+11382	2	Ragglesnout
+11396	4	Shade Mage
+11412	2	Lupos
+11412	4	Death Howl
+11413	4	Gorefang
+11414	4	Old Cliff Jumper
+11422	4	Timber
+11453	4	Duskstalker
+11460	3	Azuregos
+11510	4	Gruklash
+11511	4	Thauris Balgarr
+11532	4	Cyclok the Mad
+11551	2	Foulbelly
+11556	2	Grug'thok the Seer
+11562	4	Gorgon'och
+11562	4	Mojo the Twisted
+11564	4	Hahk'Zor
+11564	4	Magronos the Unyielding
+11566	4	Lo'Grosh
+11568	2	Mosh'Ogg Butcher
+11570	4	Omgorn the Lost
+11572	2	Ruul Onestone
+11574	2	Spirestone Butcher
+11576	2	Spirestone Battle Lord
+11578	2	Spirestone Lord Magus
+11640	4	Cursed Centaur
+11657	3	Lady Sylvanas Windrunner
+11658	3	Varimathras
+11675	4	Vanessa Moneybutton
+11686	3	Merithra's Wake
+11713	4	Embereye
+11798	4	Gozzo
+11809	2	Ghok Bashguud
+11824	4	Liang
+11909	3	Ursoc
+11986	3	Golemagg the Incinerator
+12002	3	Prince Skaldrenox
+12003	4	Ruk'thok the Pyromancer
+12029	3	Majordomo Executus
+12074	3	Marrowspike
+12110	3	Garr
+12129	3	Baron Geddon
+12153	2	Rex Ashil
+12232	2	Volchan
+12237	2	Mallon The Moontouched
+12336	4	Oozeworm
+12342	4	Scale Belly
+12449	3	Lord Kazzak
+12683	2	The Razza
+12814	3	Baron Kazum
+12816	2	Grimungous
+12819	4	Lumbering Horror
+13030	3	Gehennas
+13030	3	Sulfuron Harbinger
+13031	3	Lucifron
+13032	3	Shazzrah
+13069	3	Gurubashi
+13869	2	Siege Golem
+13992	3	Vaelastrasz the Corrupt
+14255	4	Kaskk
+14257	4	Lord Angler
+14308	3	Broodlord Lashlayer
+14308	3	Lord Valthalak
+14313	4	Lord Condar
+14315	4	Mongress
+14334	mount	
+14337	mount	
+14347	mount	
+14348	mount	
+14357	3	Commander Gerastrasz
+14357	3	Echo of Gerastrasz
+14367	3	Chromaggus
+14382	2	Mushgog
+14416	3	Twilight Corrupter
+14497	4	Molt Thorn
+14521	2	Lapress
+14522	2	Zora
+14523	4	Grubthor
+14525	4	Huricanian
+14526	4	Twilight Lord Everun
+14528	4	Rippa
+14573	mount	
+14577	mount	
+14698	3	Nerubian Overseer
+14832	2	Jal'akar
+14832	2	Shadeflayer Goliath
+14992	3	Prince Thunderaan
+15133	3	Parasitic Serpent
+15191	3	High Priestess Jeklik Transform Visual
+15216	3	High Priest Thekal
+15217	3	High Priest Venoxis
+15218	3	High Priestess Arlokk
+15219	3	High Priestess Jeklik
+15220	3	High Priestess Mar'li
+15234	2	Ripjaw
+15267	3	Hazza'rah
+15269	3	Wushoolay
+15271	3	Ohgan
+15288	3	Gahz'ranka
+15295	3	Hakkar
+15297	3	Feugen
+15297	3	Stalagg
+15345	3	The Prophet Skeram
+15349	2	Darkcaller Yanka
+15355	2	Xil'xix
+15356	2	Aluntir
+15357	2	Arakis
+15359	3	Emissary Roman'khan
+15363	3	Taerar
+15364	3	Ysondre
+15365	3	Lethon
+15366	3	Emeriss
+15376	3	General Rajaxx
+15392	3	Moam
+15399	3	Malfurion Stormrage
+15412	3	Merithra Dragon Form
+15413	3	Arygos Dragon Form
+15414	3	Caelestrasz Dragon Form
+15415	3	Anachronos the Ancient
+15418	3	Arygos
+15419	3	Caelestrasz
+15420	3	Merithra of the Dream
+15421	3	Fandral Staghelm
+15431	3	Ayamiss the Hunter
+15432	3	Ossirian the Unscarred
+15473	3	Spirit of Azuregos
+15474	3	Eranikus the Redeemed
+15474	3	Eranikus, Tyrant of the Dream
+15500	3	Anachronos Dragon Form
+15509	3	Corpsemuncher
+15509	3	Ouro
+15555	3	Maws
+15556	3	Eye of C'Thun
+15583	3	Battleguard Sartura
+15654	3	Buru the Gorger
+15655	3	Buru the Gorger Transform Visual
+15656	3	Lord Kri
+15657	3	Princess Yauj
+15657	3	Vam
+15658	3	Vem
+15686	3	Viscidus
+15693	3	Colossus of Gorexxi
+15693	3	Colossus of Zora
+15694	3	Colossus of Regal
+15695	3	Colossus of Ashi
+15739	3	Princess Huhuran
+15742	3	Kurinnaxx
+15743	3	Fankriss the Unyielding
+15760	2	Christmas Goraluk Anvilcrack
+15761	3	Emperor Vek'nilash
+15778	3	Emperor Vek'lor
+15787	3	C'Thun
+15794	3	Lieutenant General Nokhor
+15879	3	Omen
+15928	3	Maexxna
+15931	3	Anub'Rekhan
+15932	3	The Master's Eye
+15937	3	Brood Queen Araxxna
+15940	3	Grand Widow Faerlina
+15945	3	Kel'Thuzad
+15994	2	Bodley
+16033	3	Sapphiron
+16035	3	Grobbulus
+16063	2	Professor Lysander
+16064	3	Gluth
+16110	3	Loatheb
+16137	3	Thaddius
+16139	3	Highlord Mograine
+16153	3	Lady Blaumeux
+16154	3	Sir Zeliek
+16155	3	Thane Korth'azz
+16164	3	Atiesh
+16167	4	Bone Witch
+16170	4	Spirit of the Damned
+16174	3	Patchwerk
+16279	3	Gothik the Harvester
+16309	3	Heigan the Unclean
+16326	3	Spirit of Mograine
+16327	3	Spirit of Blaumeux
+16328	3	Spirit of Zeliek
+16329	3	Spirit of Korth'azz
+16582	3	Instructor Razuvious
+16590	3	Noth the Plaguebringer
+16612	2	The Wandering Knight
+17251	3	Lady Onyxia
+18001	4	Baron Perenolde
+18031	4	Arcandir
+18038	3	Image of Kael'Thas
+18039	3	Echo of Medivh
+18039	3	Medivh
+18045	2	Antnormi
+18045	3	Antnormi
+18082	3	Zul'jin
+18135	3	Alarus
+18194	4	Kal'mantir the Mad
+18208	4	Ranger Lord Hawkspear
+18227	3	Dark Reaver of Karazhan
+18235	3	Speaker Vereesa Windrunner
+18235	3	Vereesa Windrunner
+18244	4	Spirit Fox
+18247	3	Hivaxxis
+18247	4	Duskskitterer
+18498	2	Widow of the Woods
+18647	2	Blademaster Kargron
+18648	2	Zareth Terrorblade
+18671	3	Grand Sorcerer Ardaeus
+18675	3	Spirit of Alexandros Mograine
+18676	3	High Inquisitor Mariella
+18678	3	Brother Eric Vesper
+18680	3	Citadel Inquisitor
+18683	3	Sacred Fist Daelus
+18687	3	Citadel Valiant
+18697	3	Concavius
+18745	4	Barkskin Fisher
+18748	2	Explorer Ashbeard
+18749	2	Crusader Larsarius
+19033	3	Solnius
+19125	3	Clawlord Howlfang
+19126	2	Firstborn of Arugal
+19136	3	Lord Blackwald II
+19167	3	Moroes
+20410	2	Cenerron
+20434	2	Bethelon Wildwhisper
+20503	2	Tenris Mirkblood
+20512	4	Moonfeather

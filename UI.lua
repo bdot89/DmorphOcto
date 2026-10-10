@@ -2,14 +2,16 @@
 --
 -- Left: your character in a dressing room (your race's dress-up backdrop),
 -- with the morphable slots around it. Right: tabs to browse every creature
--- model (a grid of 3D previews, or a list), the races, items per slot and a
--- wardrobe of saved outfits. Everything goes through the DmorphOcto.*
--- functions in DmorphOcto.lua, the same ones the chat commands use.
+-- model (a grid of 3D previews, or a list), the races, a character creator,
+-- items per slot, item sets and a wardrobe of saved outfits. Everything goes
+-- through the DmorphOcto.* functions in DmorphOcto.lua, the same ones the chat
+-- commands use.
 --
 -- No white flashes: a model frame draws its model white until the textures
 -- have loaded. So every model here loads out of sight first, below an opaque
 -- layer, and is raised above it once it has had time to finish. The character
--- preview keeps two PlayerModels for this and swaps them.
+-- preview keeps two PlayerModels for this and swaps them, and never reloads
+-- one that is still loading.
 --
 -- 1.12 API: scripts read `this`/`arg1` instead of taking arguments, there is
 -- no SetSize, lists use FauxScrollFrameTemplate, and regions that share a draw
@@ -28,6 +30,11 @@ local TILE_W, TILE_H, TILE_GAP, GRID_COLS = 110, 132, 6, 4
 local PAGE_SIZE = 8
 -- How long a model loads out of sight before it's shown.
 local REVEAL = 0.45
+-- After a morph the game rebuilds your character; a second change before it
+-- has finished can mix the two looks' textures. Clicks closer than this wait.
+local GATE = 0.35
+local MIN_SCALE, MAX_SCALE = 0.6, 1.6
+local MENU_ROWS, MENU_WIDTH = 14, 170
 local WHITE = "Interface\\Buttons\\WHITE8X8"
 local EDGE = "Interface\\Tooltips\\UI-Tooltip-Border"
 local RACE_ICONS_FILE = "Interface\\Glues\\CharacterCreate\\UI-CharacterCreate-Races"
@@ -54,23 +61,30 @@ local RACE_ICONS = {
 -- UnitRace() tokens whose dress-up backdrop has another name.
 local ART_TOKENS = { HighElf = "BloodElf" }
 
--- Creature model entries by kind (DmorphOcto.KIND_*).
-local KIND_COLORS = { [0] = { 1, 1, 1 }, [1] = { 0.62, 0.76, 0.92 }, [2] = { 0.45, 1, 0.6 } }
+-- Creature model entries by kind (DmorphOcto.KIND_*). Items and sets use 0 and 2.
+local KIND_COLORS = { [0] = { 1, 1, 1 }, [1] = { 0.62, 0.76, 0.92 }, [2] = { 0.45, 1, 0.6 }, [3] = { 0.45, 1, 0.6 } }
 local KIND_NOTES = {
 	[0] = "A creature from the world database.",
 	[1] = "No creature has this look, so it's named after its model file.",
-	[2] = "New in OctoWoW, named after its model file.",
+	[2] = "New in OctoWoW: a creature from Turtle WoW's database.",
+	[3] = "New in OctoWoW, named after its model file.",
 }
 
 local TABS = {
 	{ key = "models", text = "Models" },
 	{ key = "races", text = "Races" },
+	{ key = "creator", text = "Creator" },
 	{ key = "items", text = "Items" },
+	{ key = "sets", text = "Sets" },
 	{ key = "wardrobe", text = "Wardrobe" },
 }
+local TAB_W = 74
 
 local frame -- the window, built the first time it opens
-local ui = { tabs = {}, pages = {}, slots = {}, raceButtons = {}, raceCells = {}, tiles = {}, page = 1 }
+local ui = {
+	tabs = {}, pages = {}, slots = {}, raceButtons = {}, raceCells = {}, tiles = {}, page = 1,
+	creator = {}, creatorRaces = {}, creatorRows = {}, target = "you",
+}
 local currentTab = "models"
 local itemSlot = 1 -- the slot the Items tab is browsing
 local selectedOutfit
@@ -107,16 +121,37 @@ local function Count(n, word)
 	return Commas(n) .. " " .. word .. "s"
 end
 
--- Window settings shared by all characters: list or grid, model filter.
+-- Steps through n positions, wrapping round.
+local function Wrap(pos, step, n)
+	return math.mod(pos - 1 + step + n * 4, n) + 1
+end
+
+-- Window settings shared by all characters: views, filters, sorting, size.
 local function Prefs()
 	local account = M.GetAccount()
 	if type(account.ui) ~= "table" then
 		account.ui = {}
 	end
-	if not M.MODEL_FILTERS[account.ui.filter] then
-		account.ui.filter = 1
+	local p = account.ui
+	if not M.MODEL_FILTERS[p.filter] then
+		p.filter = 1
 	end
-	return account.ui
+	if not M.ITEM_FILTERS[p.itemFilter] then
+		p.itemFilter = 1
+	end
+	if not M.SET_FILTERS[p.setFilter] then
+		p.setFilter = 1
+	end
+	if not M.QUALITY_FILTERS[p.itemQuality] then
+		p.itemQuality = 1
+	end
+	if not M.QUALITY_FILTERS[p.setQuality] then
+		p.setQuality = 1
+	end
+	if type(p.scale) ~= "number" or p.scale < MIN_SCALE or p.scale > MAX_SCALE then
+		p.scale = 1
+	end
+	return p
 end
 
 -- Widget helpers --------------------------------------------------------------
@@ -179,6 +214,22 @@ local function Layer(parent, level)
 	return f
 end
 
+local function Tooltip(owner, title, line1, line2)
+	GameTooltip:SetOwner(owner, "ANCHOR_TOP")
+	GameTooltip:SetText(title)
+	if line1 then
+		GameTooltip:AddLine(line1, 1, 1, 1)
+	end
+	if line2 then
+		GameTooltip:AddLine(line2, 0.8, 0.8, 0.8)
+	end
+	GameTooltip:Show()
+end
+
+local function HideTooltip()
+	GameTooltip:Hide()
+end
+
 -- Runs fn once typing has paused, so long lists aren't filtered per key.
 local function Debounce(timer, delay, fn)
 	timer.wait = delay
@@ -197,6 +248,101 @@ local function NewTimer()
 		end
 	end)
 	return timer
+end
+
+-- Every morph from the window goes through here. The game rebuilds your
+-- character after each change, and a change that lands while it is still
+-- rebuilding can leave the earlier look's textures on it. So a click within
+-- GATE seconds of the last one waits, and only the latest waiting one runs.
+local function Morph(fn, a1, a2)
+	if ui.gateBusy then
+		ui.gateNext = { fn, a1, a2 }
+		return
+	end
+	ui.gateBusy = true
+	SetStatus(fn(a1, a2))
+	Debounce(ui.gateTimer, GATE, function()
+		ui.gateBusy = nil
+		local nextCall = ui.gateNext
+		ui.gateNext = nil
+		if nextCall then
+			Morph(nextCall[1], nextCall[2], nextCall[3])
+		end
+	end)
+end
+
+-- A drop-down menu shared by every filter button. options: a list of
+-- { text = ..., checked = true/nil, header = true/nil }; pick(option) runs when
+-- one is clicked. Clicking the same button again closes it.
+local function OpenMenu(anchor, options, pick)
+	local menu = ui.menu
+	if menu:IsShown() and menu.anchor == anchor then
+		menu:Hide()
+		return
+	end
+	menu.anchor, menu.pick = anchor, pick
+	local count = table.getn(options)
+	for i = 1, MENU_ROWS do
+		local row, option = menu.rows[i], options[i]
+		if option then
+			row.option = option
+			row.label:SetText(option.text)
+			if option.header then
+				row.label:SetTextColor(1, 0.82, 0)
+				row:Disable()
+			else
+				row.label:SetTextColor(1, 1, 1)
+				row:Enable()
+			end
+			if option.checked then
+				row.check:Show()
+			else
+				row.check:Hide()
+			end
+			row:Show()
+		else
+			row:Hide()
+		end
+	end
+	menu:SetHeight(count * 18 + 12)
+	menu:ClearAllPoints()
+	menu:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -2)
+	menu:Show()
+end
+
+local function BuildMenu()
+	local menu = CreateFrame("Frame", "DmorphOctoMenu", frame)
+	menu:Hide()
+	menu:SetFrameLevel(frame:GetFrameLevel() + 40)
+	menu:SetWidth(MENU_WIDTH)
+	menu:EnableMouse(true)
+	Panel(menu, 0.06, 0.06, 0.07)
+	menu:SetBackdropBorderColor(0.8, 0.65, 0.3, 1)
+	menu.rows = {}
+	for i = 1, MENU_ROWS do
+		local row = CreateFrame("Button", "DmorphOctoMenuRow" .. i, menu)
+		row:SetFrameLevel(menu:GetFrameLevel() + 1)
+		row:SetWidth(MENU_WIDTH - 12)
+		row:SetHeight(18)
+		row:SetPoint("TOPLEFT", menu, "TOPLEFT", 6, -6 - (i - 1) * 18)
+		local highlight = row:CreateTexture(nil, "HIGHLIGHT")
+		highlight:SetTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
+		highlight:SetBlendMode("ADD")
+		highlight:SetAllPoints(row)
+		row.check = row:CreateTexture(nil, "ARTWORK")
+		row.check:SetTexture("Interface\\Buttons\\UI-CheckBox-Check")
+		row.check:SetWidth(16)
+		row.check:SetHeight(16)
+		row.check:SetPoint("LEFT", row, "LEFT", 0, 0)
+		row.label = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		row.label:SetPoint("LEFT", row, "LEFT", 18, 0)
+		row:SetScript("OnClick", function()
+			ui.menu:Hide()
+			ui.menu.pick(this.option)
+		end)
+		menu.rows[i] = row
+	end
+	return menu
 end
 
 -- A scrolling list of LIST_ROWS rows over a FauxScrollFrame. fill(row, index)
@@ -241,10 +387,14 @@ local function List(parent, name, x, y, infoWidth, fill, click, enter)
 		list.Refresh()
 	end
 
-	-- New contents: back to the top.
-	function list.SetCount(count)
+	-- New contents: back to the top, unless keep is set.
+	function list.SetCount(count, keep)
 		list.count = count
-		list.ScrollTo(1)
+		if keep then
+			list.Refresh()
+		else
+			list.ScrollTo(1)
+		end
 	end
 
 	function list.GetOffset()
@@ -297,11 +447,28 @@ local function List(parent, name, x, y, infoWidth, fill, click, enter)
 			end)
 			row:SetScript("OnLeave", function()
 				ui.card:Hide()
+				GameTooltip:Hide()
 			end)
 		end
 		list.rows[i] = row
 	end
 	return list
+end
+
+-- Sorting by name or by ID: a toggle button for every list that has one.
+local function SortButton(page, name, x, y, key, refilter)
+	local button = Button(page, "", 92, x, y, function()
+		local prefs = Prefs()
+		prefs[key] = not prefs[key]
+		this:SetText(prefs[key] and "Sort: ID" or "Sort: A-Z")
+		refilter()
+	end, name)
+	button:SetText(Prefs()[key] and "Sort: ID" or "Sort: A-Z")
+	button:SetScript("OnEnter", function()
+		Tooltip(this, "Sort order", "Click to list by name (A-Z) or by ID.")
+	end)
+	button:SetScript("OnLeave", HideTooltip)
+	return button
 end
 
 -- Creature previews -------------------------------------------------------------
@@ -320,6 +487,8 @@ local function LoadView(view, displayID)
 	view.facing = 0
 	view.wait = REVEAL
 	model:SetFrameLevel(view.low)
+	-- Drop the old model and its skins first, so none carry over to the new one.
+	pcall(model.ClearModel, model)
 	model:SetDisplayInfo(displayID)
 	-- Camera 0 is the model's portrait camera; a Model has no light of its own.
 	pcall(model.SetCamera, model, 0)
@@ -345,6 +514,11 @@ end
 
 local function KindColor(kind)
 	return KIND_COLORS[kind] or KIND_COLORS[0]
+end
+
+local function QualityColor(quality)
+	local color = ITEM_QUALITY_COLORS[quality or 1] or ITEM_QUALITY_COLORS[1]
+	return color.r, color.g, color.b
 end
 
 -- Character preview ---------------------------------------------------------------
@@ -387,9 +561,14 @@ local function UpdatePlate()
 	elseif count > 1 then
 		info = info .. " - " .. count .. " items morphed"
 	end
+	if state.mount then
+		info = info .. " - mount morphed"
+	end
 	ui.plateTitle:SetText(title)
 	ui.plateInfo:SetText(info)
 end
+
+local RequestPreview
 
 -- The new look has loaded behind the backdrop: bring it to the front.
 local function SwapPreview()
@@ -400,10 +579,23 @@ local function SwapPreview()
 	front:SetFrameLevel(p.high)
 	back:SetFrameLevel(p.low)
 	back:Hide()
+	p.loading = nil
+	if p.again then
+		p.again = nil
+		RequestPreview()
+	end
 end
 
+-- A model is only reloaded once it has finished loading: changes made while
+-- it loads are picked up by one more load afterwards. Reloading it half way
+-- can leave textures from the earlier look on it.
 local function LoadPreview()
 	local p = ui.preview
+	if p.loading then
+		p.again = true
+		return
+	end
+	p.loading = true
 	local back = p.models[3 - p.front]
 	back:SetFrameLevel(p.low)
 	back:Show()
@@ -414,7 +606,7 @@ end
 
 -- After any change: the new look loads in the hidden model and replaces the
 -- shown one when it's ready. A burst of changes loads once.
-local function RequestPreview()
+RequestPreview = function()
 	Debounce(ui.previewTimer, 0.1, LoadPreview)
 end
 
@@ -487,7 +679,7 @@ local function UpdatePager()
 		return
 	end
 	local pages = PageCount()
-	ui.pagerText:SetText("Page " .. Commas(ui.page) .. " of " .. Commas(pages) .. "   -   " .. total)
+	ui.pagerText:SetText("Page " .. Commas(ui.page) .. "/" .. Commas(pages) .. "  (" .. total .. ")")
 	ui.prevPage:Show()
 	ui.nextPage:Show()
 	if ui.page > 1 then
@@ -502,10 +694,19 @@ local function UpdatePager()
 	end
 end
 
+-- The display ID the Models tab works on: your model's, or your mount's.
+local function TargetDisplay()
+	local state = M.GetState()
+	if ui.target == "mount" then
+		return state.mount
+	end
+	return state.display
+end
+
 local function TileBorder(tile)
 	if tile.hover then
 		tile:SetBackdropBorderColor(1, 1, 1, 1)
-	elseif tile.displayID and tile.displayID == M.GetState().display then
+	elseif tile.displayID and tile.displayID == TargetDisplay() then
 		tile:SetBackdropBorderColor(1, 0.82, 0, 1)
 	else
 		tile:SetBackdropBorderColor(0.35, 0.35, 0.38, 1)
@@ -550,9 +751,10 @@ local function RefreshModels()
 end
 
 local function FilterModels()
+	local prefs = Prefs()
 	local count
 	ui.modelResult, count = M.FilterCatalog(M.GetCreatureCatalog(), ui.modelSearch:GetText(),
-		M.MODEL_FILTERS[Prefs().filter].kinds)
+		M.MODEL_FILTERS[prefs.filter], nil, prefs.sortModels)
 	ui.modelTotal = count
 	ui.page = 1
 	ui.modelList.SetCount(count)
@@ -607,9 +809,14 @@ local function SetListMode(listMode)
 	UpdatePager()
 end
 
+-- Click a model: become it, or (with the Mount switch) make your mount it.
 local function MorphInto(displayID)
 	ui.displayBox:SetText(displayID)
-	SetStatus(M.SetDisplay(displayID))
+	if ui.target == "mount" then
+		Morph(M.SetMount, displayID)
+	else
+		Morph(M.SetDisplay, displayID)
+	end
 end
 
 local function ModelTooltip(owner, entry)
@@ -618,8 +825,26 @@ local function ModelTooltip(owner, entry)
 	GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
 	GameTooltip:SetText(catalog.names[entry], color[1], color[2], color[3])
 	GameTooltip:AddLine("Display ID " .. catalog.ids[entry], 1, 1, 1)
+	local tags = catalog.tags[entry]
+	if tags then
+		local words = {}
+		if strfind(tags, "boss", 1, true) then
+			table.insert(words, "Boss")
+		end
+		if strfind(tags, "rare", 1, true) then
+			table.insert(words, "Rare creature")
+		end
+		if strfind(tags, "mount", 1, true) then
+			table.insert(words, "Mount")
+		end
+		GameTooltip:AddLine(table.concat(words, ", "), 1, 0.82, 0)
+	end
 	GameTooltip:AddLine(KIND_NOTES[catalog.kind[entry] or 0], 0.7, 0.7, 0.7)
-	GameTooltip:AddLine("Click to morph into it.", 0.6, 1, 0.6)
+	if ui.target == "mount" then
+		GameTooltip:AddLine("Click to make your mount look like it.", 0.6, 1, 0.6)
+	else
+		GameTooltip:AddLine("Click to morph into it.", 0.6, 1, 0.6)
+	end
 	GameTooltip:Show()
 end
 
@@ -720,10 +945,32 @@ local function ShowCard(index, row)
 	end
 end
 
+local function ModelFilterMenu()
+	local prefs, options = Prefs(), {}
+	for i = 1, table.getn(M.MODEL_FILTERS) do
+		table.insert(options, { text = M.MODEL_FILTERS[i].text, index = i, checked = prefs.filter == i })
+	end
+	OpenMenu(this, options, function(option)
+		Prefs().filter = option.index
+		ui.modelFilter:SetText(option.text)
+		FilterModels()
+	end)
+end
+
+local function SetTarget(target)
+	ui.target = target
+	if target == "mount" then
+		ui.targetButton:SetText("Morph: mount")
+	else
+		ui.targetButton:SetText("Morph: you")
+	end
+	RefreshModels()
+end
+
 local function BuildModelsPage(page)
 	local prefs = Prefs()
 	Label(page, "Search:", nil, 10, -12)
-	ui.modelSearch = EditBox(page, "DmorphOctoModelSearch", 140, 58, -8)
+	ui.modelSearch = EditBox(page, "DmorphOctoModelSearch", 146, 58, -8)
 	ui.modelSearch:SetScript("OnTextChanged", function()
 		Debounce(ui.searchTimer, 0.25, FilterModels)
 	end)
@@ -731,36 +978,56 @@ local function BuildModelsPage(page)
 		this:ClearFocus()
 		FilterModels()
 	end)
-	local filter = Button(page, M.MODEL_FILTERS[prefs.filter].text, 136, 214, -7, function()
-		local count, settings = table.getn(M.MODEL_FILTERS), Prefs()
-		local step = 1
-		if arg1 == "RightButton" then
-			step = count - 1
-		end
-		settings.filter = math.mod(settings.filter - 1 + step, count) + 1
-		this:SetText(M.MODEL_FILTERS[settings.filter].text)
-		FilterModels()
-	end, "DmorphOctoModelFilter")
-	filter:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-	filter:SetScript("OnEnter", function()
-		GameTooltip:SetOwner(this, "ANCHOR_TOP")
-		GameTooltip:SetText("Which models to list")
-		GameTooltip:AddLine("Click for the next set, right-click for the one before.", 1, 1, 1)
-		GameTooltip:AddLine("Creatures", 1, 1, 1)
-		GameTooltip:AddLine("Other models: every look no creature uses", KIND_COLORS[1][1], KIND_COLORS[1][2], KIND_COLORS[1][3])
-		GameTooltip:AddLine("New in OctoWoW: models added to 1.12", KIND_COLORS[2][1], KIND_COLORS[2][2], KIND_COLORS[2][3])
-		GameTooltip:Show()
+	ui.modelFilter = Button(page, M.MODEL_FILTERS[prefs.filter].text, 136, 216, -7, ModelFilterMenu, "DmorphOctoModelFilter")
+	ui.modelFilter:SetScript("OnEnter", function()
+		Tooltip(this, "Which models to list", "Creatures, bosses, rare creatures, mounts, models no creature uses,",
+			"or only the ones OctoWoW added.")
 	end)
-	filter:SetScript("OnLeave", function()
-		GameTooltip:Hide()
-	end)
-	ui.viewButton = Button(page, "List view", 100, 356, -7, function()
+	ui.modelFilter:SetScript("OnLeave", HideTooltip)
+	ui.viewButton = Button(page, "List view", 106, 358, -7, function()
 		SetListMode(not ui.listMode)
 	end, "DmorphOctoModelView")
 
+	SortButton(page, "DmorphOctoModelSort", 8, -33, "sortModels", FilterModels)
+	ui.targetButton = Button(page, "Morph: you", 112, 104, -33, function()
+		if ui.target == "mount" then
+			SetTarget("you")
+		else
+			SetTarget("mount")
+		end
+	end, "DmorphOctoModelTarget")
+	ui.targetButton:SetScript("OnEnter", function()
+		Tooltip(this, "What a click morphs", "You: become the model.",
+			"Mount: your mount looks like it, every time you ride.")
+	end)
+	ui.targetButton:SetScript("OnLeave", HideTooltip)
+
+	-- Pager, next to the switches.
+	local function PageButton(dir, x)
+		local button = CreateFrame("Button", "DmorphOcto" .. dir .. "Page", page)
+		button:SetWidth(24)
+		button:SetHeight(24)
+		button:SetPoint("TOPLEFT", page, "TOPLEFT", x, -32)
+		button:SetNormalTexture("Interface\\Buttons\\UI-SpellbookIcon-" .. dir .. "Page-Up")
+		button:SetPushedTexture("Interface\\Buttons\\UI-SpellbookIcon-" .. dir .. "Page-Down")
+		button:SetDisabledTexture("Interface\\Buttons\\UI-SpellbookIcon-" .. dir .. "Page-Disabled")
+		button:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")
+		return button
+	end
+	ui.prevPage = PageButton("Prev", 222)
+	ui.prevPage:SetScript("OnClick", function()
+		TurnPage(-1)
+	end)
+	ui.nextPage = PageButton("Next", PAGE_W - 32)
+	ui.nextPage:SetScript("OnClick", function()
+		TurnPage(1)
+	end)
+	ui.pagerText = page:CreateFontString("DmorphOctoPagerText", "OVERLAY", "GameFontHighlightSmall")
+	ui.pagerText:SetPoint("TOP", page, "TOPLEFT", 345, -39)
+
 	-- Grid of previews.
 	ui.grid = CreateFrame("Frame", "DmorphOctoModelGrid", page)
-	ui.grid:SetPoint("TOPLEFT", page, "TOPLEFT", 8, -36)
+	ui.grid:SetPoint("TOPLEFT", page, "TOPLEFT", 8, -60)
 	ui.grid:SetWidth(GRID_COLS * TILE_W + (GRID_COLS - 1) * TILE_GAP)
 	ui.grid:SetHeight(2 * TILE_H + TILE_GAP)
 	ui.grid:EnableMouseWheel(true)
@@ -774,49 +1041,26 @@ local function BuildModelsPage(page)
 	-- Or a list.
 	ui.listBox = CreateFrame("Frame", "DmorphOctoModelListBox", page)
 	ui.listBox:SetAllPoints(page)
-	ui.modelList = List(ui.listBox, "DmorphOctoModelList", 8, -36, 60, function(row, index)
+	ui.modelList = List(ui.listBox, "DmorphOctoModelList", 8, -60, 60, function(row, index)
 		local catalog = M.GetCreatureCatalog()
 		local i = ui.modelResult[index]
 		local color = KindColor(catalog.kind[i])
 		row.text:SetText(catalog.names[i])
 		row.text:SetTextColor(color[1], color[2], color[3])
 		row.info:SetText(catalog.ids[i])
-		if catalog.ids[i] == M.GetState().display then
+		if catalog.ids[i] == TargetDisplay() then
 			row:LockHighlight()
 		end
 	end, function(index)
 		MorphInto(M.GetCreatureCatalog().ids[ui.modelResult[index]])
 	end, ShowCard)
 
-	-- Pager.
-	local function PageButton(dir, x)
-		local button = CreateFrame("Button", "DmorphOcto" .. dir .. "Page", page)
-		button:SetWidth(26)
-		button:SetHeight(26)
-		button:SetPoint("TOPLEFT", page, "TOPLEFT", x, -308)
-		button:SetNormalTexture("Interface\\Buttons\\UI-SpellbookIcon-" .. dir .. "Page-Up")
-		button:SetPushedTexture("Interface\\Buttons\\UI-SpellbookIcon-" .. dir .. "Page-Down")
-		button:SetDisabledTexture("Interface\\Buttons\\UI-SpellbookIcon-" .. dir .. "Page-Disabled")
-		button:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")
-		return button
-	end
-	ui.prevPage = PageButton("Prev", 8)
-	ui.prevPage:SetScript("OnClick", function()
-		TurnPage(-1)
-	end)
-	ui.nextPage = PageButton("Next", PAGE_W - 34)
-	ui.nextPage:SetScript("OnClick", function()
-		TurnPage(1)
-	end)
-	ui.pagerText = page:CreateFontString("DmorphOctoPagerText", "OVERLAY", "GameFontHighlightSmall")
-	ui.pagerText:SetPoint("TOP", page, "TOP", 0, -315)
-
 	-- Any display ID, including ones no list has.
 	local y = -346
 	Label(page, "Display ID:", nil, 10, y - 5)
 	ui.displayBox = EditBox(page, "DmorphOctoDisplayID", 70, 76, y, 9)
 	local function Apply(step)
-		local displayID = M.ParseID(ui.displayBox:GetText()) or M.GetState().display
+		local displayID = M.ParseID(ui.displayBox:GetText()) or TargetDisplay()
 		if not displayID then
 			if step == 0 then
 				return SetStatus(false, "Type a display ID first.")
@@ -846,13 +1090,41 @@ local function BuildModelsPage(page)
 
 	if not ui.canPreview then
 		ui.viewButton:Hide()
-		Label(page, "3D previews need ClassicAPI.", "GameFontDisableSmall", 358, -13)
+		Label(page, "3D previews need ClassicAPI.", "GameFontDisableSmall", 362, -13)
 	end
 	ui.listMode = nil
 	SetListMode(prefs.list)
 end
 
 -- Races tab ------------------------------------------------------------------------
+
+local function RaceIcon(button, race, gender)
+	local icon = button:CreateTexture(nil, "ARTWORK")
+	icon:SetAllPoints(button)
+	icon:SetTexture(RACE_ICONS_FILE)
+	local c = RACE_ICONS[race]
+	icon:SetTexCoord(c[1], c[2], c[3] + gender * 0.5, c[3] + gender * 0.5 + 0.25)
+	button.ring = button:CreateTexture(nil, "OVERLAY")
+	button.ring:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
+	button.ring:SetBlendMode("ADD")
+	button.ring:SetVertexColor(1, 0.82, 0.2)
+	button.ring:SetWidth(button:GetWidth() * 1.8)
+	button.ring:SetHeight(button:GetHeight() * 1.8)
+	button.ring:SetPoint("CENTER", button, "CENTER", 0, 0)
+	button.ring:Hide()
+	local highlight = button:CreateTexture(nil, "HIGHLIGHT")
+	highlight:SetTexture("Interface\\Buttons\\ButtonHilight-Square")
+	highlight:SetBlendMode("ADD")
+	highlight:SetAllPoints(button)
+	button.race, button.gender = race, gender
+end
+
+local function GenderName(gender)
+	if gender == 1 then
+		return "Female"
+	end
+	return "Male"
+end
 
 local function RefreshRaces()
 	local race, gender = M.GetBodyRace()
@@ -881,48 +1153,6 @@ local function RefreshRaces()
 	end
 end
 
-local function RaceButton(cell, race, gender)
-	local suffix = "Male"
-	if gender == 1 then
-		suffix = "Female"
-	end
-	local button = CreateFrame("Button", "DmorphOctoRace" .. race .. suffix, cell)
-	button:SetWidth(38)
-	button:SetHeight(38)
-	button:SetPoint("TOPLEFT", cell, "TOPLEFT", 6 + gender * 44, -6)
-	local icon = button:CreateTexture(nil, "ARTWORK")
-	icon:SetAllPoints(button)
-	icon:SetTexture(RACE_ICONS_FILE)
-	local c = RACE_ICONS[race]
-	icon:SetTexCoord(c[1], c[2], c[3] + gender * 0.5, c[3] + gender * 0.5 + 0.25)
-	button.ring = button:CreateTexture(nil, "OVERLAY")
-	button.ring:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
-	button.ring:SetBlendMode("ADD")
-	button.ring:SetVertexColor(1, 0.82, 0.2)
-	button.ring:SetWidth(70)
-	button.ring:SetHeight(70)
-	button.ring:SetPoint("CENTER", button, "CENTER", 0, 0)
-	button.ring:Hide()
-	local highlight = button:CreateTexture(nil, "HIGHLIGHT")
-	highlight:SetTexture("Interface\\Buttons\\ButtonHilight-Square")
-	highlight:SetBlendMode("ADD")
-	highlight:SetAllPoints(button)
-	button.race, button.gender = race, gender
-	button:SetScript("OnClick", function()
-		SetStatus(M.SetRace(this.race, this.gender))
-	end)
-	button:SetScript("OnEnter", function()
-		GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
-		GameTooltip:SetText(M.DescribeBody(this.race, this.gender))
-		GameTooltip:AddLine("Keeps your own skin, face and hair.", 0.8, 0.8, 0.8)
-		GameTooltip:Show()
-	end)
-	button:SetScript("OnLeave", function()
-		GameTooltip:Hide()
-	end)
-	table.insert(ui.raceButtons, button)
-end
-
 local function BuildRacesPage(page)
 	Label(page, "Races", "GameFontNormal", 10, -12)
 	Label(page, "Pick a race and gender. Your own skin, face and hair carry over.", "GameFontDisableSmall", 62, -14)
@@ -932,27 +1162,236 @@ local function BuildRacesPage(page)
 		cell:SetHeight(50)
 		cell:SetPoint("TOPLEFT", page, "TOPLEFT", 8 + math.mod(race - 1, 2) * 233, -36 - math.floor((race - 1) / 2) * 56)
 		Panel(cell, 0.08, 0.08, 0.09)
-		RaceButton(cell, race, 0)
-		RaceButton(cell, race, 1)
+		for gender = 0, 1 do
+			local button = CreateFrame("Button", "DmorphOctoRace" .. race .. GenderName(gender), cell)
+			button:SetWidth(38)
+			button:SetHeight(38)
+			button:SetPoint("TOPLEFT", cell, "TOPLEFT", 6 + gender * 44, -6)
+			RaceIcon(button, race, gender)
+			button:SetScript("OnClick", function()
+				Morph(M.SetRace, this.race, this.gender)
+			end)
+			button:SetScript("OnEnter", function()
+				Tooltip(this, M.DescribeBody(this.race, this.gender), "Keeps your own skin, face and hair.",
+					"Your item morphs show on it.")
+			end)
+			button:SetScript("OnLeave", HideTooltip)
+			table.insert(ui.raceButtons, button)
+		end
 		Label(cell, M.RACES[race].name, "GameFontNormal", 100, -12)
 		cell.mine = Label(cell, "", "GameFontDisableSmall", 100, -28)
 		ui.raceCells[race] = cell
 	end
 	Button(page, "Swap gender", 140, 8, -346, function()
-		SetStatus(M.ToggleGender())
+		Morph(M.ToggleGender)
 	end)
 	ui.nativeLabel = Label(page, "", "GameFontDisableSmall", 160, -352)
 end
 
--- Items tab -------------------------------------------------------------------------
+-- Creator tab ------------------------------------------------------------------------
 
-local function RefreshItems()
-	ui.itemList.Refresh()
+-- The creator builds a look from the game's own NPCs of a race and gender
+-- (Data/Looks.lua): pick a race, then step through the skin colours, faces,
+-- hair styles and colours and facial hair that those NPCs have.
+local function CreatorTarget()
+	local c = ui.creator
+	if not c.race then
+		local race, gender = M.GetBodyRace()
+		c.race, c.gender = race or 1, gender or 0
+	end
+	return c.race, c.gender
 end
 
-local function FilterItems()
+local function Position(list, value)
+	for i = 1, table.getn(list) do
+		if list[i] == value then
+			return i
+		end
+	end
+	return 1
+end
+
+local function RefreshCreator()
+	local c = ui.creator
+	local race, gender = CreatorTarget()
+	local list = M.GetLooks(race, gender)
+	local look = c.index and list[c.index]
+	for _, button in pairs(ui.creatorRaces) do
+		if button.race == race and button.gender == gender then
+			button.ring:Show()
+		else
+			button.ring:Hide()
+		end
+	end
+	ui.creatorTitle:SetText(M.DescribeBody(race, gender) .. ": " .. Count(table.getn(list), "look"))
+	for f = 1, 6 do
+		local row = ui.creatorRows[f]
+		local values
+		if f == 6 then
+			values = look and M.GetLookOutfits(race, gender, c.index) or {}
+		else
+			values = M.GetLookValues(race, gender, f)
+		end
+		local text = "- / " .. table.getn(values)
+		if look and f == 6 then
+			text = Position(values, c.index) .. " / " .. table.getn(values) .. "  (" .. Count(look[7], "piece") .. ")"
+		elseif look then
+			text = Position(values, look[f + 1]) .. " / " .. table.getn(values)
+		end
+		row.value:SetText(text)
+		if f == 5 then
+			if gender == 1 then
+				row.label:SetText("Features")
+			else
+				row.label:SetText("Facial hair")
+			end
+		end
+	end
+	if look then
+		ui.creatorLook:SetText("Look " .. Commas(c.index) .. " of " .. Commas(table.getn(list)) .. " - display ID " .. look[1])
+	else
+		ui.creatorLook:SetText("Pick a race, then any feature, or roll the dice.")
+	end
+end
+
+local function WearLook(index)
+	local c = ui.creator
+	local race, gender = CreatorTarget()
+	local list = M.GetLooks(race, gender)
+	if not (index and list[index]) then
+		return SetStatus(false, "The game has no " .. M.DescribeBody(race, gender) .. " NPC looks.")
+	end
+	c.index = index
+	RefreshCreator()
+	Morph(M.SetDisplay, list[index][1])
+end
+
+-- Feature f (1-5) or the outfit (6) one value along.
+local function StepFeature(f, step)
+	local c = ui.creator
+	local race, gender = CreatorTarget()
+	local list = M.GetLooks(race, gender)
+	if table.getn(list) == 0 then
+		return WearLook(nil)
+	end
+	if not (c.index and list[c.index]) then
+		return WearLook(1)
+	end
+	if f == 6 then
+		local outfits = M.GetLookOutfits(race, gender, c.index)
+		return WearLook(outfits[Wrap(Position(outfits, c.index), step, table.getn(outfits))])
+	end
+	local values = M.GetLookValues(race, gender, f)
+	local value = values[Wrap(Position(values, list[c.index][f + 1]), step, table.getn(values))]
+	WearLook(M.FindLook(race, gender, f, value, c.index))
+end
+
+local function BuildCreatorPage(page)
+	Label(page, "Character creator", "GameFontNormal", 10, -10)
+	Label(page, "Every face, skin and hairstyle the game's own NPCs have.", "GameFontDisableSmall", 130, -12)
+	for race = 1, table.getn(M.RACES) do
+		for gender = 0, 1 do
+			local button = CreateFrame("Button", "DmorphOctoCreator" .. race .. GenderName(gender), page)
+			button:SetWidth(36)
+			button:SetHeight(36)
+			button:SetPoint("TOPLEFT", page, "TOPLEFT", 14 + (race - 1) * 45, -30 - gender * 40)
+			RaceIcon(button, race, gender)
+			button:SetScript("OnClick", function()
+				local c = ui.creator
+				c.race, c.gender, c.index = this.race, this.gender, nil
+				WearLook(1)
+			end)
+			button:SetScript("OnEnter", function()
+				Tooltip(this, M.DescribeBody(this.race, this.gender),
+					Count(table.getn(M.GetLooks(this.race, this.gender)), "look") .. " from the game's NPCs.")
+			end)
+			button:SetScript("OnLeave", HideTooltip)
+			table.insert(ui.creatorRaces, button)
+		end
+	end
+	ui.creatorTitle = Label(page, "", "GameFontHighlight", 14, -116, "DmorphOctoCreatorTitle")
+	local names = { M.LOOK_FEATURES[1], M.LOOK_FEATURES[2], M.LOOK_FEATURES[3], M.LOOK_FEATURES[4],
+		M.LOOK_FEATURES[5], "Outfit" }
+	for f = 1, 6 do
+		local y = -140 - (f - 1) * 27
+		local row = {}
+		row.label = Label(page, names[f], "GameFontNormal", 20, y - 4)
+		Button(page, "<", 26, 170, y, function()
+			StepFeature(this.feature, -1)
+		end, "DmorphOctoCreatorPrev" .. f).feature = f
+		row.value = page:CreateFontString("DmorphOctoCreatorValue" .. f, "OVERLAY", "GameFontHighlight")
+		row.value:SetPoint("TOP", page, "TOPLEFT", 270, y - 4)
+		Button(page, ">", 26, 344, y, function()
+			StepFeature(this.feature, 1)
+		end, "DmorphOctoCreatorNext" .. f).feature = f
+		ui.creatorRows[f] = row
+	end
+	local dice = CreateFrame("Button", "DmorphOctoCreatorRandom", page)
+	dice:SetWidth(30)
+	dice:SetHeight(30)
+	dice:SetPoint("TOPLEFT", page, "TOPLEFT", 14, -304)
+	dice:SetNormalTexture("Interface\\Buttons\\UI-GroupLoot-Dice-Up")
+	dice:SetPushedTexture("Interface\\Buttons\\UI-GroupLoot-Dice-Down")
+	dice:SetHighlightTexture("Interface\\Buttons\\UI-GroupLoot-Dice-Highlight")
+	dice:SetScript("OnClick", function()
+		local race, gender = CreatorTarget()
+		local count = table.getn(M.GetLooks(race, gender))
+		if count == 0 then
+			return WearLook(nil)
+		end
+		local index = math.random(count)
+		if count > 1 and index == ui.creator.index then
+			index = Wrap(index, 1, count)
+		end
+		WearLook(index)
+	end)
+	dice:SetScript("OnEnter", function()
+		Tooltip(this, "Random look", "Any face, skin, hair and outfit of this race.")
+	end)
+	dice:SetScript("OnLeave", HideTooltip)
+	ui.creatorLook = Label(page, "", "GameFontHighlightSmall", 52, -315, "DmorphOctoCreatorLook")
+	Label(page, "These are NPC looks, so your item morphs don't show on them.", "GameFontDisableSmall", 14, -346)
+	Label(page, "For your own face with gear, use the Races tab.", "GameFontDisableSmall", 14, -360)
+end
+
+-- Items tab -------------------------------------------------------------------------
+
+local function ItemFilterText(filters, source, quality)
+	if quality > 1 and source > 1 then
+		return M.QUALITY_FILTERS[quality].text .. ", " .. (source == 2 and "1.12" or "new")
+	elseif quality > 1 then
+		return M.QUALITY_FILTERS[quality].text
+	end
+	return filters[source].text
+end
+
+-- A menu with the source filters (all, 1.12, new) and the quality filters.
+local function SourceQualityMenu(anchor, filters, sourceKey, qualityKey, done)
+	local prefs, options = Prefs(), { { text = "Show", header = true } }
+	for i = 1, table.getn(filters) do
+		table.insert(options, { text = filters[i].text, source = i, checked = prefs[sourceKey] == i })
+	end
+	table.insert(options, { text = "Quality", header = true })
+	for i = 1, table.getn(M.QUALITY_FILTERS) do
+		table.insert(options, { text = M.QUALITY_FILTERS[i].text, quality = i, checked = prefs[qualityKey] == i })
+	end
+	OpenMenu(anchor, options, function(option)
+		local p = Prefs()
+		if option.source then
+			p[sourceKey] = option.source
+		else
+			p[qualityKey] = option.quality
+		end
+		anchor:SetText(ItemFilterText(filters, p[sourceKey], p[qualityKey]))
+		done()
+	end)
+end
+
+local function FilterItems(keep)
+	local prefs = Prefs()
 	local count
-	ui.itemResult, count = M.FilterCatalog(M.GetItemCatalog(itemSlot), ui.itemSearch:GetText())
+	ui.itemResult, count = M.FilterCatalog(M.GetItemCatalog(itemSlot), ui.itemSearch:GetText(),
+		M.ITEM_FILTERS[prefs.itemFilter], M.QUALITY_FILTERS[prefs.itemQuality].quality, prefs.sortItems)
 	ui.itemSlotLabel:SetText(M.SLOT_NAMES[itemSlot])
 	local note = Count(count, "item")
 	if itemSlot >= 16 and itemSlot <= 18 then
@@ -961,7 +1400,11 @@ local function FilterItems()
 	ui.itemCount:SetText(note)
 	local _, empty = GetInventorySlotInfo(SLOT_KEYS[itemSlot])
 	ui.itemSlotIcon:SetTexture(empty)
-	ui.itemList.SetCount(count)
+	ui.itemList.SetCount(count, keep)
+end
+
+local function RefreshItems()
+	ui.itemList.Refresh()
 end
 
 local function ShowItemSlot(slot)
@@ -975,27 +1418,55 @@ local function CycleSlot(step)
 	local count = table.getn(order)
 	for i = 1, count do
 		if order[i] == itemSlot then
-			ShowItemSlot(order[math.mod(i - 1 + step + count, count) + 1])
+			ShowItemSlot(order[Wrap(i, step, count)])
 			return
 		end
 	end
 end
 
+local function SlotMenu()
+	local options = {}
+	for i = 1, table.getn(M.SLOT_ORDER) do
+		local slot = M.SLOT_ORDER[i]
+		table.insert(options, { text = M.SLOT_NAMES[slot], slot = slot, checked = slot == itemSlot })
+	end
+	OpenMenu(this, options, function(option)
+		ShowItemSlot(option.slot)
+	end)
+end
+
 local function BuildItemsPage(page)
-	ui.itemSlotIcon = page:CreateTexture(nil, "ARTWORK")
+	local prefs = Prefs()
+	-- The slot: click it for a menu of every slot.
+	local slotButton = CreateFrame("Button", "DmorphOctoItemSlotButton", page)
+	slotButton:SetWidth(210)
+	slotButton:SetHeight(30)
+	slotButton:SetPoint("TOPLEFT", page, "TOPLEFT", 6, -4)
+	local highlight = slotButton:CreateTexture(nil, "HIGHLIGHT")
+	highlight:SetTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
+	highlight:SetBlendMode("ADD")
+	highlight:SetAllPoints(slotButton)
+	slotButton:SetScript("OnClick", SlotMenu)
+	slotButton:SetScript("OnEnter", function()
+		Tooltip(this, "Slot", "Click to pick another slot.")
+	end)
+	slotButton:SetScript("OnLeave", HideTooltip)
+	ui.itemSlotIcon = slotButton:CreateTexture(nil, "ARTWORK")
 	ui.itemSlotIcon:SetWidth(26)
 	ui.itemSlotIcon:SetHeight(26)
-	ui.itemSlotIcon:SetPoint("TOPLEFT", page, "TOPLEFT", 8, -6)
-	ui.itemSlotLabel = Label(page, "", "GameFontNormal", 40, -8, "DmorphOctoItemSlotLabel")
-	ui.itemCount = Label(page, "", "GameFontDisableSmall", 40, -22, "DmorphOctoItemCount")
+	ui.itemSlotIcon:SetPoint("TOPLEFT", slotButton, "TOPLEFT", 2, -2)
+	ui.itemSlotLabel = Label(slotButton, "", "GameFontNormal", 34, -4, "DmorphOctoItemSlotLabel")
+	ui.itemCount = Label(slotButton, "", "GameFontDisableSmall", 34, -18, "DmorphOctoItemCount")
+	ui.itemLookup = Label(page, "", "GameFontDisableSmall", 222, -14, "DmorphOctoItemLookup")
 	Button(page, "<", 26, PAGE_W - 64, -8, function()
 		CycleSlot(-1)
 	end)
 	Button(page, ">", 26, PAGE_W - 36, -8, function()
 		CycleSlot(1)
 	end)
+
 	Label(page, "Search:", nil, 10, -42)
-	ui.itemSearch = EditBox(page, "DmorphOctoItemSearch", 200, 58, -38)
+	ui.itemSearch = EditBox(page, "DmorphOctoItemSearch", 140, 58, -38)
 	ui.itemSearch:SetScript("OnTextChanged", function()
 		Debounce(ui.searchTimer, 0.25, FilterItems)
 	end)
@@ -1003,12 +1474,21 @@ local function BuildItemsPage(page)
 		this:ClearFocus()
 		FilterItems()
 	end)
+	local filter = Button(page, ItemFilterText(M.ITEM_FILTERS, prefs.itemFilter, prefs.itemQuality), 150, 212, -37, function()
+		SourceQualityMenu(this, M.ITEM_FILTERS, "itemFilter", "itemQuality", FilterItems)
+	end, "DmorphOctoItemFilter")
+	filter:SetScript("OnEnter", function()
+		Tooltip(this, "Which items to list", "All, 1.12's own or the ones Turtle WoW and OctoWoW added,",
+			"and one quality: Rare, Epic, Legendary, ...")
+	end)
+	filter:SetScript("OnLeave", HideTooltip)
+	SortButton(page, "DmorphOctoItemSort", 368, -37, "sortItems", FilterItems)
+
 	ui.itemList = List(page, "DmorphOctoItemList", 8, -64, 60, function(row, index)
 		local catalog = M.GetItemCatalog(itemSlot)
 		local i = ui.itemResult[index]
-		local color = ITEM_QUALITY_COLORS[catalog.quality[i]] or ITEM_QUALITY_COLORS[1]
 		row.text:SetText(catalog.names[i])
-		row.text:SetTextColor(color.r, color.g, color.b)
+		row.text:SetTextColor(QualityColor(catalog.quality[i]))
 		row.info:SetText(catalog.ids[i])
 		if catalog.ids[i] == M.GetState().items[itemSlot] then
 			row:LockHighlight()
@@ -1016,7 +1496,7 @@ local function BuildItemsPage(page)
 	end, function(index)
 		local itemID = M.GetItemCatalog(itemSlot).ids[ui.itemResult[index]]
 		ui.itemBox:SetText(itemID)
-		SetStatus(M.SetItem(itemSlot, itemID))
+		Morph(M.SetItem, itemSlot, itemID)
 	end)
 
 	local y = -346
@@ -1024,14 +1504,90 @@ local function BuildItemsPage(page)
 	ui.itemBox = EditBox(page, "DmorphOctoItemID", 70, 60, y, 9)
 	local function Apply()
 		ui.itemBox:ClearFocus()
-		SetStatus(M.SetItem(itemSlot, M.ParseID(ui.itemBox:GetText()) or -1))
+		Morph(M.SetItem, itemSlot, M.ParseID(ui.itemBox:GetText()) or -1)
 	end
 	ui.itemBox:SetScript("OnEnterPressed", Apply)
 	Button(page, "Apply", 70, 142, y, Apply)
 	Button(page, "Use my own gear", 130, 218, y, function()
 		ui.itemBox:SetText("")
-		SetStatus(M.SetItem(itemSlot, 0))
+		Morph(M.SetItem, itemSlot, 0)
 	end)
+end
+
+-- Sets tab --------------------------------------------------------------------------
+
+local function FilterSets(keep)
+	local prefs = Prefs()
+	local count
+	ui.setResult, count = M.FilterCatalog(M.GetSetCatalog(), ui.setSearch:GetText(),
+		M.SET_FILTERS[prefs.setFilter], M.QUALITY_FILTERS[prefs.setQuality].quality, prefs.sortSets)
+	ui.setCount:SetText(Count(count, "set"))
+	ui.setList.SetCount(count, keep)
+end
+
+local function RefreshSets()
+	ui.setList.Refresh()
+end
+
+local function SetTooltip(index, row)
+	local catalog = M.GetSetCatalog()
+	local i = ui.setResult[index]
+	if not i then
+		return
+	end
+	GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
+	GameTooltip:SetText(catalog.names[i], QualityColor(catalog.quality[i]))
+	local pieces = catalog.pieces[i]
+	for k = 1, table.getn(pieces) do
+		local slots = M.GetItemSlots(pieces[k])
+		if slots then
+			GameTooltip:AddLine(M.SLOT_NAMES[slots[1]] .. ": " .. M.DescribeItem(pieces[k], slots[1]), 1, 1, 1)
+		else
+			GameTooltip:AddLine("Item " .. pieces[k] .. ": still being looked up", 0.6, 0.6, 0.6)
+		end
+	end
+	GameTooltip:AddLine("Click to wear every piece.", 0.6, 1, 0.6)
+	GameTooltip:Show()
+end
+
+local function BuildSetsPage(page)
+	local prefs = Prefs()
+	Label(page, "Search:", nil, 10, -12)
+	ui.setSearch = EditBox(page, "DmorphOctoSetSearch", 140, 58, -8)
+	ui.setSearch:SetScript("OnTextChanged", function()
+		Debounce(ui.searchTimer, 0.25, FilterSets)
+	end)
+	ui.setSearch:SetScript("OnEnterPressed", function()
+		this:ClearFocus()
+		FilterSets()
+	end)
+	local filter = Button(page, ItemFilterText(M.SET_FILTERS, prefs.setFilter, prefs.setQuality), 150, 212, -7, function()
+		SourceQualityMenu(this, M.SET_FILTERS, "setFilter", "setQuality", FilterSets)
+	end, "DmorphOctoSetFilter")
+	filter:SetScript("OnEnter", function()
+		Tooltip(this, "Which sets to list", "All, 1.12's own or the ones Turtle WoW and OctoWoW added,",
+			"and one quality: Rare, Epic, Legendary, ...")
+	end)
+	filter:SetScript("OnLeave", HideTooltip)
+	SortButton(page, "DmorphOctoSetSort", 368, -7, "sortSets", FilterSets)
+
+	ui.setList = List(page, "DmorphOctoSetList", 8, -36, 80, function(row, index)
+		local catalog = M.GetSetCatalog()
+		local i = ui.setResult[index]
+		row.text:SetText(catalog.names[i])
+		row.text:SetTextColor(QualityColor(catalog.quality[i]))
+		row.info:SetText(Count(table.getn(catalog.pieces[i]), "piece"))
+		if i == ui.selectedSet then
+			row:LockHighlight()
+		end
+	end, function(index)
+		ui.selectedSet = ui.setResult[index]
+		ui.setList.Refresh()
+		Morph(M.WearSet, ui.selectedSet)
+	end, SetTooltip)
+	ui.setCount = Label(page, "", "GameFontDisableSmall", 10, -314, "DmorphOctoSetCount")
+	ui.setLookup = Label(page, "", "GameFontDisableSmall", 160, -314, "DmorphOctoSetLookup")
+	Label(page, "Click a set to wear every piece it has. Hover to see the pieces.", "GameFontDisableSmall", 10, -352)
 end
 
 -- Wardrobe tab ------------------------------------------------------------------------
@@ -1055,7 +1611,7 @@ local function LoadSelected()
 	if not selectedOutfit then
 		return SetStatus(false, "Pick an outfit in the list first.")
 	end
-	SetStatus(M.LoadOutfit(selectedOutfit))
+	Morph(M.LoadOutfit, selectedOutfit)
 end
 
 local function BuildWardrobePage(page)
@@ -1125,7 +1681,9 @@ StaticPopupDialogs["DMORPHOCTO_DELETE_OUTFIT"] = {
 local REFRESH = {
 	models = RefreshModels,
 	races = RefreshRaces,
+	creator = RefreshCreator,
 	items = RefreshItems,
+	sets = RefreshSets,
 	wardrobe = RefreshWardrobe,
 }
 
@@ -1138,6 +1696,29 @@ local function RefreshAll()
 	ShowArt()
 	REFRESH[currentTab]()
 	RequestPreview()
+end
+
+-- Once a second: slot icons (1.12 has no event for item info arriving) and
+-- items the background lookup has found.
+local function Poll()
+	UpdateSlots()
+	local version = M.GetItemsVersion()
+	if version ~= ui.itemsVersion then
+		ui.itemsVersion = version
+		if ui.itemResult and currentTab == "items" then
+			FilterItems(true)
+		end
+		if ui.setResult and currentTab == "sets" then
+			FilterSets(true)
+		end
+	end
+	local left = M.GetLookupStatus()
+	local text = ""
+	if left > 0 then
+		text = "Looking up " .. Count(left, "OctoWoW item") .. "..."
+	end
+	ui.itemLookup:SetText(text)
+	ui.setLookup:SetText(text)
 end
 
 local function TabLook(tab, active)
@@ -1155,6 +1736,7 @@ end
 ShowTab = function(key)
 	currentTab = key
 	ui.card:Hide()
+	ui.menu:Hide()
 	for i = 1, table.getn(TABS) do
 		local tab = TABS[i]
 		if tab.key == key then
@@ -1168,6 +1750,8 @@ ShowTab = function(key)
 		FilterModels()
 	elseif key == "items" then
 		FilterItems()
+	elseif key == "sets" and not ui.setResult then
+		FilterSets()
 	end
 	UpdateSlots()
 	REFRESH[key]()
@@ -1276,15 +1860,13 @@ local function BuildStage()
 			button.slot = slot
 			button:SetScript("OnClick", function()
 				if arg1 == "RightButton" then
-					SetStatus(M.SetItem(this.slot, 0))
+					Morph(M.SetItem, this.slot, 0)
 				else
 					ShowItemSlot(this.slot)
 				end
 			end)
 			button:SetScript("OnEnter", SlotTooltip)
-			button:SetScript("OnLeave", function()
-				GameTooltip:Hide()
-			end)
+			button:SetScript("OnLeave", HideTooltip)
 			ui.slots[slot] = button
 		end
 	end
@@ -1298,11 +1880,112 @@ local function BuildStage()
 	border:SetBackdropBorderColor(0.6, 0.5, 0.3, 1)
 
 	Button(frame, "Reset model", 155, 20, -432, function()
-		SetStatus(M.ResetModel())
+		Morph(M.ResetModel)
 	end)
 	Button(frame, "Reset everything", 155, 183, -432, function()
-		SetStatus(M.ResetAll())
+		Morph(M.ResetAll)
 	end)
+end
+
+-- Scales the window, keeping its top-left corner where it is.
+local function ScaleWindow(scale)
+	if scale < MIN_SCALE then
+		scale = MIN_SCALE
+	elseif scale > MAX_SCALE then
+		scale = MAX_SCALE
+	end
+	local old, left, top = frame:GetScale(), frame:GetLeft(), frame:GetTop()
+	frame:SetScale(scale)
+	if left and top then
+		frame:ClearAllPoints()
+		frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left * old / scale, top * old / scale)
+	end
+	Prefs().scale = scale
+end
+
+-- The corner grip: drag it to make the whole window bigger or smaller.
+local function BuildGrip()
+	local grip = CreateFrame("Button", "DmorphOctoResize", frame)
+	grip:SetWidth(18)
+	grip:SetHeight(18)
+	grip:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -8, 8)
+	grip:SetFrameLevel(frame:GetFrameLevel() + 10)
+	grip:EnableMouse(true)
+	grip.dots = {}
+	local spots = { { 2, 2 }, { 7, 2 }, { 12, 2 }, { 2, 7 }, { 7, 7 }, { 2, 12 } }
+	for i = 1, table.getn(spots) do
+		local dot = grip:CreateTexture(nil, "OVERLAY")
+		dot:SetTexture(WHITE)
+		dot:SetWidth(3)
+		dot:SetHeight(3)
+		dot:SetPoint("BOTTOMRIGHT", grip, "BOTTOMRIGHT", -spots[i][1], spots[i][2])
+		dot:SetVertexColor(0.7, 0.6, 0.4)
+		grip.dots[i] = dot
+	end
+	local function Tint(r, g, b)
+		for i = 1, table.getn(grip.dots) do
+			grip.dots[i]:SetVertexColor(r, g, b)
+		end
+	end
+	grip:SetScript("OnEnter", function()
+		Tint(1, 0.82, 0)
+		Tooltip(this, "Window size", "Drag to make the window bigger or smaller.")
+	end)
+	grip:SetScript("OnLeave", function()
+		Tint(0.7, 0.6, 0.4)
+		GameTooltip:Hide()
+	end)
+	grip:SetScript("OnMouseDown", function()
+		this.startX = GetCursorPosition()
+		this.startScale = frame:GetScale()
+	end)
+	grip:SetScript("OnMouseUp", function()
+		this.startX = nil
+	end)
+	grip:SetScript("OnUpdate", function()
+		if this.startX then
+			local x = GetCursorPosition()
+			ScaleWindow(this.startScale + (x - this.startX) / (W * UIParent:GetEffectiveScale()))
+		end
+	end)
+end
+
+local function BuildTabs()
+	for i = 1, table.getn(TABS) do
+		local info = TABS[i]
+		local tab = CreateFrame("Button", "DmorphOctoTab" .. info.text, frame)
+		tab:SetWidth(TAB_W)
+		tab:SetHeight(26)
+		tab:SetPoint("TOPLEFT", frame, "TOPLEFT", PAGE_X + (i - 1) * (TAB_W + 6), -38)
+		Panel(tab, 0.08, 0.08, 0.09)
+		tab.label = tab:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+		tab.label:SetPoint("CENTER", tab, "CENTER", 0, 0)
+		tab.label:SetText(info.text)
+		local highlight = tab:CreateTexture(nil, "HIGHLIGHT")
+		highlight:SetTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
+		highlight:SetBlendMode("ADD")
+		highlight:SetPoint("TOPLEFT", tab, "TOPLEFT", 3, -3)
+		highlight:SetPoint("BOTTOMRIGHT", tab, "BOTTOMRIGHT", -3, 3)
+		tab.key = info.key
+		tab:SetScript("OnClick", function()
+			PlaySound("igCharacterInfoTab")
+			ShowTab(this.key)
+		end)
+		ui.tabs[info.key] = tab
+		local page = CreateFrame("Frame", "DmorphOctoPage" .. info.text, frame)
+		page:SetPoint("TOPLEFT", frame, "TOPLEFT", PAGE_X, PAGE_Y)
+		page:SetWidth(PAGE_W)
+		page:SetHeight(PAGE_H)
+		Panel(page, 0.035, 0.035, 0.04)
+		page:Hide()
+		ui.pages[info.key] = page
+	end
+	BuildModelsPage(ui.pages.models)
+	BuildRacesPage(ui.pages.races)
+	BuildCreatorPage(ui.pages.creator)
+	BuildItemsPage(ui.pages.items)
+	BuildSetsPage(ui.pages.sets)
+	BuildWardrobePage(ui.pages.wardrobe)
 end
 
 local function Build()
@@ -1312,6 +1995,7 @@ local function Build()
 	frame:SetHeight(H)
 	frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
 	frame:SetFrameStrata("DIALOG")
+	frame:SetScale(Prefs().scale)
 	frame:SetBackdrop({
 		bgFile = WHITE, edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
 		tile = false, edgeSize = 32,
@@ -1341,14 +2025,19 @@ local function Build()
 	frame:SetScript("OnHide", function()
 		PlaySound("igCharacterInfoClose")
 		ui.card:Hide()
+		ui.menu:Hide()
+		-- A click still waiting at the gate is applied now.
+		local nextCall = ui.gateNext
+		ui.gateBusy, ui.gateNext = nil, nil
+		if nextCall then
+			Morph(nextCall[1], nextCall[2], nextCall[3])
+		end
 	end)
-	-- 1.12 has no event for item info arriving, so redraw the slot icons now
-	-- and then: a morphed item's "?" turns into its icon once the client knows it.
 	frame:SetScript("OnUpdate", function()
-		this.sinceSlots = (this.sinceSlots or 0) + arg1
-		if this.sinceSlots > 1 then
-			this.sinceSlots = 0
-			UpdateSlots()
+		this.sincePoll = (this.sincePoll or 0) + arg1
+		if this.sincePoll > 1 then
+			this.sincePoll = 0
+			Poll()
 		end
 	end)
 	-- Shapeshifts, zoning and the like rebuild your model.
@@ -1379,45 +2068,14 @@ local function Build()
 	ui.searchTimer = NewTimer()
 	ui.previewTimer = NewTimer()
 	ui.revealTimer = NewTimer()
+	ui.gateTimer = NewTimer()
 	ui.card = BuildCard()
 	ui.canPreview = type(ui.card.view.model.SetDisplayInfo) == "function"
+	ui.menu = BuildMenu()
 
 	BuildStage()
-
-	-- Tabs and pages.
-	for i = 1, table.getn(TABS) do
-		local info = TABS[i]
-		local tab = CreateFrame("Button", "DmorphOctoTab" .. info.text, frame)
-		tab:SetWidth(112)
-		tab:SetHeight(26)
-		tab:SetPoint("TOPLEFT", frame, "TOPLEFT", PAGE_X + (i - 1) * 120, -38)
-		Panel(tab, 0.08, 0.08, 0.09)
-		tab.label = tab:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-		tab.label:SetPoint("CENTER", tab, "CENTER", 0, 0)
-		tab.label:SetText(info.text)
-		local highlight = tab:CreateTexture(nil, "HIGHLIGHT")
-		highlight:SetTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
-		highlight:SetBlendMode("ADD")
-		highlight:SetPoint("TOPLEFT", tab, "TOPLEFT", 3, -3)
-		highlight:SetPoint("BOTTOMRIGHT", tab, "BOTTOMRIGHT", -3, 3)
-		tab.key = info.key
-		tab:SetScript("OnClick", function()
-			PlaySound("igCharacterInfoTab")
-			ShowTab(this.key)
-		end)
-		ui.tabs[info.key] = tab
-		local page = CreateFrame("Frame", "DmorphOctoPage" .. info.text, frame)
-		page:SetPoint("TOPLEFT", frame, "TOPLEFT", PAGE_X, PAGE_Y)
-		page:SetWidth(PAGE_W)
-		page:SetHeight(PAGE_H)
-		Panel(page, 0.035, 0.035, 0.04)
-		page:Hide()
-		ui.pages[info.key] = page
-	end
-	BuildModelsPage(ui.pages.models)
-	BuildRacesPage(ui.pages.races)
-	BuildItemsPage(ui.pages.items)
-	BuildWardrobePage(ui.pages.wardrobe)
+	BuildTabs()
+	BuildGrip()
 
 	ui.status = Label(frame, "", "GameFontHighlightSmall", 22, -462, "DmorphOctoFrameStatus")
 	ui.status:SetWidth(W - 44)
@@ -1425,7 +2083,7 @@ local function Build()
 	Label(frame, "Morphs only change what you see. Type /dmorph help for chat commands.",
 		"GameFontDisableSmall", 22, -500)
 	local version = frame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-	version:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -22, -500)
+	version:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -34, -500)
 	version:SetText("v" .. M.VERSION)
 end
 

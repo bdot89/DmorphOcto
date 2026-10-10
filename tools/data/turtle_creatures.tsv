@@ -1,0 +1,1200 @@
+# Turtle WoW creature_template display IDs: displayID<TAB>name (one row per creature and model), only models Data/Creatures.lua does not name
+# Exported from ShellLab (github.com/oplancelot/ShellLab, data/shelllab.db) for tools/build_models.ps1.
+19	Brandon Sawyer
+40	Avatar of Pompa
+80	Annabelle
+93	Cheyenne Reynolds
+95	Taradormi
+98	Blood Ring Gladiator
+99	Kaay Carlson
+100	Tamamo
+104	Blood Ring Gladiator
+113	Blood Ring Gladiator
+125	Officer Visser
+129	John Gates
+191	Dockmaster Lorman
+191	Novice Investor
+191	Ol' Biggins
+208	Blackthorn Footpad
+215	Stormwind Citizen
+218	Citizen Schreimeier
+228	Stormwind Citizen
+232	Devon Miller
+232	Novice Investor
+243	Jason Redick
+258	Female Admirer
+267	Valund Halle
+285	Stormwind Citizen
+286	Dave "Ozy" Norton
+299	Vuh'sha Torntusk
+301	Dock Logger
+327	Savanna Palesotti
+352	Axis Spinpistol
+423	Stormwind Citizen
+424	Stormwind Citizen
+427	Stormwind Citizen
+429	Docks Crier
+459	'Charming' Rudair
+508	Luke Agamand
+516	Blademaster Axun
+544	Southfury Bruiser
+560	Novice Investor
+584	Dock Logger
+586	Dock Logger
+588	Dock Fisher
+623	Paranus
+623	Slumbnaz
+638	Branden Mullins
+751	Female Admirer
+841	Highvale Thunderer
+964	Amy Maciulewicz
+1021	Loren Goodcorn
+1048	Maddened Vault Guard
+1108	Disturbed Earth Elemental
+1108	Enraged Cave Rumbler
+1138	Dock Fisher
+1193	Boulderclaw Basher
+1193	Boulderclaw Geomancer
+1193	Boulderclaw Tunneler
+1193	Stonevault Brute
+1435	Caravan Escort
+1611	Bald'aan The Quiet
+1890	Clover Spinpistol
+2185	Nightmare Dreamrunner
+2186	Quel'dorei Steed
+3036	Marrek Stromnur
+4445	Bael Modan Golem
+4712	Zha'nu
+4729	Damilara Sunsorrow
+4729	High Elf Hunter
+5778	Scribe Nahele
+6372	Albino Drake
+6810	Winter Grell Trickster
+6930	Neevan Gubblewire
+7409	Jima
+7532	Elisandra Spellbinder
+8049	Hatereaver Annihilator
+8989	K'ron Tusk
+9568	Dawnhowl
+10750	Forlorn Shrieker
+11637	Deathcaller Aisha
+14310	Shaethis Darkoak
+14340	Obsidian War Raptor
+14341	Red War Raptor
+14343	Violet War Raptor
+14345	Ivory War Raptor
+14357	Commander Gerastrasz
+14357	Echo of Gerastrasz
+14358	Corrupted Warden of Time
+14358	Warden of Time
+14432	Kirin Tor Familiar
+15517	Alah'Thalas Magister
+15517	High Elven Magister
+15518	Alah'Thalas Researcher
+15519	Alah'Thalas Researcher
+15523	Alah'Thalas Magister
+15531	Alah'Thalas Magister
+15901	Blitzen
+15901	Winter Veil Reindeer
+16025	Krucios the Soulless
+16036	Alah'Thalas Citizen
+16037	Arcanist Anu'delen
+16037	Scribe Nahele
+16038	Alah'Thalas Citizen
+16046	Chradarmu
+16047	Alah'Thalas Magister
+16075	Forworn Mule
+16083	Ethernos
+16083	Neto The Time Weaver
+16103	Captured Refugee
+16103	High Elf Refugee
+16115	Magistrix Ishalah
+16133	Alyssia Solar
+16162	Echo of Time
+16162	Time Anomaly
+16182	Alah'Thalas Citizen
+16184	Alah'Thalas Citizen
+16184	Eremzion
+16289	Captured Refugee
+16289	High Elf Refugee
+16592	Aelira Dawnhand
+16592	Captured Refugee
+16592	High Elf Refugee
+16624	Andalideth Suncaller
+16655	Fenrion Rendall
+16655	Melonius Silvershine
+16655	Technician Nel'doriel
+16676	Captured Refugee
+16676	High Elf Refugee
+16682	Captured Refugee
+16682	High Elf Refugee
+16682	Telina Shadehand
+16685	Larane Dawnbringer
+16704	Captured Refugee
+16704	High Elf Refugee
+16705	Malanius Silvershine
+16718	Alaya Dawnrose
+16746	Torial Dawnrise
+16760	Malvinah Sunblade
+16760	Velessa Brightstar
+16761	Melkolar Dawnrise
+16765	Priestess Maelah Sunsworn
+16767	Geherion Whitesnake
+16767	Valanos Dawnfire
+16771	Talvas Whitesnake
+16777	Voldana
+16778	Ranger Rubinah Sunsworn
+16796	Leela the Shadow
+16798	Vanira Quel'Belore
+16814	Daemar Swiftstrike
+16814	Tolif Valanor
+16818	Toranial Mishulas
+16818	Voryn Skystrider
+16822	Chaddus Suncarrier
+16825	Captured Refugee
+16825	High Elf Refugee
+16825	Shandlar Thethis
+16826	Loriel
+16833	Soalara Dawnstar
+16851	Lor'thas the Holy
+16859	Leshandra Fintri
+16926	Alisaiah Sunblade
+16983	Scryer Lordal Thas'alah
+17279	Ley-Technician Vorthal
+17279	Magister Ala'shor Sunblood
+17279	Sinodas Azuresky
+17325	Grand Magistrix Merisa Dawnbreaker
+17329	Alurzion
+17329	Manloran Dawnstrike
+17540	Denalah Silverpoint
+17641	Illyanah Dawnstar
+17658	Captured Refugee
+17658	High Elf Refugee
+17676	Ashanya Quel'belore
+17842	Ley-Technician Aemara Sunsorrow
+17844	Amelanoh Dawnstar
+17875	High Priest Raemoran Alah'belore
+17875	Remnants Priest
+18000	Drowned Sinner
+18000	Soulless Husk
+18001	Baron Perenolde
+18001	Guard Captain Gort
+18001	Xecc
+18002	Illidari Spellbreaker
+18003	Arisha Sunblade
+18003	High Elf Child
+18003	High Elf Orphan
+18003	Krilana
+18003	Linthea
+18003	Teslinah
+18004	Mist Fox
+18004	Young Mist Fox
+18005	Young Arctic Fox
+18006	Silver Fox
+18007	Brown Fox
+18007	Young Brown Fox
+18008	Fox
+18008	Red Fox
+18008	Thalassian Fox
+18009	Eredar Lord (Outland)
+18013	Nazorna
+18019	Arcane Golem
+18019	Arcane Guardian
+18021	Arcane Pounder
+18022	Broken Arcane Golem
+18022	Defender of Ronae'thalas
+18022	Malfunctioning Arcane Construct
+18022	Malfunctioning Arcane Golem
+18023	Defective Arcane Golem
+18027	Crimson Lynx
+18027	Elder Crimson Lynx
+18027	Young Crimson Lynx
+18028	Bright Lynx
+18028	Bright Lynx Matriarch
+18029	Applebough
+18029	Thalassian Treant
+18030	Autumnal Treant
+18031	Arcandir
+18037	Elodia
+18037	Lord Illidan
+18038	Echo of Kael'thas Sunstrider
+18038	Image of Kael'Thas
+18038	Prince Kael’thas
+18039	Echo of Medivh
+18039	Medivh
+18040	Infinite Riftguard
+18041	Infinite Dragonspawn
+18042	Infinite Riftweaver
+18042	Infinite Timeripper
+18043	Epidamu
+18043	Infinite Whelp
+18043	Infinite Whelpling
+18044	Infinite Timereaver
+18044	Time-Lord Epochronos
+18045	Antnormi
+18046	Maiev Shadowsong
+18047	Akama
+18053	Daemona Des
+18057	Bourok
+18057	Thorg the Big
+18057	Wuzgut
+18062	Bulum
+18070	Chok'Garok
+18073	Enchanted Broom
+18079	Echo of the Lich King
+18079	[Test] Custom spell cast
+18080	Echo of Lady Vashj
+18080	Lady Vashj
+18081	Lisa Jenkins
+18081	Morgan Maxwell
+18082	Zul'jin
+18085	Black Riding Bear
+18087	Infinite Chromie
+18089	Ash Riding Bear
+18090	Brown Riding Bear
+18090	Darkmoon Dancing Bear
+18091	Dark Brown Riding Bear
+18092	Snowy Riding Bear
+18093	White Riding Bear
+18094	Swift Rooster
+18095	Cho’gall
+18096	Wildlord Cenarius
+18097	Highvale Monkey
+18097	Nibu
+18098	The Peach King
+18098	Tiki
+18099	Highvale Chimpanzee
+18099	Simbu
+18100	Ebu
+18101	Warden Watcher
+18102	Kiri Starstalker
+18102	Warden Watcher
+18103	Warden Sira Moonwarden
+18103	Warden Watcher
+18104	Lord Naz’thaj
+18104	Lord Vash'arj
+18107	Damion Steelborn
+18107	Vigil Cavalryman
+18107	Vigil Footman
+18108	Remnants Footman
+18108	Remnants Knight
+18108	Vigil Cavalryman
+18108	Vigil Footman
+18109	Remnants Footman
+18109	Remnants Knight
+18109	Vigil Cavalryman
+18109	Vigil Footman
+18110	Vigil Cavalryman
+18110	Vigil Footman
+18113	Dreadlord
+18113	Fearoth
+18114	Rotten Zombie
+18116	Chronar
+18117	Risen Crypt Guard
+18118	Gorrok
+18118	Orc Grunt
+18119	Faladar Starsplinter
+18119	Illidari Demon Hunter
+18120	Dronormu
+18123	Bronze Time Weaver
+18124	Illidari Naga Myrmidon
+18125	Illidari Naga Myrmidon
+18125	Reefscale Sunderer
+18126	Illidari Naga Myrmidon
+18128	Illidari Naga Myrmidon
+18128	Reefscale Warrior
+18130	Illidari Naga Siren
+18131	Illidari Naga Siren
+18132	Illidari Naga Siren
+18132	Reefscale Sorceress
+18133	Illidari Naga Siren
+18133	Lady Renirja
+18135	Alarus
+18135	Lord Darkhallow
+18135	Scourge Necromancer
+18137	Human Footman
+18137	Valiant
+18140	Lonum Magicus
+18143	Spectral Tiger
+18144	Bonny
+18144	Butterscotch
+18144	Larry
+18144	Moo
+18145	Bessy
+18145	Domino
+18145	Duke
+18145	Molasses
+18149	Sir Jessy
+18150	Manacrazed Grell
+18151	Hemming Silverbeard
+18152	Mulin Snowbeard
+18167	Thalassian Warhorse
+18168	Argent Warhorse
+18169	Thalassian Charger
+18170	Argent Charger
+18174	Bloodclaw Alpha
+18174	Bloodclaw Rager
+18174	Bloodclaw Worgen
+18174	Shadowbane Alpha
+18175	Dragonhawk Hatchling
+18176	Thalassian Tender
+18177	Red Fox
+18178	Dryad Fawn
+18179	Phoenix Hatchling
+18180	Raven Lord
+18184	Tham'Grarr
+18187	Ewe'luas
+18191	Fel Wretched Elf (Deadscar)
+18191	Withered Refugee
+18192	Fel Wretched Elf (Deadscar)
+18192	Withered Refugee
+18193	Fel Wretched Elf (Deadscar)
+18193	Ranathir
+18193	Withered Refugee
+18194	Fel Wretched Elf (Deadscar)
+18194	Ka'zmir Somberwind
+18194	Kal'mantir the Mad
+18194	Withered Refugee
+18195	Fel Elf Warlock Female (Deadscar)
+18196	Fel Elf Warlock Female (Deadscar)
+18197	Fel Elf Warlock Female (Deadscar)
+18198	Fel Elf Ranger (Deadscar)
+18199	Fel Elf Ranger (Deadscar)
+18200	Fel Elf Ranger (Deadscar)
+18201	Fel Elf Warlock Male (Deadscar)
+18202	Fel Elf Warlock Male (Deadscar)
+18203	Fel Elf Warlock Male (Deadscar)
+18204	Fel Elf Warrior (Deadscar)
+18205	Fel Elf Warrior (Deadscar)
+18206	Fel Elf Warrior (Deadscar)
+18208	Ranger Lord Hawkspear
+18209	Caledra Dawnbreeze
+18212	Lorath Silverwing
+18212	Theramore Guard
+18212	Theramore Sentry
+18213	Theramore Guard
+18213	Theramore Sentry
+18214	Ranger Canarah Kim'Alah
+18214	Ranger-Captain Nasuna Dawnbringer
+18216	Shanala Sunsorrow
+18218	Andrelas Thas'danil
+18220	Alah'thalas Ranger
+18220	Ranger Protector
+18221	Alah'thalas Ranger
+18221	Pathstrider Protector
+18221	Ranger Protector
+18222	Alah'thalas Ranger
+18222	Ranger Protector
+18223	Alah'thalas Ranger
+18223	Commander Anarileth
+18223	Pathstrider Protector
+18223	Ranger Protector
+18224	Dark Ranger Lanissa
+18225	Alinerenah Sunsparrow
+18225	Ansela Dawnshield
+18226	High Elf Ranger
+18227	Dark Reaver of Karazhan
+18227	Dark Rider
+18228	Dark Rider's Steed [Deprecated]
+18228	Immortal Champion's Charger
+18229	Armored Dalaran Warhorse
+18229	Dalaran Charger
+18230	Armored Knight's Warhorse
+18230	Knight's Charger
+18231	Scarlet Warhorse
+18234	Scarlet Charger
+18235	Speaker Vereesa Windrunner
+18235	Vereesa Windrunner
+18236	Faceless Terror
+18238	Harbinger Aph'ygth
+18240	Unicorn
+18240	White Thalassian Unicorn
+18243	Barrens Zhevra
+18244	Spectral Fox
+18244	Spirit Fox
+18245	Tomb Creeper
+18246	Aqir Drone
+18246	Shadow Creeper
+18246	Tomb Creeper
+18247	Duskskitterer
+18247	Hivaxxis
+18247	Wicked Skitterer
+18248	Tomb Creeper
+18251	Chen Stormstout
+18252	Brewfest Ram
+18253	Swift Brewfest Ram
+18254	Swift Red Ram
+18255	Flaxen Riding Saber
+18256	Swift Darnassian Saber
+18257	Swift Horde Worg
+18258	Swift Grey Worg
+18259	Swift Alliance Steed
+18260	Swift Grey Steed
+18261	Swift Blue Riding Raptor
+18262	Swift Crimson Skeletal Steed
+18263	Swift Forsaken Skeletal Steed
+18264	Swift Blood Kodo
+18265	Swift Brewfest Kodo
+18266	Swift Gnomeregan Mechastrider
+18267	Armored Thalassian Unicorn
+18270	Armored Unicorn
+18270	Ornate Thalassian Unicorn
+18271	Riding Gryphon
+18274	Beaky
+18274	Kelton's Riding Gryphon
+18276	Riding Chromatic Drake
+18277	Riding Black Drake
+18279	Alormion
+18279	Bronze Drake
+18280	Riding Green Drake
+18281	Riding Red Drake
+18282	Riding White Drake
+18286	Riding Blue Drake
+18288	Riding Void Drake
+18291	Riding Armored Gryphon
+18295	Frayfeather Hippogryph
+18298	Viridian Hippogryph
+18298	Zulian Panther
+18299	Riding Cenarion Hippogryph
+18301	Bristlefur
+18301	Riding Wyvern
+18304	Riding Armored Wyvern
+18309	Riding Infinite Drake
+18311	Black Pounder
+18312	Blue Pounder
+18313	Green Pounder
+18314	Red Pounder
+18315	Black Spidertank
+18316	Blue Spidertank
+18317	Green Spidertank
+18318	Red Spidertank
+18319	Blue Rocket Car
+18320	Goblin Racing Car
+18320	Red Rocket Car
+18321	Green Rocket Car
+18322	Animated Shredder
+18322	Red Goblin Shredder
+18323	Animated Shredder
+18323	Green Goblin Shredder
+18329	Joalar Solar
+18330	Niffy Goodsteel
+18330	Twinkie Boomstick
+18331	Ralonius Sundew
+18332	Warleader Zol'majin
+18334	Mystic Guay’Jin
+18335	Amani'Alor Settler
+18336	Amani'Alor Settler
+18337	Amani'Alor Settler
+18338	Amani Eagle
+18339	Hinterlands Eagle
+18340	Wally
+18341	Black Bear Cub
+18351	White Bear Cub
+18352	Gray Bear Cub
+18354	Elodia
+18355	Xecc
+18363	Zafan
+18371	Tiny Pterodactyl
+18376	Mr. Tails
+18386	Brilliant Wind Serpent
+18386	Sunscale Hatchling
+18388	Earthcaller Jalyssa
+18418	Alvida
+18418	Johnny Deepdrowned
+18418	Lost Crewman
+18419	Wallowing Crewman
+18420	'Slip'
+18420	Helmsman Vic
+18421	Phantom Guardsman
+18425	Spirit Darter
+18430	Shar'lan
+18432	Zulian Panther
+18435	Riding Ice Saber
+18436	Riding Aqua Saber
+18447	Lieren
+18448	Loania
+18468	Netherspawn Flayer
+18470	Volkan Cruelblade
+18471	Dragonhawk
+18476	Glitterwing
+18476	Quel'dorei Dragonhawk
+18480	Armored Dragonhawk
+18480	Illidari Dragonhawk
+18481	Armored Brown War Bear
+18484	Armored Red War Bear
+18487	Armored Amani Riding Bear
+18487	Armored Green War Bear
+18488	Armored Purple War Bear
+18491	Armored Frostmane Riding Bear
+18491	Armored White War Bear
+18492	Blizzcon Riding Bear
+18493	Black Fox
+18495	Chromie's Time Rift
+18495	Large Time Rift
+18495	Sun
+18495	Time Rift
+18497	Dark Rider Apprentice
+18498	Lady Ripper
+18498	Ravenous Strigoi
+18498	Widow of the Woods
+18499	Strigoi
+18502	Aputuq
+18502	Inuksuk
+18502	Inunquaq
+18502	Panukuki
+18502	Tonlok
+18502	Travel through the Northeast Passage
+18504	Arc'tiras
+18510	Blackstone Flying Machine
+18510	Gazzik's Flying Machine
+18510	Goblin's Flying Machine
+18510	Turbo-Charged Flying Machine
+18512	Riding Sea Turtle
+18514	Lansa Skyseer
+18515	Kalaya Spellbinder
+18515	Tylekinah Lunalumina
+18523	Dalaran Cloud Familiar
+18523	Happy Whimsyshire Cloud
+18524	Dalaran Cloud Familiar
+18524	Sad Whimsyshire Cloud
+18526	Dalaran Cloud Familiar
+18527	Dalaran Cloud Familiar
+18530	Armored Ebon Deathcharger
+18531	Armored Crimson Deathcharger
+18532	Armored Emerald Deathcharger
+18533	Armored Ivory Deathcharger
+18542	Chieftain's Kodo
+18544	Kheyna Spinpistol
+18546	Anisalah Starcaller
+18548	Mysterious Stranger
+18550	Vanessa Clang
+18551	Archaeologist Trixia Goldspark
+18551	Bebri Coifcurl
+18551	Kana Togglebend
+18555	Moxie Steelgrille
+18556	Nanze
+18560	Tiny Warp Stalker
+18592	Infinite Rift-Lord
+18603	Scotty
+18624	White Stag
+18625	Magic Broom
+18626	Flipper
+18626	Glacier Penguin
+18627	Glacier Penguin
+18627	Pengu
+18628	Midnight
+18641	Frigid Guardian
+18641	Great Spirit of Winter
+18641	Tarqsiku
+18647	Blademaster Kargron
+18647	Grok Twigleg
+18648	Niremius Darkwind
+18648	Zareth Terrorblade
+18649	Colonel Hardinus
+18650	Sergeant Blackwell
+18651	Deckmaster Breachcrest
+18652	Marine Clifftower
+18652	Marine Hornby
+18653	Marine Dagby
+18653	Marine Larwell
+18653	Marine Lockside
+18654	Hydromancer Flakereef
+18655	Sailor Larson
+18656	Marine Dalus
+18656	Marine Logan
+18657	Sailor Patterson
+18658	Sailor Percy
+18659	Valdarion Smite
+18660	Hydromancer Vanessa
+18661	Stablemaster Yannis
+18662	Tanner Brightbelt
+18662	Watch Sergeant Arthur
+18663	Watchman Banal
+18664	Watchman Damion
+18665	Watchman Hanson
+18666	Watch Paladin Janathos
+18667	Watchman Tyrial
+18668	Sanv K'la
+18669	Gigno Flaxwhisker
+18670	Tradesman Laz
+18671	Citadel Wizard
+18671	Grand Sorcerer Ardaeus
+18673	High Judicator Frensworth
+18673	Lancaster Lightblessed
+18674	Citadel Preacher
+18675	Citadel Footman
+18675	Spirit of Alexandros Mograine
+18676	High Inquisitor Mariella
+18677	Brother Elias
+18678	Brother Eric Vesper
+18679	Darkcaller Rayn
+18680	Citadel Inquisitor
+18680	High Judge Morice
+18681	Citadel Interrogator
+18682	Crimson
+18683	Sacred Fist Daelus
+18684	Duke Oswald III
+18684	Duke Tavinrad
+18687	Citadel Valiant
+18688	Citadel Watchman
+18690	Dag'grak Bloodfist
+18691	Analyzer X-51
+18692	Analyzer X-48
+18693	Custodian A-01
+18694	Earthshaper Thoron
+18697	Concavius
+18701	Belgrush Daggerfist
+18701	First Mate Dorrul
+18702	Daffar
+18703	Dirty Jacob
+18704	Drummer Ata'nal
+18705	First Mate McCoy
+18705	First Mate McGillicuddy
+18706	Bartholos
+18706	Fishface Joe
+18707	Garfield Sparkblast
+18708	Gold-Tooth Gary
+18709	'Ale Saint' Grida
+18710	Jessie Sugar-Tongue
+18711	Jinz'ah
+18712	Lozo
+18713	Captain Haroldson
+18713	Old-Tide Sam
+18714	One-Ear Nellie
+18715	Prida
+18716	Raz'Dag
+18717	Sark Blacktooth
+18718	Shan'ara
+18720	Speaker Ganz'ih
+18721	Tin'go
+18721	Titiki
+18722	Vil'do One-Tusk
+18723	Watcher Hala
+18724	Watcher Lazran
+18725	Watcher Eh'kal
+18726	Watcher Oto'be
+18727	Ganum Highmountain
+18728	Dark Ranger Anya
+18730	Spectral Cub
+18733	Barkskin Ursa
+18734	Barkskin Windtalker
+18738	Elder Barkmaw
+18739	Elder Growlheart
+18740	Chieftain Icepaw
+18742	Brum Bamse
+18744	Barkskin Avenger
+18745	Barkskin Fisher
+18745	Barkskin Pathfinder
+18746	Captain Screech
+18748	Explorer Ashbeard
+18749	Crusader Larsarius
+18751	Magus Ariden Dusktower
+18751	Magus Palon
+18752	Kor'gan
+18753	Lord Ivar Pyrewood
+18753	The Scorpid King
+18755	Lord Cruk'Zogg
+18756	Duke Nargelas
+18762	Kanarius Spellstalker
+18763	Leoserith Spellbinder
+18764	Toryn Khadinus
+18765	Talavana Andalorah
+18766	Illanaya Spellwind
+18767	Kalara Shadebough
+18768	Viz'neya Firefly
+18768	Winlassah Dawnstar
+18769	Talorum Autumnsleaf
+18770	Anarea Sundawn
+18770	Lady Meldralis Windsong
+18771	Lovely Pink Pony
+18772	White Stag
+18773	Lovely Pink Fox
+18778	Incubus
+18797	Adjutant Scheer
+18798	Commander Baelos
+18799	Sergeant Burnside
+18800	Engineer Wigglestip
+18801	Harguf
+18802	Colonel Breen
+18803	Haunted Blacksmith
+18803	Old Bryan
+18804	Captain Wallace Cross
+18805	Captain Harker
+18806	Magus Halister
+18807	Sergeant Terresa
+18808	Champion Taza'go
+18809	Ekka
+18810	Hingozu
+18811	Seer Maz'ek
+18812	Tinubi
+18813	Yaz'rik
+18815	Lovely Pink Talbuk
+18832	Engineer Figgles
+18833	Har'gesh Doomcaller
+18834	Hateforge Watcher
+18835	Hateforge Watcher
+18836	Hateforge Chemist
+18837	Hateforge Chemist
+18838	Hateforge Cleric
+18839	Hateforge Cleric
+18840	Hateforge Craftsman
+18841	Hateforge Craftsman
+18842	Darneg Darkbeard
+18842	Hateforge Engineer
+18843	Hateforge Miner
+18843	Shadowforge Excavator
+18844	Hateforge Miner
+18845	Hateforge Overseer
+18846	Hateforge Overseer
+18847	Hateforge Taskmaster
+18848	Hateforge Taskmaster
+18849	Hateforge Warden
+18850	High Foreman Bargul Blackhammer
+18851	Twilight Fireblade
+18852	Twilight Fireblade
+18853	Twilight Fireblade
+18854	Twilight Shadowcaller
+18855	Twilight Shadowcaller
+18856	Twilight Shadowcaller
+18857	Annabelle Livingstone
+18858	Bart Natheldon
+18859	Hazel Luppel
+18860	Marjorie Natheldon
+18861	Mathilda Beckett
+18862	Oswald Livingstone
+18864	Peter Yarrel
+18865	Sergeant Karster
+18866	Tarral Holk
+18868	Yur Dragonfist
+18869	Bagaroh
+18870	Jaiymu
+18871	Ragnak Helmcleaver
+18871	Sorlugg
+18872	Blacksmith Torren
+18873	Darkseer Geshtol
+18874	Dagesh the Evoker
+18875	Raider Fargosh
+18876	Golsh
+18877	Herekk
+18878	Karfang
+18879	Karfang Grunt
+18882	Molk
+18883	Sarkensh
+18884	Councilor Vargek
+18885	Soresh
+18886	Taskmaster Ok'gog
+18887	Mistress Katalla
+18889	Ahnja Summerwind
+18890	Brave Cloudhorn
+18891	Brave Runebrace
+18892	Kolgo Highmane
+18893	Trainer Sinopa
+18894	Trainer Tokala
+18895	Brave Proudspear
+18896	Elder Pyrestrider
+18897	Kiona Stonefeather
+18898	Metahnze Hawkdreamer
+18899	Sokahn Truthwalker
+18900	Tasag
+18901	Troll Hunter Penthar
+18902	Darlen Darkgrin
+18903	Hateforge Excavator
+18904	Hateforge Excavator
+18905	Hateforge Geologist
+18906	Gelweg Darkbrow
+18906	Hateforge Geologist
+18907	Morgrim Firepike
+18908	Orvak Sternrock
+18909	Radgan Deepblaze
+18910	Raz'gol Deadtusk
+18911	Slaver Vilegrip
+18913	Farad Wrightsow
+18914	Foreman Tanoth
+18915	Hansu Go'sha
+18916	Soja
+18917	Maltimor Gartside
+18918	Private Holson
+18920	Spirit Worg
+18922	Roost Hatchling
+18925	Lil' K.T.
+18926	Moonkin Hatchling
+18926	Shivering Moonkin Hatchling
+18927	Lil' Ragnaros
+18928	Core Hound Pup
+18930	Blackhorn Mystic
+18931	Blackhorn Mystic
+18932	Blackhorn Warrior
+18933	Blackhorn Warrior
+18934	Deserter Exile
+18935	Deserter Exile
+18936	Deserter Turncoat
+18937	Sellick Voss
+18938	Targos Hatewind
+18939	Ancient Warrior
+18940	Ancient Warrior
+18940	Forgotten Warlord
+18940	Refrik
+18941	Ancient Warrior
+18941	Forgotten Chieftain
+18942	Ancient Warrior
+18943	Echo of Corthan
+18943	Marauder King Corthan
+18944	Forgotten Keeper
+18945	Borrin Gloombeard
+18946	Earthen Curator
+18947	Earthen Rockshaper
+18948	Orthal the Steward
+18949	Lord Nazgrim Redbrand
+18950	Surveyor Bronzehorn
+18951	Torlig Redbrand
+18952	Kegdesh Foulmantle
+18953	Shadowforge Skinner
+18954	Shadowforge Trapper
+18955	Shadowforge Wyrm Hunter
+18956	Hydromancer Shaleborn
+18957	Sir Danuvis
+18958	Deckmaster Darkhollow
+18959	Expedition Cleric
+18960	Expedition Cleric
+18961	Expedition Commando
+18962	Expedition Commando
+18963	Expedition Officer
+18964	Expedition Officer
+18965	Expedition Sailor
+18966	Expedition Sailor
+18967	Dutch Haveshine
+18967	Expedition Scout
+18968	Expedition Scout
+18969	Expedition Soldier
+18969	Private Glenndel
+18970	Expedition Soldier
+18971	Lieutenant Alverold
+18972	Commando Harwall
+18973	Darwin Holdfall
+18974	Deckmaster Javin
+18975	Kelly Vaulstone
+18976	Petty Officer Milldough
+18977	Quartermaster Alden
+18978	Sailor Borus
+18979	Sailor Shalwynd
+18980	Sailor Valia
+18981	Vice Admiral Renhoff
+18982	Begwynn Blackmallet
+18983	Emissary Godwin Valorcall
+18984	Garwen Loadstone
+18985	Gimle Redbrand
+18986	Grumnir Battlebeard
+18987	Halfdan Coalborn
+18988	Harlek Vaultshield
+18989	Lead Explorer Whitepeak
+18990	Magna Runecleave
+18991	Mister Wick
+18992	Mountaineer Truthforge
+18993	Senior Foreman Nazz Firecracker
+18994	Sailor Hylreth
+18995	Sailor Capewind
+18996	Sailor Brewen
+18997	Sailor Pardol
+18998	Tarlegg Redbrand
+18999	Torwyn Redbrand
+19019	Urghor the Talker
+19033	Solnius
+19100	Archmage Talyvanah
+19101	Shadowhorn Stag
+19105	Shade of the Temptress
+19108	Vengeful Spirit
+19111	Ancient of Winter
+19112	Krampus
+19112	Mini Krampus
+19113	Father Bear
+19114	Greatfather Winter
+19115	Kuz Kusstusk
+19116	Alika Ripfrost
+19117	Raz'umdaj Frostnose
+19118	Melaniah Belore'Danil
+19119	The Winter Patriarch
+19120	Postworker Albertus Manethas
+19121	Postworker Katya Hastings
+19125	Clawlord Howlfang
+19126	Firstborn of Arugal
+19136	Lord Blackwald II
+19137	Blackthorn
+19139	Baron Caliban Silverlaine
+19140	Regent-Lady Celia Harlow
+19141	Deathstalker Alynna
+19142	Deathstalker Vernon
+19143	Dominic Larson
+19144	Elaroth Ranworth
+19145	Ravenshire Guard
+19146	Ravenshire Guard
+19147	Ravenshire Guard
+19148	Ravenshire Guard
+19149	Ravenshire Guard
+19150	Ravenshire Guard
+19151	Ravenshire Guard
+19152	Ravenshire Guard
+19153	Harlan Ballow
+19154	Harrison Blackheart
+19155	Larry Bolder
+19156	Magistrate Carson
+19157	Magus Orelius
+19158	Moranna Rosenberg
+19159	Dark Bishop Mordren
+19160	Regent-Lord Mortimer Harlow
+19161	Orvan Darkeye
+19162	Lord Darius Ravenwood
+19163	Savenna Mosscage
+19164	Sergeant Arbington
+19165	Tamara Gracefall
+19166	Todd Bolder
+19167	Moroes
+19170	Inferno's Shadow
+20253	Danthar Oakmantle
+20257	Talona Gladeheart
+20260	Naytha Grovelight
+20262	Cannoneer Rileson
+20263	Greymane Arbalest
+20264	Greymane Arbalest
+20265	Greymane Cleric
+20266	Greymane Cleric
+20267	Captain Veller
+20267	Greymane Elite
+20268	Greymane Elite
+20269	Greymane Enforcer
+20270	Greymane Enforcer
+20271	Enslaved Worker
+20272	Enslaved Worker
+20273	Greymane Footman
+20273	Guard Captain Marson
+20273	Overlord Grigor
+20274	Greymane Footman
+20275	Greymane Instigator
+20276	Greymane Instigator
+20277	Greymane Knight
+20277	High Officer Osmark
+20278	Greymane Knight
+20279	Greymane Miner
+20280	Greymane Miner
+20281	Greymane Noble
+20282	Greymane Noble
+20283	Greymane Preserver
+20284	Greymane Preserver
+20285	Greymane Watcher
+20286	Greymane Watcher
+20287	Shadeflayer Berserker
+20288	Shadeflayer Berserker
+20289	Shadeflayer Shadowhunter
+20290	Shadeflayer Shadowhunter
+20291	Shadeflayer Shaman
+20292	Shadeflayer Shaman
+20293	Shadeflayer Trapper
+20294	Shadeflayer Trapper
+20295	Shadeflayer Troll
+20296	Shadeflayer Troll
+20297	Warlord Hanzento
+20298	Speaker Gan'hota
+20299	Greymane Taskmaster
+20300	Greymane Taskmaster
+20301	Avram Duskgarde
+20303	Bearbane
+20305	Cassie Copperlight
+20306	Chemist Glowsight
+20307	Chemist Lizzbang
+20308	Demetreus
+20309	Dustivan Blackcowl
+20310	Ethan Ravencroft
+20311	Genn Greymane
+20313	Greymane Justicar
+20314	Krilee Stormshot
+20315	Levandra
+20316	Liam Greymane
+20317	Liam Greymane
+20318	Lurn Five-Pelts
+20319	Marshal Magnus Greystone
+20320	Matthias Holtz
+20321	Mother Tanya
+20322	Mustang
+20325	Reclamation Guardian
+20326	Reclamation Guardian
+20327	Reclamation Guardian
+20328	Reclamation Guardian
+20334	Judge Sutherland
+20336	Technician Hizzleflash
+20337	Technician Voltgear
+20338	Technician Stormlight
+20339	Master Technician Wirespanner
+20340	Teezle Dualflash
+20341	Tenner Pipegadge
+20342	Tess Greymane
+20343	Master Chemist Volterwhite
+20344	Weezan Littlegear
+20346	Azshanaya Spellwind
+20354	Shanyra El'aluna
+20355	Nordanaar Guardian
+20356	Nordanaar Guardian
+20381	White Tiger Cub
+20401	Yohan Wildwalker
+20402	Marlonias Shademoon
+20403	Brigade Footman
+20403	Corporal Danmere
+20404	Corporal Ranworth
+20410	Cenerron
+20412	Dunebound Chimaera
+20414	Venomlash Chimaera
+20416	Big Turtle WoW Bear
+20417	Black Spectral Tiger
+20419	Green Spectral Tiger
+20420	Ice Raptor
+20421	Armored Ice Raptor
+20422	Scarlet Charger
+20423	Kul Tiran Warhorse
+20424	Gilneas Stable Horse
+20424	Greymane Charger
+20425	Brown Zhevra
+20426	Grim Totem Kodo
+20428	Annesastrasza
+20429	Shadowhunter Trak'nal
+20432	Larodar Wildwhisper
+20433	Velos Sharpstrike
+20434	Bethelon Wildwhisper
+20436	Lataro Swifthoof
+20437	Darksaber
+20438	Nordrassil Stag
+20439	Melanastrasza
+20440	Zappo Zapblast
+20455	AJ Springberry
+20456	Daisy Windhelm
+20457	Diane Cloverfield
+20458	Marven
+20459	Old Jonah
+20460	Willhelm Rockdust
+20461	Dakikon
+20462	Jim'bala
+20463	Zin'jashi
+20464	Ka'zinka
+20465	Zim'bwaba
+20466	Mezaji
+20467	Marksman Rembrandt Olar
+20472	Azure Frog
+20473	Dream Frog
+20474	Bullfrog
+20475	Infinite Frog
+20476	Poison Frog
+20477	Snow Frog
+20478	Pink Frog
+20479	Golden Frog
+20480	Pond Frog
+20492	Darkpelt Shadowcaster
+20492	Shadowbane Darkcaster
+20493	Nighthowl Shadowcaster
+20495	Darkpelt Shadowcaster
+20496	Raven
+20500	Blindlight Muckdweller
+20500	Blindlight Oracle
+20500	Deepmurk Darkhunter
+20500	Deepmurk Warrior
+20500	Murkblood
+20501	Gelihast
+20502	Blindlight Murloc
+20502	Deepmurk Oracle
+20503	Tenris Mirkblood
+20504	Elder Thalassian Boar
+20504	Thalassian Boar
+20504	Young Thalassian Boar
+20505	Marrondra
+20505	Rine
+20505	Sister of Autumn
+20507	Stallhorn Stag
+20507	Thalassian Stag
+20508	Ancient of Arcane
+20510	Ivory Hawkstider
+20511	Forest Hawkstrider
+20512	Crimson Hawkstrider
+20512	Moonfeather
+20515	Emerald Mana Wyrm
+20516	Lavender Mana Wyrm
+20519	Brilliant Mana Wyrm
+20520	Sindri Thunderforge
+20521	Frig Thunderforge
+20522	Brok Thunderforge
+20523	Eldin Sunstrider
+20524	Ithirilen Shadewind
+20525	Blood Elf Darkcaster
+20526	Blood Elf Darkcaster
+20527	Blood Elf Darkcaster
+20528	Gilaras Sunfury
+20529	Blood Elf Marauder
+20530	Blood Elf Marauder
+20531	Blood Elf Marauder
+20532	Blood Elf Ranger
+20533	Blood Elf Ranger
+20534	Blood Elf Ranger
+20535	Blood Elf Spy
+20536	Blood Elf Spy
+20537	Veloren Brightstar
+20538	Dean LeGuin
+20539	Gunther
+20540	High Widow Arania
+20541	Miriam Lenheim
+20542	Overzealous Student
+20543	Overzealous Student
+20544	Overzealous Student
+20545	Alah'Thalas Sentinel
+20545	Thalassian Sentinel
+20546	Aerthand Skyshield
+20547	Avenant
+20548	Calhir Dawnchaser
+20549	Edrion Ironstrike
+20550	Kaelin Bladesong
+20551	Maelor Steelguard
+20552	Othorion Whitelance
+20553	Phylas Hawkwing
+20554	Raelus Morninglight
+20555	Saelyn Seastrider
+20556	Magister Sylvus Silkspinner
+20557	Thalion Noblewarden
+20558	Vanudal Goldweaver
+20559	Halduron Brightwing
+20560	Lor'Themar Theron
+20561	Grand Magister Rommath
+20562	Astalor Sunsworn
+20563	Voren'thal the Scryer
+20564	Silver Covenant Recruit
+20565	Silver Covenant Recruit
+20566	Commander Braedin
+20567	Amara Highbreeze
+20569	Briella Brightsun
+20570	Celia Daywing
+20571	Elenia Everdawn
+20572	Fainriel Silverharp
+20573	Farenia Roseheart
+20574	Jolie Keenwit
+20575	Lin Swiftblade
+20576	Liris Fairlocks
+20577	Melanthe Shadesong
+20578	Niniel Snowgleam
+20579	Taliren Lightborn
+20580	Nirenia Swiftsun
+20581	Miralin Wavesinger
+20582	Tiriel Brightwater
+20583	Liadrin
+20584	Navanir Thedal
+20586	Withering Refugee
+20587	Withering Refugee
+20588	Auctioneer Reilin
+20590	Verrus Trueshine
+20591	Brindel Morningsun
+20592	Firalius Arrowstrike
+20593	Eirwen Aniron
+20594	Dalicia Sweetsilver
+20595	Banker Shalanna
+20596	Solenia Solarcrest
+20597	Relaina Whiteshore
+20598	Valentino Westwood
+20599	Stella de Givenchy
+20600	Coco Gucci
+20601	Lili St. Laurent
+20602	Dior Lagerfield
+20603	Vera Lauren
+20604	Alix Gres
+20605	Ralph Jacobs

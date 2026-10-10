@@ -148,6 +148,10 @@ function methods:SetFrameStrata(strata) self.strata = strata end
 function methods:SetFrameLevel(level) self.level = level end
 function methods:GetFrameLevel() return self.level or 1 end
 function methods:SetAlpha() end
+function methods:SetScale(s) self.scale = s end
+function methods:GetScale() return self.scale or 1 end
+function methods:GetLeft() return 100 end
+function methods:GetTop() return 700 end
 function methods:GetCenter() return 500, 400 end
 function methods:GetEffectiveScale() return 1 end
 function methods:CreateTexture(name, layer)
@@ -315,6 +319,7 @@ function Mock.ResetUI()
 		end
 	end
 	Mock.frames, Mock.chat, Mock.sent, Mock.popups = {}, {}, {}, {}
+	Mock.serverItems = Mock.serverItems or {}
 	Mock.modelRefreshes = 0
 	UIParent = NewWidget("Frame", "UIParent")
 	Minimap = NewWidget("Frame", "Minimap", UIParent)
@@ -341,6 +346,22 @@ function Mock.ResetUI()
 			return "First Mate Hat", "item:2955:0:0:0", 2, 1, "Armor", "Cloth", 1, "INVTYPE_HEAD",
 				"Interface\\Icons\\INV_Misc_Bandana_03"
 		end
+		-- Items the fake server has sent: { name, quality, equipLoc }.
+		local item = Mock.serverItems[id]
+		if item then
+			return item[1], "item:" .. id .. ":0:0:0", item[2], 60, "Armor", "Plate", 1, item[3],
+				"Interface\\Icons\\INV_Misc_QuestionMark"
+		end
+	end
+	-- ClassicAPI's item loading, only while the test installs ClassicAPI.
+	Mock.itemRequests = {}
+	if Mock.classicAPI then
+		C_Item = { RequestLoadItemDataByID = function(id)
+			table.insert(Mock.itemRequests, id)
+			return true
+		end }
+	else
+		C_Item = nil
 	end
 	ITEM_QUALITY_COLORS = {}
 	for q = -1, 6 do
@@ -358,13 +379,14 @@ function Mock.LoadAddon(toc)
 	end
 end
 
-function Mock.Fire(name, a1)
+function Mock.Fire(name, a1, a2)
 	local frames = Mock.frames
 	for i = 1, table.getn(frames) do
 		local frame = frames[i]
 		if frame.events[name] then
-			event = name
+			event, arg2 = name, a2
 			RunScript(frame, "OnEvent", a1)
+			arg2 = nil
 		end
 	end
 end

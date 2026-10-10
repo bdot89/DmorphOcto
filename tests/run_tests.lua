@@ -72,6 +72,14 @@ local function installMorphAPI()
 		end
 	end
 
+	function SetUnitMountDisplayID(unit, displayID)
+		if type(unit) ~= "string" then
+			error("Usage: SetUnitMountDisplayID(unitToken [, mountDisplayID])")
+		end
+		vh.calls = vh.calls + 1
+		vh.mount = displayID
+	end
+
 	function UnitDisplayInfo(unit)
 		return vh.display, vh.native, 0
 	end
@@ -80,7 +88,7 @@ local function installMorphAPI()
 end
 
 local function removeMorphAPI()
-	SetUnitDisplayID, SetUnitVisibleItemID, UnitDisplayInfo = nil, nil, nil
+	SetUnitDisplayID, SetUnitVisibleItemID, UnitDisplayInfo, SetUnitMountDisplayID = nil, nil, nil, nil
 	VANILLAHELPERS_VERSION = nil
 end
 
@@ -238,6 +246,24 @@ say(".outfit Nope")
 check(contains(lastChat(), "no outfit"), "loading a missing outfit says so")
 DmorphOcto_ResetAll()
 
+
+-- Mounts from chat.
+say(".mount 14334")
+check(vh.mount == 14334 and DmorphOctoDB.mount == 14334, ".mount morphs your mount")
+say(".outfit save Rider")
+DmorphOcto_ResetAll()
+check(vh.mount == nil and DmorphOctoDB.mount == nil, "reset-all puts your own mount back")
+say(".outfit rider")
+check(vh.mount == 14334, "outfits keep the mount")
+vh.mount = nil
+Mock.Fire("PLAYER_ENTERING_WORLD")
+Mock.Tick(0.6)
+check(vh.mount == 14334, "the mount morph comes back after a loading screen")
+say(".mount 0")
+check(vh.mount == nil and DmorphOctoDB.mount == nil, ".mount 0 resets the mount")
+say(".outfit delete rider")
+DmorphOcto_ResetAll()
+
 ------------------------------------------------------------------------------
 -- Catalogue
 
@@ -262,17 +288,17 @@ local file = io.open("Data/Models.lua")
 local modelText = file:read("*a")
 file:close()
 local fileModels, wrongKind, octo = 0, 0, 0
-for id, flag in string.gfind(modelText, "\n(%d+)\t(%d)\t") do
+for id, kind in string.gfind(modelText, "\n(%d+)\t(%d)\t") do
 	fileModels = fileModels + 1
 	local index = creatures.byID[tonumber(id)]
-	if not index or creatures.kind[index] ~= 1 + tonumber(flag) then
+	if not index then
 		wrongKind = wrongKind + 1
 	end
-	if flag == "1" then
+	if kind == "2" or kind == "3" then
 		octo = octo + 1
 	end
 end
-check(fileModels > 4000 and wrongKind == 0, "every model in Models.lua is in the catalogue, with its kind")
+check(fileModels > 4000 and wrongKind == 0, "every model in Models.lua is in the catalogue")
 check(octo > 2800, "the models OctoWoW added are in the catalogue")
 local sorted = true
 for i = 2, creatures.count do
@@ -281,15 +307,65 @@ for i = 2, creatures.count do
 	end
 end
 check(sorted, "the merged catalogue is sorted by name")
-result, count = DmorphOcto.FilterCatalog(creatures, "zuljin", DmorphOcto.MODEL_FILTERS[4].kinds)
+local F = DmorphOcto.MODEL_FILTERS
+local function filterNamed(text)
+	for i = 1, table.getn(F) do
+		if F[i].text == text then
+			return F[i]
+		end
+	end
+end
+result, count = DmorphOcto.FilterCatalog(creatures, "zul'jin", filterNamed("New in OctoWoW"))
 check(count >= 1 and creatures.ids[result[1]] == 18082, "OctoWoW's models can be searched and filtered")
-local _, named = DmorphOcto.FilterCatalog(creatures, "", DmorphOcto.MODEL_FILTERS[2].kinds)
-local _, other = DmorphOcto.FilterCatalog(creatures, "", DmorphOcto.MODEL_FILTERS[3].kinds)
-local _, added = DmorphOcto.FilterCatalog(creatures, "", DmorphOcto.MODEL_FILTERS[4].kinds)
+check(DmorphOcto.DescribeDisplay(18082) == "Zul'jin (18082)", "OctoWoW's models have Turtle WoW's creature names")
+local _, named = DmorphOcto.FilterCatalog(creatures, "", filterNamed("Creatures"))
+local _, other = DmorphOcto.FilterCatalog(creatures, "", filterNamed("Other models"))
+local _, added = DmorphOcto.FilterCatalog(creatures, "", filterNamed("New in OctoWoW"))
 check(named > 10000 and named + other == creatures.count and added == octo, "the filters split the catalogue")
-result, count = DmorphOcto.FilterCatalog(creatures, "thrall", DmorphOcto.MODEL_FILTERS[3].kinds)
+result, count = DmorphOcto.FilterCatalog(creatures, "thrall", filterNamed("Other models"))
 check(count == 0, "a filter hides the other kinds from a search")
-check(DmorphOcto.DescribeDisplay(18082) == "Zuljin (18082)", "OctoWoW's models have names in chat too")
+result, count = DmorphOcto.FilterCatalog(creatures, "ragnaros", filterNamed("Bosses"))
+check(count >= 1 and creatures.ids[result[1]] == 11121, "Ragnaros is a boss")
+local _, bosses = DmorphOcto.FilterCatalog(creatures, "", filterNamed("Bosses"))
+local _, mounts = DmorphOcto.FilterCatalog(creatures, "", filterNamed("Mounts"))
+local _, rares = DmorphOcto.FilterCatalog(creatures, "", filterNamed("Rare creatures"))
+check(bosses > 100 and mounts > 300 and rares > 200, "bosses, mounts and rare creatures are tagged")
+result, count = DmorphOcto.FilterCatalog(creatures, "", filterNamed("Mounts"), nil, true)
+local byID = true
+for i = 2, count do
+	if creatures.ids[result[i - 1]] > creatures.ids[result[i]] then
+		byID = false
+	end
+end
+check(byID, "lists can be sorted by ID")
+
+-- Items: Turtle WoW's and OctoWoW's join the 1.12 lists.
+result, count = DmorphOcto.FilterCatalog(heads, "crown of prophecy")
+check(count >= 1 and heads.kind[result[1]] == 2, "OctoWoW's items are in the slot lists, marked new")
+local mainHands = DmorphOcto.GetItemCatalog(16)
+result, count = DmorphOcto.FilterCatalog(mainHands, "warglaive of azzinoth")
+check(count >= 1, "the Warglaives of Azzinoth are there")
+local Q = DmorphOcto.QUALITY_FILTERS
+result, count = DmorphOcto.FilterCatalog(heads, "", nil, Q[6].quality)
+local epic = count > 50
+for i = 1, count do
+	if heads.quality[result[i]] ~= 4 then
+		epic = false
+	end
+end
+check(Q[6].text == "Epic" and epic, "the quality filter keeps only epic items")
+check(DmorphOcto.GetItemSlots(16966)[1] == 5, "an item's slot can be looked up")
+
+-- Sets and looks.
+local sets = DmorphOcto.GetSetCatalog()
+result, count = DmorphOcto.FilterCatalog(sets, "battlegear of wrath")
+check(sets.count > 300 and count >= 1 and sets.names[result[1]] == "Battlegear of Wrath"
+	and sets.quality[result[1]] == 4, "every item set is listed, with its quality")
+local looks = DmorphOcto.GetLooks(4, 1)
+check(table.getn(looks) > 300 and table.getn(looks[1]) == 7, "Night Elf females have hundreds of NPC looks")
+local skins = DmorphOcto.GetLookValues(4, 1, 1)
+local other = DmorphOcto.FindLook(4, 1, 1, skins[2], 1)
+check(other and looks[other][2] == skins[2], "the creator finds a look with the chosen skin colour")
 
 ------------------------------------------------------------------------------
 -- The window, with ClassicAPI's model previews
@@ -302,6 +378,23 @@ check(window ~= nil and window:IsVisible(), "/dmorph opens the window")
 check(contains(UISpecialFrames[1], "DmorphOctoFrame"), "Escape closes the window")
 Mock.Tick(0.2)
 Mock.Tick(0.5)
+
+-- A click that morphs, then the gate's pause, so the next click goes through.
+local function press(button, mouseButton)
+	Mock.Click(button, mouseButton)
+	Mock.Tick(0.4)
+end
+
+-- Clicks the line of the open drop-down menu with that text.
+local function pickMenu(text)
+	for i = 1, 14 do
+		local row = getglobal("DmorphOctoMenuRow" .. i)
+		if row:IsVisible() and row.label.text == text then
+			return Mock.Click(row)
+		end
+	end
+	error("no menu line \"" .. text .. "\"")
+end
 
 -- The character preview has two PlayerModels: the one in front is never
 -- reloaded (a reloading model draws white), the new look loads behind the
@@ -327,12 +420,20 @@ check(back:IsShown() and back.unit == "player" and back.level < front.level,
 	"the new look loads behind the backdrop")
 check(DmorphOctoArt1:GetParent().level > back.level and DmorphOctoArt1:GetParent().level < front.level,
 	"the backdrop sits between the two models")
+local refreshes = Mock.modelRefreshes
+say(".morph 4528")
+Mock.Tick(0.15)
+check(Mock.modelRefreshes == refreshes, "a model that is still loading isn't loaded again")
 Mock.Tick(0.5)
 local newFront = previews()
 check(newFront == back and front.unitLoads == frontLoads, "then it replaces the old one, which was never reloaded")
-check(DmorphOctoLookName.text == "Thrall" and DmorphOctoLookInfo.text == "Display ID 4527", "the name plate names the morph")
-local refreshes = Mock.modelRefreshes
-say(".morph 4528")
+Mock.Tick(0.15)
+check(Mock.modelRefreshes == refreshes + 1, "and the change made while it loaded follows straight after")
+Mock.Tick(0.5)
+check(DmorphOctoLookName.text == (DmorphOcto.GetDisplayName(4528) or "Unlisted model") and DmorphOctoLookInfo.text == "Display ID 4528",
+	"the name plate names the morph")
+refreshes = Mock.modelRefreshes
+say(".morph 4527")
 say(".item 1 2955")
 say(".race 2")
 Mock.Tick(0.15)
@@ -355,7 +456,7 @@ check(DmorphOctoModelGrid:IsVisible() and not DmorphOctoModelListRow1:IsVisible(
 check(DmorphOctoTile1Model.displayInfo == catalog.ids[1] and DmorphOctoTile1.title.text == catalog.names[1]
 	and DmorphOctoTile8Model.displayInfo == catalog.ids[8], "the tiles preview the first 8 models")
 check(DmorphOctoTile1Model.camera == 0, "previews use the model's portrait camera")
-check(contains(DmorphOctoPagerText.text, "Page 1 of 2,0"), "the pager counts the pages")
+check(contains(DmorphOctoPagerText.text, "Page 1/2,0"), "the pager counts the pages")
 Mock.Click(DmorphOctoNextPage)
 check(DmorphOctoTile1Model.displayInfo == catalog.ids[9], "the next page shows the next 8")
 check(DmorphOctoTile1Model.level == 2, "a new preview loads behind its cover")
@@ -378,28 +479,54 @@ local modelSearch = DmorphOctoModelSearch
 Mock.Type(modelSearch, "thrall")
 check(DmorphOctoTile1:IsVisible() and DmorphOctoTile1.title.text == "Thrall" and DmorphOctoTile1Model.displayInfo == 4527,
 	"searching shows Thrall first")
-Mock.Click(DmorphOctoTile1)
+press(DmorphOctoTile1)
 check(vh.display == 4527 and DmorphOctoDB.display == 4527, "clicking a preview morphs you")
 check(DmorphOctoTile1.border[1] == 1 and DmorphOctoTile1.border[2] == 0.82, "the model you wear has a gold frame")
 check(contains(DmorphOctoFrameStatus.text, "Thrall"), "the status line confirms the morph")
-Mock.Click(Mock.FindButton(">"))
+press(Mock.FindButton(">"))
 check(vh.display == 4528, "> steps to the next model ID")
-Mock.Click(Mock.FindButton("<"))
-Mock.Click(Mock.FindButton("<"))
+press(Mock.FindButton("<"))
+press(Mock.FindButton("<"))
 check(vh.display == 4526, "< steps back")
 
+-- Fast clicks wait their turn: the game rebuilds your character after each.
 Mock.Type(modelSearch, "")
-local filter = DmorphOctoModelFilter
-Mock.Click(filter)
-Mock.Click(filter)
-Mock.Click(filter)
-check(filter.text == "New in OctoWoW" and catalog.kind[catalog.byID[DmorphOctoTile1Model.displayInfo]] == 2,
-	"the filter shows only OctoWoW's models")
-Mock.Click(filter, "RightButton")
-check(filter.text == "Other models" and DmorphOctoAccount.ui.filter == 3, "right-click goes back, and it's remembered")
-Mock.Click(filter)
-Mock.Click(filter)
-check(filter.text == "All models", "the filter cycles round")
+Mock.Click(DmorphOctoTile1)
+Mock.Click(DmorphOctoTile2)
+Mock.Click(DmorphOctoTile3)
+check(vh.display == DmorphOctoTile1.displayID, "a quick second click waits while the first one rebuilds you")
+Mock.Tick(0.4)
+check(vh.display == DmorphOctoTile3.displayID, "then only the latest click is applied")
+Mock.Tick(0.4)
+
+-- Categories, sorting, and your mount.
+Mock.Click(DmorphOctoModelFilter)
+check(DmorphOctoMenu:IsVisible(), "the filter button opens a menu")
+pickMenu("Bosses")
+check(DmorphOctoModelFilter.text == "Bosses" and contains(catalog.tags[DmorphOctoTile1.entry], "boss"),
+	"the Bosses filter lists bosses")
+Mock.Click(DmorphOctoModelFilter)
+pickMenu("Mounts")
+check(contains(catalog.tags[DmorphOctoTile1.entry], "mount") and DmorphOctoAccount.ui.filter == 5,
+	"the Mounts filter lists mount models, and it's remembered")
+Mock.Click(DmorphOctoModelSort)
+check(DmorphOctoModelSort.text == "Sort: ID" and DmorphOctoTile1.displayID <= DmorphOctoTile2.displayID,
+	"the sort button lists by ID")
+local worn = vh.display
+Mock.Click(DmorphOctoModelTarget)
+check(DmorphOctoModelTarget.text == "Morph: mount", "the switch makes clicks morph your mount")
+press(DmorphOctoTile1)
+check(vh.mount == DmorphOctoTile1.displayID and vh.display == worn,
+	"clicking a model with the switch on morphs only your mount")
+check(DmorphOctoTile1.border[2] == 0.82, "the mount you ride has the gold frame")
+Mock.Click(DmorphOctoModelTarget)
+Mock.Click(DmorphOctoModelSort)
+Mock.Click(DmorphOctoModelFilter)
+pickMenu("New in OctoWoW")
+check(catalog.kind[DmorphOctoTile1.entry] >= 2, "the filter shows only OctoWoW's models")
+Mock.Click(DmorphOctoModelFilter)
+pickMenu("All models")
+check(DmorphOctoModelFilter.text == "All models", "back to all models")
 
 -- List view, with a preview card for the row under the mouse.
 Mock.Click(DmorphOctoModelView)
@@ -414,7 +541,7 @@ Mock.Type(modelSearch, "thrall")
 local firstRow = DmorphOctoModelListRow1
 check(firstRow:IsVisible() and firstRow.text.text == "Thrall" and firstRow.info.text == "4527",
 	"searching the list shows Thrall first")
-Mock.Click(firstRow)
+press(firstRow)
 check(vh.display == 4527 and firstRow.locked, "clicking a row morphs you, and the model you wear is highlighted")
 
 -- Scrolling a long list, then back to the grid at the same place.
@@ -432,27 +559,54 @@ check(DmorphOctoModelGrid:IsVisible() and DmorphOctoTile1Model.displayInfo == ca
 Mock.Click(DmorphOctoTabRaces)
 check(not DmorphOctoModelGrid:IsVisible(), "switching tabs hides the models")
 check(DmorphOctoTabRaces.label.color[2] == 0.82, "the open tab is lit")
-Mock.Click(DmorphOctoRace4Female)
+press(DmorphOctoRace4Female)
 check(vh.display == 56, "the races tab morphs into Night Elf female")
 check(DmorphOctoRace4Female.ring.shown and not DmorphOctoRace4Male.ring.shown, "the race you wear is ringed")
 check(DmorphOctoRace1Male.ring.shown == false, "other races aren't")
 Mock.Tick(0.15)
 check(DmorphOctoArt1.texture == "Interface\\DressUpFrame\\DressUpBackground-NightElf1", "the room follows the race")
-Mock.Click(Mock.FindButton("Swap gender"))
+press(Mock.FindButton("Swap gender"))
 check(vh.display == 55, "swap gender works from the window")
 
+-- Character creator: pick a race, then step through faces, skin and hair.
+Mock.Click(DmorphOctoTabCreator)
+local trollLooks = DmorphOcto.GetLooks(8, 0)
+press(DmorphOctoCreator8Male)
+check(vh.display == trollLooks[1][1] and DmorphOctoCreator8Male.ring.shown, "picking a race wears its plainest look")
+check(contains(DmorphOctoCreatorTitle.text, "Troll male") and contains(DmorphOctoCreatorValue1.text, " / "),
+	"the creator shows the race and each choice")
+local hairValues = DmorphOcto.GetLookValues(8, 0, 3)
+local before = vh.display
+press(DmorphOctoCreatorNext3)
+local now
+for i = 1, table.getn(trollLooks) do
+	if trollLooks[i][1] == vh.display then
+		now = trollLooks[i]
+	end
+end
+check(vh.display ~= before and now and now[4] ~= trollLooks[1][4] and contains(DmorphOctoCreatorValue3.text, "/ " .. table.getn(hairValues)),
+	"the next hair style wears a look with another hair style")
+press(DmorphOctoCreatorRandom)
+local isTroll = false
+for i = 1, table.getn(trollLooks) do
+	if trollLooks[i][1] == vh.display then
+		isTroll = true
+	end
+end
+check(isTroll and contains(DmorphOctoCreatorLook.text, "Look "), "the dice rolls a random look of that race")
+
 -- Items: click the head slot next to the model, search and pick.
-Mock.Click(DmorphOctoSlot1)
+press(DmorphOctoSlot1)
 check(DmorphOctoSlot1.locked and DmorphOctoItemSlotLabel.text == "Head", "a slot opens its items")
 local itemSearch = DmorphOctoItemSearch
 Mock.Type(itemSearch, "first mate")
 local itemRow = DmorphOctoItemListRow1
 check(itemRow:IsVisible() and itemRow.text.text == "First Mate Hat", "the head list finds the hat")
 check(DmorphOctoItemCount.text == "1 item", "one result says \"1 item\"")
-Mock.Click(itemRow)
+press(itemRow)
 check(vh.items[1] == 2955, "clicking an item morphs that slot")
 Mock.Type(itemSearch, "")
-Mock.Click(DmorphOctoItemListRow3)
+press(DmorphOctoItemListRow3)
 local locked = {}
 for i = 1, 15 do
 	if getglobal("DmorphOctoItemListRow" .. i).locked then
@@ -460,26 +614,69 @@ for i = 1, 15 do
 	end
 end
 check(table.getn(locked) == 1 and locked[1] == 3, "only the item you wear is highlighted")
+Mock.Click(DmorphOctoItemFilter)
+pickMenu("Epic")
+local headItems = DmorphOcto.GetItemCatalog(1)
+local allEpic = DmorphOctoItemListRow1:IsVisible()
+for i = 1, 15 do
+	local row = getglobal("DmorphOctoItemListRow" .. i)
+	if row:IsVisible() and headItems.quality[headItems.byID[tonumber(row.info.text)]] ~= 4 then
+		allEpic = false
+	end
+end
+check(DmorphOctoItemFilter.text == "Epic" and allEpic, "the quality filter shows only epic items")
+Mock.Click(DmorphOctoItemFilter)
+pickMenu("New in OctoWoW")
+check(DmorphOctoItemFilter.text == "Epic, new" and headItems.kind[headItems.byID[tonumber(DmorphOctoItemListRow1.info.text)]] == 2,
+	"and the source filter on top: epic items OctoWoW added")
+Mock.Click(DmorphOctoItemFilter)
+pickMenu("Any quality")
+Mock.Click(DmorphOctoItemFilter)
+pickMenu("All items")
+Mock.Click(DmorphOctoItemSlotButton)
+pickMenu("Main hand")
+check(DmorphOctoItemSlotLabel.text == "Main hand" and contains(DmorphOctoItemCount.text, "NPC weapons included"),
+	"the slot menu jumps to any slot")
+Mock.Click(DmorphOctoSlot1)
 Mock.Type(itemSearch, "first mate")
-Mock.Click(itemRow)
+press(itemRow)
 check(DmorphOctoSlot1.icon.texture == "Interface\\Icons\\INV_Misc_Bandana_03" and DmorphOctoSlot1.glow.shown,
 	"the slot shows the morphed item's icon")
 Mock.RunScript(DmorphOctoSlot1, "OnEnter")
 check(contains(table.concat(GameTooltip.lines, "\n"), "First Mate Hat"), "the slot tooltip names the item")
 Mock.Click(Mock.FindButton(">"))
 check(DmorphOctoItemSlotLabel.text == "Shoulder", "> moves to the next slot")
-Mock.Click(DmorphOctoSlot16)
-check(contains(DmorphOctoItemCount.text, "NPC weapons included"), "weapon slots say they include NPC weapons")
-Mock.Click(DmorphOctoSlot1, "RightButton")
+press(DmorphOctoSlot1, "RightButton")
 check(vh.items[1] == nil, "right-clicking a slot puts your own gear back")
 check(DmorphOctoSlot5.icon.texture == "Interface\\Icons\\INV_Chest_Plate01", "unmorphed slots show your gear")
 Mock.Click(DmorphOctoSlot1)
 Mock.Type(DmorphOctoItemID, "2955")
-Mock.Click(Mock.FindButton("Apply"))
+press(Mock.FindButton("Apply"))
 check(vh.items[1] == 2955, "typing an item ID and pressing Apply works")
+
+-- Sets: wear every piece at once.
+Mock.Click(DmorphOctoTabSets)
+Mock.Type(DmorphOctoSetSearch, "battlegear of wrath")
+check(DmorphOctoSetListRow1:IsVisible() and DmorphOctoSetListRow1.text.text == "Battlegear of Wrath",
+	"the sets tab finds a set")
+Mock.RunScript(DmorphOctoSetListRow1, "OnEnter")
+check(contains(table.concat(GameTooltip.lines, "\n"), "Breastplate of Wrath"), "hovering a set lists its pieces")
+press(DmorphOctoSetListRow1)
+check(vh.items[5] == 16966 and vh.items[1] == 16963 and contains(DmorphOctoFrameStatus.text, "Battlegear of Wrath"),
+	"clicking a set wears its pieces")
+Mock.Type(DmorphOctoSetSearch, "")
+Mock.Click(DmorphOctoSetFilter)
+pickMenu("New in OctoWoW")
+check(DmorphOctoSetFilter.text == "New in OctoWoW" and DmorphOctoSetListRow1:IsVisible(), "OctoWoW's own sets can be listed")
+Mock.Click(DmorphOctoSetFilter)
+pickMenu("All sets")
+DmorphOcto_ResetAll()
+Mock.Tick(0.4)
+say(".item 1 2955")
 
 -- Wardrobe: save, reset, load, delete.
 Mock.Click(DmorphOctoTabWardrobe)
+say(".race 4")
 check(DmorphOctoOutfitListRow1:IsVisible() == false, "the wardrobe starts empty")
 Mock.Type(DmorphOctoOutfitName, "Elf Pirate")
 Mock.Click(Mock.FindButton("Save current look"))
@@ -489,27 +686,62 @@ check(outfit and outfit.race == 4 and outfit.gender == 0 and outfit.items[1] == 
 local outfitRow = DmorphOctoOutfitListRow1
 check(outfitRow:IsVisible() and outfitRow.text.text == "Elf Pirate" and contains(outfitRow.info.text, "Night Elf male"),
 	"the wardrobe lists the outfit with a summary")
-Mock.Click(Mock.FindButton("Reset everything"))
+press(Mock.FindButton("Reset everything"))
 check(vh.display == 49 and vh.items[1] == nil, "reset everything from the window")
 Mock.Click(outfitRow)
 check(outfitRow.locked, "clicking an outfit selects it")
-Mock.Click(Mock.FindButton("Load"))
+press(Mock.FindButton("Load"))
 check(vh.display == 55 and vh.items[1] == 2955, "load puts the outfit back on")
 DmorphOcto_ResetAll()
-Mock.Click(outfitRow)
+press(outfitRow)
 check(vh.display == 55, "clicking the selected outfit again puts it on")
+
+-- Resizing: drag the corner grip.
+Mock.cursorX = 100
+Mock.RunScript(DmorphOctoResize, "OnMouseDown")
+Mock.cursorX = 100 + 846 * 0.25
+Mock.Tick(0.1)
+Mock.RunScript(DmorphOctoResize, "OnMouseUp")
+check(DmorphOctoFrame.scale > 1.2 and DmorphOctoFrame.scale < 1.3 and DmorphOctoAccount.ui.scale == DmorphOctoFrame.scale,
+	"dragging the grip makes the window bigger, and the size is remembered")
+Mock.cursorX = 100
+Mock.RunScript(DmorphOctoResize, "OnMouseDown")
+Mock.cursorX = 100 - 846 * 5
+Mock.Tick(0.1)
+Mock.RunScript(DmorphOctoResize, "OnMouseUp")
+check(DmorphOctoFrame.scale == 0.6, "it can't get smaller than 60%")
 
 -- Survives /reload and a fresh login.
 loadUI()
 check(vh.display == 55 and vh.items[1] == 2955, "the look survives /reload")
 slash("")
 check(DmorphOctoModelGrid:IsVisible(), "the window opens in the view you left it in")
+check(DmorphOctoFrame.scale == 0.6, "and at the size you left it")
 Mock.Click(DmorphOctoTabWardrobe)
 check(DmorphOctoOutfitListRow1:IsVisible() and DmorphOctoOutfitListRow1.text.text == "Elf Pirate",
 	"saved outfits survive /reload")
+
+-- Looking up OctoWoW items in the background, once the login has settled.
+Mock.Tick(16)
+Mock.Tick(0.3)
+local asked = Mock.itemRequests[1]
+check(asked ~= nil, "unknown OctoWoW items are asked about after login")
+Mock.serverItems[asked] = { "Helm of Testing", 4, "INVTYPE_HEAD" }
+Mock.Fire("ITEM_DATA_LOAD_RESULT", asked, 1)
+Mock.Tick(0.3)
+check(type(DmorphOctoAccount.itemInfo[asked]) == "string" and DmorphOcto.GetItemCatalog(1).byID[asked] ~= nil,
+	"an answer puts the item in its slot's list, saved for next time")
+local second = Mock.itemRequests[2]
+Mock.Fire("ITEM_DATA_LOAD_RESULT", second, nil)
+Mock.Tick(0.3)
+check(DmorphOctoAccount.itemInfo[second] == false, "items the server doesn't have aren't asked about again")
+local left = DmorphOcto.GetLookupStatus()
+check(left > 0, "the lookup reports how many are left")
+
 newClient(49)
 loadUI()
 check(vh.display == 55 and vh.items[1] == 2955, "the look comes back after logging in again")
+check(DmorphOcto.GetItemCatalog(1).byID[asked] ~= nil, "looked-up items are still there after logging in")
 
 slash("")
 Mock.Click(DmorphOctoTabWardrobe)

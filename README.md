@@ -8,7 +8,8 @@
 
 ![WoW 1.12.1](https://img.shields.io/badge/WoW-1.12.1-c79c6e?style=flat-square)
 ![Lua 5.0](https://img.shields.io/badge/Lua-5.0-2c2d72?style=flat-square)
-![Models](https://img.shields.io/badge/models-16%2C296-b46bff?style=flat-square)
+![Models](https://img.shields.io/badge/models-16%2C000%2B-b46bff?style=flat-square)
+![Items](https://img.shields.io/badge/items-12%2C000%2B-a335ee?style=flat-square)
 ![Needs VanillaHelpers](https://img.shields.io/badge/needs-VanillaHelpers-2e8b57?style=flat-square)
 
 </div>
@@ -19,13 +20,16 @@ Pick any creature, race or item, see it on your character straight away, and sav
 
 **What it does**
 
-- 🐉 **Every creature model in the client:** 16,000+ entries covering all 13,423 usable display IDs, including the **2,894 models OctoWoW added**.
-- 🖼️ **3D previews**, eight to a page, or a list that previews the row under your mouse. Search by name or display ID.
+- 🐉 **Every creature model in the client:** 16,000+ entries covering all 13,423 usable display IDs, including the **2,894 models OctoWoW added** (named after their Turtle WoW creatures where there is one).
+- 🖼️ **3D previews**, eight to a page, or a list that previews the row under your mouse. Filter **Bosses, Rare creatures, Mounts** or OctoWoW's new models, search by name or ID, sort **A-Z or by ID**.
+- 🐎 **Morph your mount** into any model, not just yourself.
 - 🧝 **All 10 races**, male and female. Your own face, skin and hair carry over.
-- ⚔️ **Any armour or weapon** on any visible slot, from every item in 1.12 (NPC weapons too), or any item ID.
+- 🎭 **Character creator:** pick a race, then step through every skin colour, face, hair style, hair colour and facial hair the game's NPCs have (8,068 looks), or roll the dice.
+- ⚔️ **12,000+ weapons and armour pieces:** everything in 1.12 plus Turtle WoW's and OctoWoW's, from the Tower of Karazhan sets and the tier variants to the Warglaives of Azzinoth. Filter by quality (**Rare, Epic, Legendary** ...).
+- 🛡️ **352 item sets:** wear a whole set in one click.
 - 👗 **Wardrobe:** save outfits and put them back on with one click. Shared by all your characters.
-- 💬 **DMorph's chat commands:** `.morph`, `.race`, `.gender`, `.item`, `.demorph`, `.outfit`.
-- 🔁 **Your look stays** after `/reload`, loading screens and logging in.
+- 💬 **DMorph's chat commands:** `.morph`, `.race`, `.gender`, `.item`, `.mount`, `.demorph`, `.outfit`.
+- 🔁 **Your look stays** after `/reload`, loading screens and logging in. The window resizes and remembers how you left it.
 
 ## Screenshots
 
@@ -65,13 +69,17 @@ Not using OctoLauncher? Put `VanillaHelpers.dll` (v1.1.0+, [releases](https://gi
 |---|---|
 | **Dressing room** (left) | Your character in your race's dress-up room. Drag to turn it. The plate underneath names your look. |
 | **Slots** around the model | Left-click: browse items for that slot. Right-click: back to your own gear. Morphed slots glow green. |
-| **Reset model** / **Reset everything** | Your own body back (items stay) / clear every morph. |
+| **Reset model** / **Reset everything** | Your own body back (items stay) / clear every morph, mount too. |
+| **Corner grip** (bottom right) | Drag to make the window bigger or smaller. It remembers the size. |
 | **Models** tab | Grid of previews (mouse wheel turns pages) or list view. Gold frame = the model you wear. |
-| **Filter** button | All models · Creatures (white) · Other models, named after their model file (blue) · New in OctoWoW (green). Right-click goes back. |
-| **Display ID** | Type any ID and press Morph, or step through every ID with < and >. |
-| **Races** tab | Male and female portraits for all 10 races. **Swap gender** flips the current one. |
-| **Items** tab | Items for the chosen slot, coloured by quality. **Item ID** + **Apply** takes any item. **Use my own gear** clears the slot. |
-| **Wardrobe** tab | Save, load and delete outfits. Loading puts on the whole outfit. |
+| Models: **filter** | All models · Creatures · Bosses · Rare creatures · Mounts · Other models (named after their model file, blue) · New in OctoWoW (green). |
+| Models: **Sort** / **Morph: you / mount** | List A-Z or by ID / whether a click morphs you or your mount. |
+| Models: **Display ID** | Type any ID and press Morph, or step through every ID with < and >. |
+| **Races** tab | Male and female portraits for all 10 races, with your own face, skin and hair. **Swap gender** flips the current one. |
+| **Creator** tab | Pick a race portrait, then < > through skin colour, face, hair style, hair colour, facial hair and outfit. The dice picks a random look. |
+| **Items** tab | Click the slot name for any slot. Items are coloured by quality; the filter picks all / 1.12 / new and a quality. **Item ID** + **Apply** takes any item. |
+| **Sets** tab | Every item set. Hover to see the pieces, click to wear them all. Same filters as Items. |
+| **Wardrobe** tab | Save, load and delete outfits (your mount morph included). Loading puts on the whole outfit. |
 
 Open it with the minimap button, `/dmorph` or a key under *Key Bindings > DMorph*. Escape closes it.
 
@@ -85,7 +93,8 @@ Type them in the chat box like in DMorph. They never reach the server. Each also
 | `.race <1-10>` or `.race nightelf` | `1` Human, `2` Orc, `3` Dwarf, `4` Night Elf, `5` Undead, `6` Tauren, `7` Gnome, `8` Troll, `9` Goblin, `10` High Elf. |
 | `.gender` | Swap the gender of your race or race morph. |
 | `.item <slot> <itemID>` | Morph one slot, e.g. `.item 1 2955` or `.item head` + a shift-clicked item link. `0` resets the slot. |
-| `.demorph` / `.demorph all` | Reset your model / your model and all items. |
+| `.mount <displayID>` | Your mount looks like any creature while you ride. `.mount 0` resets. |
+| `.demorph` / `.demorph all` | Reset your model / your model, items and mount. |
 | `.outfit`, `.outfit <name>`, `.outfit save <name>`, `.outfit delete <name>` | List, put on, save or delete outfits. |
 | `.dmorph status` / `/dmorph help` | What's morphed and which VanillaHelpers is loaded / all commands. |
 
@@ -94,28 +103,30 @@ Slots: `1` head, `3` shoulder, `4` shirt, `5` chest, `6` waist, `7` legs, `8` fe
 ## Good to know
 
 - **Only you see morphs.** They change your own client's picture, nothing else.
-- **Invisible after a morph?** That display ID has no model in the game. Press **Reset model**. The list itself only has IDs whose model exists.
-- **Shapeshifting** (druid forms and the like) shows your morph instead of the form. Reset your model first if you want the form.
-- **OctoWoW's custom items** aren't in the item lists (they come from the 1.12 database), but work by item ID.
+- **Invisible after a morph?** That display ID has no model in the game. Press **Reset model**. The lists only have IDs whose model exists.
+- **The creator uses the game's NPC looks.** No DLL can change your own character's skin, face or hair, so the creator morphs you into the game's dressed NPCs of that race: every combination they have. Your item morphs don't show on an NPC look; for your own face with gear, use **Races**. Only the customisations in this 1.12 client exist, not later expansions'.
+- **OctoWoW-only items** that no list knows yet are looked up in the background after you log in (with ClassicAPI, a few a second, once per account). The Items and Sets tabs say how many are left. Any item also works by its ID.
+- **Fast clicking is safe:** the game rebuilds your character after each change, so a click within a third of a second of the last one waits its turn instead of mixing two looks' textures.
 - **"?" icon on a slot:** the game hasn't loaded that item yet. It turns into the icon after a moment.
+- **Shapeshifting** (druid forms and the like) shows your morph instead of the form. Reset your model first if you want the form.
 - No `.scale` (VanillaHelpers can't scale models), no Draenei (race 11 isn't in 1.12), and F5/F10 aren't taken over: set the reset keys under *Key Bindings > DMorph*.
 
 ---
 
 ## How it works
 
-DMorph itself is a DLL for WotLK 3.3.5a and can't run on the 1.12 client. This addon uses **VanillaHelpers**, a 1.12 client mod that OctoLauncher ships, through its `SetUnitDisplayID`, `SetUnitVisibleItemID` and `UnitDisplayInfo` functions. The previews use ClassicAPI's `Model:SetDisplayInfo`. Each new model loads out of sight and only shows once it's ready, so nothing flashes white.
+DMorph itself is a DLL for WotLK 3.3.5a and can't run on the 1.12 client. This addon uses **VanillaHelpers**, a 1.12 client mod that OctoLauncher ships, through its `SetUnitDisplayID`, `SetUnitVisibleItemID`, `SetUnitMountDisplayID` and `UnitDisplayInfo` functions. The previews use ClassicAPI's `Model:SetDisplayInfo`. Each new model loads out of sight and only shows once it's ready, so nothing flashes white.
 
-- `DmorphOcto.lua`: morph state, wardrobe, search and chat commands. `UI.lua`: the window and minimap button.
-- `Data/Creatures.lua` and `Data/Items.lua`: names from the [cmangos classic-db](https://github.com/cmangos/classic-db) 1.12.1 database. `Data/Models.lua`: every other display ID in the client's own `CreatureDisplayInfo.dbc`, named after its model file.
-- Saved data: `WTF\Account\<account>\SavedVariables\DmorphOcto.lua` (outfits, window settings, minimap button) and each character's `SavedVariables\DmorphOcto.lua` (current look).
+- `DmorphOcto.lua`: morph state, wardrobe, search, item lookup and chat commands. `UI.lua`: the window and minimap button.
+- `Data/Creatures.lua` and `Data/Items.lua`: the [cmangos classic-db](https://github.com/cmangos/classic-db) 1.12.1 database. `Data/Models.lua`, `ModelTags.lua` and `Looks.lua`: every other display ID in the client's own data, its boss / rare / mount tags, and the NPC looks per race. `Data/ItemsExtra.lua` and `ItemSets.lua`: Turtle WoW's and OctoWoW's items and the client's item sets.
+- Saved data: `WTF\Account\<account>\SavedVariables\DmorphOcto.lua` (outfits, window settings, looked-up items, minimap button) and each character's `SavedVariables\DmorphOcto.lua` (current look).
 
 ## Development
 
 Written for the client's Lua 5.0: no `#`, no `%`, no `string.match`.
 
-- **Tests:** `tests/run_tests.lua` drives the addon (chat, window, previews, wardrobe, `/reload`, logins) inside `tests/mock_wow.lua`, a strict mock of the 1.12 UI and of VanillaHelpers. Run `lua tests/run_tests.lua` with Lua 5.0, or on Windows `powershell -ExecutionPolicy Bypass -File tools\run_tests.ps1` (builds `tools/LuaHost`, .NET 8, and uses the Lua runtime OBS Studio installs; `LUA51_DLL` picks another).
-- **Catalogue:** `python3 tools/build_data.py <ClassicDB_1_12_1_*.sql.gz>` rebuilds `Creatures.lua` and `Items.lua`. `powershell -ExecutionPolicy Bypass -File tools\build_models.ps1 -GameDir C:\Games\OctoWoW` rebuilds `Models.lua` from the client's MPQs; run it after a client patch.
+- **Tests:** `tests/run_tests.lua` drives the addon (chat, window, previews, filters, creator, sets, item lookup, wardrobe, `/reload`, logins) inside `tests/mock_wow.lua`, a strict mock of the 1.12 UI and of VanillaHelpers. Run `lua tests/run_tests.lua` with Lua 5.0, or on Windows `powershell -ExecutionPolicy Bypass -File tools\run_tests.ps1` (builds `tools/LuaHost`, .NET 8, and uses the Lua runtime OBS Studio installs; `LUA51_DLL` picks another).
+- **Catalogue:** `python3 tools/build_data.py <ClassicDB_1_12_1_*.sql.gz>` rebuilds `Creatures.lua` and `Items.lua`. Then, on Windows with the game installed, `tools\build_models.ps1` rebuilds the model files and `tools\build_items.ps1` the extra items and sets, from the client's MPQs, its item cache, Atlas-CFM's loot tables and `tools/data` (Turtle WoW data exported from [ShellLab](https://github.com/oplancelot/ShellLab)). Run them after a client patch.
 - **Pictures:** `docs/src` has the banner and gallery as HTML (rendered with headless Edge) and the in-game crops they use.
 
 ## Credits
@@ -124,3 +135,4 @@ Written for the client's Lua 5.0: no `#`, no `%`, no `string.match`.
 - [VanillaHelpers](https://github.com/isfir/VanillaHelpers) by isfir, which does the morphing on the 1.12.1 client.
 - [ClassicAPI](https://github.com/brues-code/ClassicAPI) by brues-code, whose `Model:SetDisplayInfo` draws the previews.
 - Creature and item names from the [cmangos classic-db](https://github.com/cmangos/classic-db) 1.12.1 world database.
+- Turtle WoW creature, item and rank data from [ShellLab](https://github.com/oplancelot/ShellLab) by oplancelot; loot-table item IDs from Atlas-CFM.

@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "1.2.0"
+local VERSION = "1.3.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 local MISSING_API = "VanillaHelpers v1.1.0 or newer is not loaded, so morphing is unavailable. "
 	.. "Enable the 'vanillaHelpers' mod in OctoLauncher (or add VanillaHelpers.dll to dlls.txt) "
@@ -77,6 +77,9 @@ local pendingApply
 local listeners = {}
 local creatures
 local items = {}
+local sets
+local looks = {}
+local InitDB -- defined under State; the catalogue needs it first
 
 local function Print(msg)
 	DEFAULT_CHAT_FRAME:AddMessage(PREFIX .. msg)
@@ -146,7 +149,8 @@ end
 -- Catalogue -----------------------------------------------------------------
 
 -- Data/*.lua hold the catalogue as text so the game loads it quickly; each
--- list is parsed the first time it's needed.
+-- list is parsed the first time it's needed. An entry is
+-- { id, name, lowercase name, quality, kind }.
 local function NewCatalog()
 	return { ids = {}, names = {}, lower = {}, quality = {}, kind = {}, byID = {}, count = 0 }
 end
@@ -161,85 +165,459 @@ local function AddEntry(catalog, id, name, quality, kind)
 	end
 end
 
--- What a creature model entry is: a creature from the world database, a
--- model the client has that no creature names (called after its model file),
--- or one of those that OctoWoW added to the stock 1.12.1 client.
-M.KIND_CREATURE, M.KIND_MODEL, M.KIND_OCTOWOW = 0, 1, 2
+local function Before(a, b)
+	return a[3] < b[3] or (a[3] == b[3] and a[1] < b[1])
+end
+
+-- Merges two name-sorted lists. The data files are sorted the way Lua
+-- compares strings, so this is one pass.
+local function Merge(a, n, b, m)
+	local out, k, i, j = {}, 0, 1, 1
+	while i <= n or j <= m do
+		local x, y = a[i], b[j]
+		if not y or (x and not Before(y, x)) then
+			i = i + 1
+		else
+			x, j = y, j + 1
+		end
+		k = k + 1
+		out[k] = x
+	end
+	return out, k
+end
+
+local function Fill(catalog, list, count)
+	for i = 1, count do
+		local e = list[i]
+		AddEntry(catalog, e[1], e[2], e[4], e[5])
+	end
+	return catalog
+end
+
+-- Creature models by kind: a creature's name, or named after the model file;
+-- 2 and 3 are the same for the models OctoWoW added to the stock 1.12.1 client.
+M.KIND_CREATURE, M.KIND_MODEL, M.KIND_NEW, M.KIND_NEW_MODEL = 0, 1, 2, 3
 M.MODEL_FILTERS = {
 	{ text = "All models" },
-	{ text = "Creatures", kinds = { [0] = true } },
-	{ text = "Other models", kinds = { [1] = true, [2] = true } },
+	{ text = "Creatures", kinds = { [0] = true, [2] = true } },
+	{ text = "Bosses", tag = "boss" },
+	{ text = "Rare creatures", tag = "rare" },
+	{ text = "Mounts", tag = "mount" },
+	{ text = "Other models", kinds = { [1] = true, [3] = true } },
+	{ text = "New in OctoWoW", kinds = { [2] = true, [3] = true } },
+}
+-- Items and sets are kind 0 (stock 1.12.1) or 2 (added by Turtle WoW / OctoWoW).
+M.ITEM_FILTERS = {
+	{ text = "All items" },
+	{ text = "1.12 items", kinds = { [0] = true } },
 	{ text = "New in OctoWoW", kinds = { [2] = true } },
+}
+M.SET_FILTERS = {
+	{ text = "All sets" },
+	{ text = "1.12 sets", kinds = { [0] = true } },
+	{ text = "New in OctoWoW", kinds = { [2] = true } },
+}
+-- Item and set quality, as GetItemInfo() numbers it.
+M.QUALITY_FILTERS = {
+	{ text = "Any quality" },
+	{ text = "Poor", quality = 0 },
+	{ text = "Common", quality = 1 },
+	{ text = "Uncommon", quality = 2 },
+	{ text = "Rare", quality = 3 },
+	{ text = "Epic", quality = 4 },
+	{ text = "Legendary", quality = 5 },
 }
 
 -- Creatures.lua (named creatures) and Models.lua (every other display ID the
--- client has) are both sorted by name, so one pass merges them in order.
+-- client has) together list every model.
 function M.GetCreatureCatalog()
 	if creatures then
 		return creatures
 	end
-	local named, other = {}, {}
-	local n, m = 0, 0
+	local named, other, n, m = {}, {}, 0, 0
 	for id, name in string.gfind(DmorphOcto_CreatureData or "", "(%d+)\t([^\r\n]+)") do
 		n = n + 1
-		named[n] = { tonumber(id), name, strlower(name), M.KIND_CREATURE }
+		named[n] = { tonumber(id), name, strlower(name), 0, M.KIND_CREATURE }
 	end
-	for id, flag, name in string.gfind(DmorphOcto_ModelData or "", "(%d+)\t(%d)\t([^\r\n]+)") do
+	for id, kind, name in string.gfind(DmorphOcto_ModelData or "", "(%d+)\t(%d)\t([^\r\n]+)") do
 		m = m + 1
-		other[m] = { tonumber(id), name, strlower(name), M.KIND_MODEL + tonumber(flag) }
+		other[m] = { tonumber(id), name, strlower(name), 0, tonumber(kind) }
 	end
 	DmorphOcto_CreatureData, DmorphOcto_ModelData = nil, nil -- the parsed tables replace the text
-	creatures = NewCatalog()
-	local i, j = 1, 1
-	while i <= n or j <= m do
-		local a, b = named[i], other[j]
-		local entry
-		if not b or (a and (a[3] < b[3] or (a[3] == b[3] and a[1] <= b[1]))) then
-			entry, i = a, i + 1
+	creatures = Fill(NewCatalog(), Merge(named, n, other, m))
+	-- Tags for the filters (Data/ModelTags.lua): bosses and rares by display and
+	-- name, mounts by display.
+	local byName, mounts = {}, {}
+	for id, tag, name in string.gfind(DmorphOcto_TagData or "", "(%d+)\t(%a+)\t([^\r\n]*)") do
+		if tag == "mount" then
+			mounts[tonumber(id)] = true
 		else
-			entry, j = b, j + 1
+			byName[id .. "\t" .. strlower(name)] = tag
 		end
-		AddEntry(creatures, entry[1], entry[2], nil, entry[4])
+	end
+	DmorphOcto_TagData = nil
+	creatures.tags = {}
+	for i = 1, creatures.count do
+		local tag = byName[creatures.ids[i] .. "\t" .. creatures.lower[i]]
+		if mounts[creatures.ids[i]] then
+			tag = (tag and (tag .. " ") or "") .. "mount"
+		end
+		creatures.tags[i] = tag
 	end
 	return creatures
 end
 
+-- Inventory slots by the INVTYPE_ name GetItemInfo() returns.
+local EQUIP_SLOTS = {
+	INVTYPE_HEAD = { 1 }, INVTYPE_SHOULDER = { 3 }, INVTYPE_BODY = { 4 }, INVTYPE_CHEST = { 5 },
+	INVTYPE_ROBE = { 5 }, INVTYPE_WAIST = { 6 }, INVTYPE_LEGS = { 7 }, INVTYPE_FEET = { 8 },
+	INVTYPE_WRIST = { 9 }, INVTYPE_HAND = { 10 }, INVTYPE_CLOAK = { 15 }, INVTYPE_TABARD = { 19 },
+	INVTYPE_WEAPON = { 16, 17 }, INVTYPE_2HWEAPON = { 16 }, INVTYPE_WEAPONMAINHAND = { 16 },
+	INVTYPE_SHIELD = { 17 }, INVTYPE_WEAPONOFFHAND = { 17 }, INVTYPE_HOLDABLE = { 17 },
+	INVTYPE_RANGED = { 18 }, INVTYPE_THROWN = { 18 }, INVTYPE_RANGEDRIGHT = { 18 },
+}
+
+local function ParseItems(text, kind, list, n, skip)
+	for id, quality, name in string.gfind(text or "", "(%d+)\t(%d)\t([^\r\n]+)") do
+		id = tonumber(id)
+		if not (skip and skip[id]) then
+			n = n + 1
+			list[n] = { id, name, strlower(name), tonumber(quality), kind }
+		end
+	end
+	return list, n
+end
+
+-- Items the game told us about in this or an earlier session (see Item
+-- lookup), saved as DmorphOctoAccount.itemInfo[id] = "slots<TAB>quality<TAB>name".
+local function LearnedItems(slot, skip)
+	local list, n = {}, 0
+	for id, info in pairs(account.itemInfo) do
+		if info and not skip[id] then
+			local _, _, slots, quality, name = strfind(info, "^([%d,]+)\t(%-?%d+)\t(.+)$")
+			if slots and strfind("," .. slots .. ",", "," .. slot .. ",", 1, true) then
+				n = n + 1
+				list[n] = { id, name, strlower(name), tonumber(quality), M.KIND_NEW }
+			end
+		end
+	end
+	table.sort(list, Before)
+	return list, n
+end
+
+-- Every item that fits the slot: Items.lua (the 1.12.1 database), then
+-- ItemsExtra.lua (Turtle WoW and OctoWoW) and the items looked up in game.
 function M.GetItemCatalog(slot)
 	if not items[slot] then
-		local catalog = NewCatalog()
-		local source = DmorphOcto_ItemData and DmorphOcto_ItemData[slot] or ""
-		for id, quality, name in string.gfind(source, "(%d+)\t(%d)\t([^\r\n]+)") do
-			AddEntry(catalog, tonumber(id), name, tonumber(quality))
+		InitDB()
+		local base, n = ParseItems(DmorphOcto_ItemData and DmorphOcto_ItemData[slot], 0, {}, 0)
+		local seen = {}
+		for i = 1, n do
+			seen[base[i][1]] = true
 		end
-		if DmorphOcto_ItemData then
-			DmorphOcto_ItemData[slot] = nil
+		local extra, m = ParseItems(DmorphOcto_ItemExtra and DmorphOcto_ItemExtra[slot], M.KIND_NEW, {}, 0, seen)
+		for i = 1, m do
+			seen[extra[i][1]] = true
 		end
-		items[slot] = catalog
+		local learned, k = LearnedItems(slot, seen)
+		local both, count = Merge(base, n, extra, m)
+		items[slot] = Fill(NewCatalog(), Merge(both, count, learned, k))
 	end
 	return items[slot]
 end
 
--- Positions of the catalogue entries matching the text, plus how many there
--- are: an exact ID first, then names starting with the text, then names
--- containing it. kinds (optional) keeps only entries of those kinds.
-function M.FilterCatalog(catalog, text, kinds)
-	local query = strlower(Trim(text))
-	local result, n = {}, 0
-	if query == "" then
-		for i = 1, catalog.count do
-			if not kinds or kinds[catalog.kind[i]] then
-				n = n + 1
-				result[n] = i
+-- The slots an item can be morphed into, or nil if it isn't known.
+local itemSlots
+function M.GetItemSlots(itemID)
+	if not itemSlots then
+		itemSlots = {}
+		for i = 1, table.getn(SLOT_ORDER) do
+			local slot = SLOT_ORDER[i]
+			for id in pairs(M.GetItemCatalog(slot).byID) do
+				local list = itemSlots[id]
+				if not list then
+					list = {}
+					itemSlots[id] = list
+				end
+				table.insert(list, slot)
 			end
 		end
-		return result, n
 	end
+	return itemSlots[itemID]
+end
+
+-- Item lists are rebuilt the next time they're needed (after a lookup).
+local function ForgetItemLists()
+	items, itemSlots = {}, nil
+	if sets then
+		sets.qualityKnown = nil
+	end
+end
+
+-- An item's quality from the item lists, or nil.
+local function ItemQuality(itemID)
+	local slots = M.GetItemSlots(itemID)
+	if slots then
+		local catalog = M.GetItemCatalog(slots[1])
+		return catalog.quality[catalog.byID[itemID]]
+	end
+end
+
+-- Every item set in the client, with the pieces that show on a character. A
+-- set's quality is that of its best known piece.
+function M.GetSetCatalog()
+	if not sets then
+		sets = NewCatalog()
+		sets.pieces = {}
+		for id, kind, name, list in string.gfind(DmorphOcto_SetData or "", "(%d+)\t(%d)\t([^\t\r\n]+)\t([%d,]+)") do
+			AddEntry(sets, tonumber(id), name, nil, tonumber(kind))
+			local pieces = {}
+			for piece in string.gfind(list, "%d+") do
+				table.insert(pieces, tonumber(piece))
+			end
+			sets.pieces[sets.count] = pieces
+		end
+		DmorphOcto_SetData = nil
+	end
+	if not sets.qualityKnown then
+		sets.qualityKnown = true
+		for i = 1, sets.count do
+			local best
+			for k = 1, table.getn(sets.pieces[i]) do
+				local quality = ItemQuality(sets.pieces[i][k])
+				if quality and (not best or quality > best) then
+					best = quality
+				end
+			end
+			sets.quality[i] = best
+		end
+	end
+	return sets
+end
+
+-- The game's dressed NPCs of a race and gender (Data/Looks.lua), the fewest
+-- clothes first. Each look is { displayID, skin, face, hair style, hair
+-- colour, facial hair, pieces of clothing }.
+function M.GetLooks(race, gender)
+	local key = race .. ":" .. gender
+	if not looks[key] then
+		local list, n = {}, 0
+		local text = DmorphOcto_LookData and DmorphOcto_LookData[key] or ""
+		for a, b, c, d, e, f, g in string.gfind(text, "(%d+),(%d+),(%d+),(%d+),(%d+),(%d+),(%d+)") do
+			n = n + 1
+			list[n] = { tonumber(a), tonumber(b), tonumber(c), tonumber(d), tonumber(e), tonumber(f), tonumber(g) }
+		end
+		looks[key] = list
+	end
+	return looks[key]
+end
+
+-- The character creator's choices: look fields 2-6. Picking a value finds the
+-- look with it that keeps the most of the other choices (skin first, then hair
+-- style, hair colour, face and facial hair), in the fewest clothes.
+M.LOOK_FEATURES = { "Skin colour", "Face", "Hair style", "Hair colour", "Facial hair" }
+local FEATURE_WEIGHTS = { 16, 2, 8, 4, 1 }
+
+-- The values feature f (1-5) has among a race and gender's looks, sorted.
+function M.GetLookValues(race, gender, f)
+	local list = M.GetLooks(race, gender)
+	local seen, values = {}, {}
+	for k = 1, table.getn(list) do
+		local v = list[k][f + 1]
+		if not seen[v] then
+			seen[v] = true
+			table.insert(values, v)
+		end
+	end
+	table.sort(values)
+	return values
+end
+
+-- The position of the look that has `value` for feature f and is closest to
+-- look `from` (a position in the same list), or nil.
+function M.FindLook(race, gender, f, value, from)
+	local list = M.GetLooks(race, gender)
+	local want = list[from]
+	local best, bestScore
+	for k = 1, table.getn(list) do
+		local look = list[k]
+		if look[f + 1] == value then
+			local score = 0
+			if want then
+				for g = 1, 5 do
+					if g ~= f and look[g + 1] == want[g + 1] then
+						score = score + FEATURE_WEIGHTS[g]
+					end
+				end
+			end
+			score = score * 20 - look[7]
+			if not best or score > bestScore then
+				best, bestScore = k, score
+			end
+		end
+	end
+	return best
+end
+
+-- The positions of the looks with the same face, skin and hair as look
+-- `from`: its outfits, the fewest clothes first.
+function M.GetLookOutfits(race, gender, from)
+	local list = M.GetLooks(race, gender)
+	local want, out = list[from], {}
+	if want then
+		for k = 1, table.getn(list) do
+			local look = list[k]
+			if look[2] == want[2] and look[3] == want[3] and look[4] == want[4] and look[5] == want[5] and look[6] == want[6] then
+				table.insert(out, k)
+			end
+		end
+	end
+	return out
+end
+
+-- Item lookup -------------------------------------------------------------------
+
+-- ItemsExtra.lua lists items whose slot isn't known offline: OctoWoW items
+-- from Atlas-CFM's loot tables and the item sets. In the background, a few a
+-- second, the addon reads them from the client's cache or (with ClassicAPI)
+-- asks the server, and saves the answers account-wide. Found ones join the
+-- item lists and the sets.
+local LOOKUP_STEP, LOOKUP_TIMEOUT, LOOKUP_PARALLEL = 0.25, 20, 4
+local lookup = { pos = 1, count = 0, ids = {}, waiting = {}, waitCount = 0, left = 0, version = 0 }
+
+local function CanAskServer()
+	return type(C_Item) == "table" and type(C_Item.RequestLoadItemDataByID) == "function"
+end
+
+-- "slots<TAB>quality<TAB>name" for an item the client knows, false if it
+-- doesn't show on a character, nil if the client doesn't know it yet.
+local function ReadItemInfo(itemID)
+	local ok, name, _, quality, _, _, _, _, equipLoc = pcall(GetItemInfo, itemID)
+	if not (ok and name) then
+		return nil
+	end
+	local slots = EQUIP_SLOTS[equipLoc or ""]
+	if not slots then
+		return false
+	end
+	return table.concat(slots, ",") .. "\t" .. (quality or 1) .. "\t" .. string.gsub(name, "\t", " ")
+end
+
+local function Record(itemID, info)
+	if account.itemInfo[itemID] == nil and info ~= nil then
+		account.itemInfo[itemID] = info
+		lookup.left = lookup.left - 1
+		if info then
+			lookup.changed = true
+		end
+	end
+end
+
+-- How many items are still to be looked up, and how many there were.
+function M.GetLookupStatus()
+	return lookup.left, lookup.count
+end
+
+-- Bumped whenever looked-up items join the lists, so the window can redraw.
+function M.GetItemsVersion()
+	return lookup.version
+end
+
+local function StartLookup()
+	if lookup.started then
+		return
+	end
+	lookup.started = true
+	for id in string.gfind(DmorphOcto_ItemPending or "", "(%d+)\t") do
+		id = tonumber(id)
+		lookup.count = lookup.count + 1
+		lookup.ids[lookup.count] = id
+		if account.itemInfo[id] == nil then
+			lookup.left = lookup.left + 1
+		end
+	end
+	DmorphOcto_ItemPending = nil
+end
+
+local function LookupTick(elapsed)
+	for id, wait in pairs(lookup.waiting) do
+		if wait <= elapsed then
+			-- No answer: try again next session.
+			lookup.waiting[id] = nil
+			lookup.waitCount = lookup.waitCount - 1
+		else
+			lookup.waiting[id] = wait - elapsed
+		end
+	end
+	local askServer = CanAskServer()
+	local checked = 0
+	while lookup.pos <= lookup.count and checked < 40 and lookup.waitCount < LOOKUP_PARALLEL do
+		local id = lookup.ids[lookup.pos]
+		lookup.pos = lookup.pos + 1
+		if account.itemInfo[id] == nil and not lookup.waiting[id] then
+			checked = checked + 1
+			local info = ReadItemInfo(id)
+			if info ~= nil then
+				Record(id, info)
+			elseif askServer then
+				lookup.waiting[id] = LOOKUP_TIMEOUT
+				lookup.waitCount = lookup.waitCount + 1
+				pcall(C_Item.RequestLoadItemDataByID, id)
+				break -- one question per step
+			end
+		end
+	end
+	if lookup.changed then
+		lookup.changed = nil
+		lookup.version = lookup.version + 1
+		ForgetItemLists()
+	end
+	return lookup.pos > lookup.count and lookup.waitCount == 0
+end
+
+-- ClassicAPI's ITEM_DATA_LOAD_RESULT(itemID, success).
+local function LookupAnswer(itemID, success)
+	if not lookup.waiting[itemID] then
+		return
+	end
+	lookup.waiting[itemID] = nil
+	lookup.waitCount = lookup.waitCount - 1
+	if success then
+		Record(itemID, ReadItemInfo(itemID))
+	else
+		Record(itemID, false) -- the server has no such item
+	end
+end
+
+-- Whether entry i passes a filter from the *_FILTERS lists ({ kinds = ..., tag
+-- = ... }) and a quality from QUALITY_FILTERS. Both are optional.
+local function Keep(catalog, i, filter, quality)
+	if filter then
+		if filter.kinds and not filter.kinds[catalog.kind[i]] then
+			return false
+		end
+		if filter.tag then
+			local tags = catalog.tags and catalog.tags[i]
+			if not (tags and strfind(tags, filter.tag, 1, true)) then
+				return false
+			end
+		end
+	end
+	return not quality or catalog.quality[i] == quality
+end
+
+-- Positions of the catalogue entries matching the text, plus how many there
+-- are: an exact ID first, then names starting with the text, then names
+-- containing it. byID lists them by ID instead.
+function M.FilterCatalog(catalog, text, filter, quality, byID)
+	local query = strlower(Trim(text))
+	local result, n = {}, 0
 	local number = ParseID(query)
 	local later, m = {}, 0
 	for i = 1, catalog.count do
-		if not kinds or kinds[catalog.kind[i]] then
-			local at = strfind(catalog.lower[i], query, 1, true)
-			if catalog.ids[i] == number or at == 1 then
+		if Keep(catalog, i, filter, quality) then
+			local at = query == "" or strfind(catalog.lower[i], query, 1, true)
+			if query == "" or catalog.ids[i] == number or at == 1 then
 				n = n + 1
 				result[n] = i
 			elseif at then
@@ -251,7 +629,14 @@ function M.FilterCatalog(catalog, text, kinds)
 	for i = 1, m do
 		result[n + i] = later[i]
 	end
-	return result, n + m
+	n = n + m
+	if byID then
+		local ids = catalog.ids
+		table.sort(result, function(a, b)
+			return ids[a] < ids[b] or (ids[a] == ids[b] and a < b)
+		end)
+	end
+	return result, n
 end
 
 -- The catalogue's name for a display ID and what kind of entry it is, or nil.
@@ -307,10 +692,14 @@ function M.DescribeOutfit(outfit)
 	for _ in pairs(outfit.items) do
 		count = count + 1
 	end
-	if count == 1 then
-		return look .. ", 1 item"
+	local mount = ""
+	if outfit.mount then
+		mount = ", mount"
 	end
-	return look .. ", " .. count .. " items"
+	if count == 1 then
+		return look .. ", 1 item" .. mount
+	end
+	return look .. ", " .. count .. " items" .. mount
 end
 
 -- State ---------------------------------------------------------------------
@@ -320,6 +709,10 @@ local function SanitizeOutfit(outfit)
 	outfit.display = ParseID(outfit.display)
 	if outfit.display == 0 then
 		outfit.display = nil
+	end
+	outfit.mount = ParseID(outfit.mount)
+	if outfit.mount == 0 then
+		outfit.mount = nil
 	end
 	if not (type(outfit.race) == "number" and RACES[outfit.race]) then
 		outfit.race = nil
@@ -341,14 +734,14 @@ local function SanitizeOutfit(outfit)
 end
 
 local function CopyOutfit(outfit)
-	local copy = { display = outfit.display, race = outfit.race, gender = outfit.gender, items = {} }
+	local copy = { display = outfit.display, race = outfit.race, gender = outfit.gender, mount = outfit.mount, items = {} }
 	for slot, itemID in pairs(outfit.items) do
 		copy.items[slot] = itemID
 	end
 	return copy
 end
 
-local function InitDB()
+function InitDB()
 	if db then
 		return
 	end
@@ -362,6 +755,15 @@ local function InitDB()
 	account = DmorphOctoAccount
 	if type(account.outfits) ~= "table" then
 		account.outfits = {}
+	end
+	-- Items looked up in game: id -> "slots<TAB>quality<TAB>name", or false.
+	if type(account.itemInfo) ~= "table" then
+		account.itemInfo = {}
+	end
+	for id, info in pairs(account.itemInfo) do
+		if type(id) ~= "number" or (info ~= false and type(info) ~= "string") then
+			account.itemInfo[id] = nil
+		end
 	end
 	for name, outfit in pairs(account.outfits) do
 		if type(name) == "string" and type(outfit) == "table" then
@@ -463,12 +865,28 @@ local function ApplyItem(slot)
 	return Morph(SetUnitVisibleItemID, "player", slot, db.items[slot])
 end
 
+-- Mount morphs need VanillaHelpers' SetUnitMountDisplayID (v1.1.0 has it).
+local function HasMountAPI()
+	return type(SetUnitMountDisplayID) == "function"
+end
+M.HasMountAPI = HasMountAPI
+
+local function ApplyMount()
+	if not HasMountAPI() then
+		return true
+	end
+	return Morph(SetUnitMountDisplayID, "player", db.mount)
+end
+
 local function ApplySaved()
 	if not Begin() then
 		return
 	end
 	if BodyDisplayID() then
 		ApplyBody()
+	end
+	if db.mount then
+		ApplyMount()
 	end
 	for slot in pairs(db.items) do
 		ApplyItem(slot)
@@ -502,6 +920,10 @@ function M.ResetAll()
 	end
 	db.display, db.race, db.gender = nil, nil, 0
 	local ok, err = ApplyBody()
+	if db.mount then
+		db.mount = nil
+		ApplyMount()
+	end
 	for i = 1, table.getn(SLOT_ORDER) do
 		local slot = SLOT_ORDER[i]
 		db.items[slot] = nil
@@ -593,6 +1015,82 @@ function M.SetItem(slot, itemID)
 	return Result(ok, err, SLOT_NAMES[slot] .. " reset.")
 end
 
+-- Morphs your mount (any creature model) the next time and every time you
+-- ride. displayID 0 puts your own mount back.
+function M.SetMount(displayID)
+	if not Begin() then
+		return false, MISSING_API
+	end
+	if not HasMountAPI() then
+		return false, "This VanillaHelpers can't morph mounts: update it to v1.1.0 or newer."
+	end
+	displayID = ParseID(displayID)
+	if not displayID then
+		return false, "Display IDs are whole numbers."
+	end
+	if displayID == 0 then
+		displayID = nil
+	end
+	db.mount = displayID
+	local ok, err = ApplyMount()
+	if displayID then
+		return Result(ok, err, "Your mount looks like " .. M.DescribeDisplay(displayID) .. ".")
+	end
+	return Result(ok, err, "Mount reset.")
+end
+
+-- Puts on every piece of set `index` (its position in GetSetCatalog) whose
+-- slot is known. Slots the set has no piece for keep what they show.
+function M.WearSet(index)
+	if not Begin() then
+		return false, MISSING_API
+	end
+	local catalog = M.GetSetCatalog()
+	local pieces = catalog.pieces[index]
+	if not pieces then
+		return false, "Pick a set in the list first."
+	end
+	local used, worn, unknown = {}, 0, 0
+	local ok, err = true, nil
+	for i = 1, table.getn(pieces) do
+		local slots = M.GetItemSlots(pieces[i])
+		local slot
+		if slots then
+			-- A second one-hand weapon goes in the off hand.
+			for k = 1, table.getn(slots) do
+				if not used[slots[k]] then
+					slot = slots[k]
+					break
+				end
+			end
+		else
+			unknown = unknown + 1
+		end
+		if slot then
+			used[slot] = true
+			worn = worn + 1
+			db.items[slot] = pieces[i]
+			local slotOK, slotErr = ApplyItem(slot)
+			if ok and not slotOK then
+				ok, err = slotOK, slotErr
+			end
+		end
+	end
+	local later = ""
+	if unknown > 0 then
+		later = " " .. unknown .. " more still being looked up: try again in a minute."
+	end
+	if worn == 0 then
+		Notify()
+		return false, "None of " .. catalog.names[index] .. "'s pieces are known yet." .. later
+	end
+	local count = worn .. " pieces"
+	if worn == 1 then
+		count = "1 piece"
+	end
+	return Result(ok, err, "Wearing " .. catalog.names[index] .. " (" .. count .. ")." .. later)
+end
+
 -- Wardrobe ------------------------------------------------------------------
 
 function M.GetOutfitNames()
@@ -660,6 +1158,10 @@ function M.LoadOutfit(name)
 			ok, err = slotOK, slotErr
 		end
 	end
+	if outfit.mount or db.mount then
+		db.mount = outfit.mount
+		ApplyMount()
+	end
 	return Result(ok, err, "Loaded outfit \"" .. name .. "\".")
 end
 
@@ -683,6 +1185,7 @@ local function ShowHelp()
 	Print(".item <slot> <itemID or item link> - morph a visible item (itemID 0 resets the slot). Slots: " .. SlotList())
 	Print(".demorph - reset your model (DMorph's F5); .demorph all - reset model and items (F10)")
 	Print(".outfit [name] - list or put on saved outfits; .outfit save <name>; .outfit delete <name>")
+	Print(".mount <displayID> - morph your mount (.mount 0 resets)")
 	Print(".dmorph status - show what is morphed. Keys: Key Bindings > DMorph.")
 	if not HasMorphAPI() then
 		Print(MISSING_API)
@@ -718,6 +1221,9 @@ local function ShowStatus()
 		Print("Items: not morphed.")
 	else
 		Print("Items: " .. strsub(list, 3) .. ".")
+	end
+	if db.mount then
+		Print("Mount: " .. M.DescribeDisplay(db.mount) .. ".")
 	end
 end
 
@@ -760,6 +1266,14 @@ function commands.item(args, line)
 		return Print("Usage: .item <slot> <itemID>  (itemID 0 resets the slot)")
 	end
 	Report(M.SetItem(slot, itemID))
+end
+
+function commands.mount(args)
+	local displayID = ParseID(args[1] or "0")
+	if not displayID then
+		return Print("Usage: .mount <displayID>  (.mount 0 resets)")
+	end
+	Report(M.SetMount(displayID))
 end
 
 function commands.scale()
@@ -889,4 +1403,34 @@ frame:SetScript("OnUpdate", function()
 		frame:Hide()
 		ApplySaved()
 	end
+end)
+
+-- Item lookup runs in the background from shortly after login until every
+-- pending item has an answer.
+local lookupFrame = CreateFrame("Frame")
+lookupFrame:Hide()
+lookupFrame:SetScript("OnUpdate", function()
+	this.elapsed = this.elapsed + arg1
+	if this.elapsed >= LOOKUP_STEP then
+		if LookupTick(this.elapsed) then
+			this:Hide()
+		end
+		this.elapsed = 0
+	end
+end)
+lookupFrame:SetScript("OnEvent", function()
+	LookupAnswer(arg1, arg2)
+end)
+
+local loginFrame = CreateFrame("Frame")
+loginFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+loginFrame:SetScript("OnEvent", function()
+	this:UnregisterEvent("PLAYER_ENTERING_WORLD")
+	InitDB()
+	StartLookup()
+	if CanAskServer() then
+		pcall(lookupFrame.RegisterEvent, lookupFrame, "ITEM_DATA_LOAD_RESULT")
+	end
+	lookupFrame.elapsed = -15 -- let the login settle first
+	lookupFrame:Show()
 end)
