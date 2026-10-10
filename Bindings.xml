@@ -1,0 +1,8 @@
+<Bindings>
+	<Binding name="DMORPHOCTO_RESET" header="DMORPHOCTO">
+		DmorphOcto_Reset();
+	</Binding>
+	<Binding name="DMORPHOCTO_RESETALL">
+		DmorphOcto_ResetAll();
+	</Binding>
+</Bindings>
