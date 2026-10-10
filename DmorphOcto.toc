@@ -1,12 +1,13 @@
 ## Interface: 11200
 ## Title: DMorph |cff33ff99(OctoWoW)|r
-## Notes: Morph window for OctoWoW: browse 12,000+ creature models, every race and visible item, preview them on your character and save outfits in a wardrobe. Type /dmorph. Needs VanillaHelpers v1.1.0+ (OctoLauncher's vanillaHelpers mod).
+## Notes: Morph window for OctoWoW: every creature model in the client (16,000+, with 3D previews), every race and visible item. Try them on your character and save outfits in a wardrobe. Type /dmorph. Needs VanillaHelpers v1.1.0+ (OctoLauncher's vanillaHelpers mod); previews need ClassicAPI.
 ## Author: bdot89
-## Version: 1.1.0
+## Version: 1.2.0
 ## X-Website: https://github.com/bdot89/DmorphOcto
 ## SavedVariables: DmorphOctoAccount
 ## SavedVariablesPerCharacter: DmorphOctoDB
 Data\Creatures.lua
+Data\Models.lua
 Data\Items.lua
 DmorphOcto.lua
 UI.lua

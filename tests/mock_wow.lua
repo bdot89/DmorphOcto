@@ -26,7 +26,7 @@ local FONTS = {
 	GameFontHighlight = 1, GameFontHighlightSmall = 1, GameFontHighlightLarge = 1,
 	GameFontDisable = 1, GameFontDisableSmall = 1, GameFontGreenSmall = 1, GameFontRedSmall = 1,
 }
-local FRAME_TYPES = { Frame = 1, Button = 1, EditBox = 1, ScrollFrame = 1, PlayerModel = 1, Slider = 1 }
+local FRAME_TYPES = { Frame = 1, Button = 1, EditBox = 1, ScrollFrame = 1, Model = 1, PlayerModel = 1, Slider = 1 }
 local TEMPLATES = {
 	UIPanelButtonTemplate = 1, InputBoxTemplate = 1, FauxScrollFrameTemplate = 1, UIPanelCloseButton = 1,
 }
@@ -37,10 +37,17 @@ local SCRIPTS = {
 	OnValueChanged = 1,
 }
 
+-- Methods a DLL adds to the client (ClassicAPI): missing unless the test
+-- installs them, and probing for them is allowed, as in the client.
+local OPTIONAL = { SetDisplayInfo = "classicAPI" }
+
 local methods = {}
 local meta = {
 	__index = function(widget, key)
 		local first = strsub(key, 1, 1)
+		if OPTIONAL[key] and not Mock[OPTIONAL[key]] then
+			return nil
+		end
 		if first == strupper(first) and first ~= "_" then
 			local method = methods[key]
 			if not method then
@@ -128,6 +135,7 @@ function methods:RegisterEvent(e) self.events[e] = true end
 function methods:UnregisterEvent(e) self.events[e] = nil end
 function methods:SetBackdrop(backdrop) self.backdrop = backdrop end
 function methods:SetBackdropColor() end
+function methods:SetBackdropBorderColor(r, g, b) self.border = { r, g, b } end
 function methods:EnableMouse(on) self.mouse = on end
 function methods:EnableMouseWheel(on) self.wheel = on end
 function methods:SetMovable(on) self.movable = on end
@@ -174,6 +182,7 @@ function methods:GetText()
 end
 function methods:SetTextColor(r, g, b) self.color = { r, g, b } end
 function methods:SetJustifyH(j) assert(j == "LEFT" or j == "RIGHT" or j == "CENTER") end
+function methods:SetJustifyV(j) assert(j == "TOP" or j == "MIDDLE" or j == "BOTTOM") end
 function methods:LockHighlight() self.locked = true end
 function methods:UnlockHighlight() self.locked = false end
 function methods:Enable() self.disabled = false end
@@ -184,16 +193,45 @@ function methods:ClearFocus() self.focus = false end
 function methods:SetFocus() self.focus = true end
 function methods:HighlightText() end
 
--- Textures
+-- Textures (SetTexture also takes r, g, b, a for a solid colour)
 function methods:SetTexture(path) self.texture = path end
+function methods:SetGradientAlpha(orientation)
+	assert(orientation == "VERTICAL" or orientation == "HORIZONTAL", "bad gradient orientation")
+end
+function methods:SetNormalTexture(path) self.normal = path end
+function methods:SetPushedTexture(path) self.pushed = path end
+function methods:SetDisabledTexture(path) self.disabledTexture = path end
+function methods:SetHighlightTexture(path) self.highlight = path end
 function methods:SetTexCoord() end
 function methods:SetVertexColor(r, g, b) self.vertex = { r, g, b } end
 function methods:SetBlendMode(mode) assert(mode == "ADD" or mode == "BLEND" or mode == "DISABLE") end
 
 -- Models
-function methods:SetUnit(unit) self.unit = unit; Mock.modelRefreshes = (Mock.modelRefreshes or 0) + 1 end
-function methods:RefreshUnit() end
-function methods:SetRotation(r) self.rotation = r end
+function methods:SetUnit(unit)
+	assert(self.kind == "PlayerModel", "SetUnit needs a PlayerModel")
+	self.unit = unit
+	self.unitLoads = (self.unitLoads or 0) + 1
+	Mock.modelRefreshes = (Mock.modelRefreshes or 0) + 1
+end
+-- Blizzard's 1.12 FrameXML only turns PlayerModels with SetRotation; addons
+-- here turn plain Models with SetFacing.
+function methods:SetRotation(r)
+	assert(self.kind == "PlayerModel", "SetRotation is a PlayerModel method; use SetFacing")
+	self.rotation = r
+end
+function methods:SetCamera(n) self.camera = n end
+function methods:SetLight() end
+function methods:SetModelScale(s) self.scale = s end
+function methods:SetPosition() end
+function methods:SetFacing(f) self.facing = f end
+function methods:SetModel(path) self.modelPath = path end
+function methods:ClearModel() self.modelPath = nil end
+-- ClassicAPI (OPTIONAL above)
+function methods:SetDisplayInfo(id)
+	assert(type(id) == "number", "Usage: Model:SetDisplayInfo(creatureDisplayID)")
+	self.displayInfo = id
+	Mock.displayLoads = (Mock.displayLoads or 0) + 1
+end
 
 -- Scroll bars and scroll frames
 function methods:SetMinMaxValues(lo, hi) self.min, self.max = lo, hi end
@@ -290,6 +328,7 @@ function Mock.ResetUI()
 	function PlaySound() end
 	function GetCursorPosition() return Mock.cursorX or 0, Mock.cursorY or 0 end
 	function UnitRace() return "Human", "Human" end
+	function UnitName() return "Tester" end
 	function UnitSex() return 2 end
 	function GetInventoryItemTexture(unit, slot)
 		if slot == 5 then

@@ -1,6 +1,6 @@
 # DMorph for OctoWoW
 
-A morph window for the **OctoWoW** client (1.12.1, build 5875, "Mysteries of Azeroth"), inspired by [DMorph](https://darksectordds.github.io/html/dmorph/index.html). Browse and search **12,000+ creature models**, every playable race and every visible weapon and armour piece. Try them on your character, save the result as an outfit in your **wardrobe**, and put it back on any time, even after `/reload` or logging out.
+A morph window for the **OctoWoW** client (1.12.1, build 5875, "Mysteries of Azeroth"), inspired by [DMorph](https://darksectordds.github.io/html/dmorph/index.html). Browse **every creature model the client has** (over 16,000 entries covering all 13,423 usable display IDs, including the 2,894 models OctoWoW added) as 3D previews, plus every playable race and every visible weapon and armour piece. Try them on your character, save the result as an outfit in your **wardrobe**, and put it back on any time, even after `/reload` or logging out.
 
 DMorph's chat commands (`.morph`, `.race`, `.gender`, `.item`) still work too.
 
@@ -10,12 +10,13 @@ DMorph's chat commands (`.morph`, `.race`, `.gender`, `.item`) still work too.
 - **VanillaHelpers v1.1.0 or newer**, loaded by the game. Either:
   - in **OctoLauncher**, enable the `vanillaHelpers` mod, or
   - add `VanillaHelpers.dll` from the [VanillaHelpers releases](https://github.com/isfir/VanillaHelpers/releases) to the game folder and list it in `dlls.txt` (VanillaFixes).
+- Optional, for the **3D model previews**: [ClassicAPI](https://github.com/brues-code/ClassicAPI), loaded the same way (`ClassicAPI.dll` in `dlls.txt`). Without it the Models tab is a plain list and everything else works the same.
 
 ## Install
 
 1. Close the game.
 2. Put the addon in `Interface\AddOns\DmorphOcto\` inside your OctoWoW folder, so that `Interface\AddOns\DmorphOcto\DmorphOcto.toc` exists. Pick one:
-   - **Package ZIP** (`DmorphOcto-1.1.0.zip`): extract it into `Interface\AddOns\`. It already contains the `DmorphOcto` folder.
+   - **Package ZIP** (`DmorphOcto-<version>.zip`): extract it into `Interface\AddOns\`. It already contains the `DmorphOcto` folder.
    - **GitHub ZIP** (*Code > Download ZIP*): extract it, then rename the folder (for example `DmorphOcto-main`) to `DmorphOcto`. 1.12 only loads an addon whose folder name matches its `.toc`.
    - **git**: `git clone https://github.com/bdot89/DmorphOcto.git Interface/AddOns/DmorphOcto`
 3. Start the game. On the character screen, open *AddOns* and check that **DMorph (OctoWoW)** is enabled.
@@ -27,24 +28,32 @@ Open it with the **minimap button**, by typing **`/dmorph`**, or with a key you 
 
 Every change shows on your character straight away. The window is the "try it on" view, so there's no separate preview step.
 
-### Preview (left)
+### Dressing room (left)
 
-- A live model of your character. **Drag it** to turn it.
+- Your character, standing in your race's dressing room (the dress-up backdrop of the race you look like). **Drag** the model to turn it. The plate underneath names your current look.
 - The **slots** you can morph sit around it: head, shoulder, back, chest, shirt, tabard, wrist, hands, waist, legs, feet, main hand, off hand and ranged.
   - A morphed slot glows green and shows the morph's icon.
   - An unmorphed slot shows the gear you really wear, dimmed.
   - **Left-click** a slot to browse items for it. **Right-click** it to go back to your own gear.
   - Hover over a slot to see what's on it.
 - **Reset model** puts your own body back but keeps item morphs (DMorph's F5). **Reset everything** clears all morphs (DMorph's F10).
+- A new look loads out of sight and only appears once it's ready, so the model never flashes white.
 
 ### Models tab
 
-- Search the creature models by name (`thrall`, `ragnaros`, `murloc`…) or by display ID. Results are listed by name, with the display ID on the right. Click one to become it.
-- Under the list, type any display ID and press **Morph**, or use **<** and **>** to step through IDs one at a time. That way you can also try models that aren't in the list, like OctoWoW's custom ones.
+- A grid of **3D previews**, eight to a page. Turn pages with the arrows or the **mouse wheel**. Hover over a preview to turn it and see its display ID; **click** it to become it. The model you wear has a gold frame.
+- **Search** by name (`thrall`, `ragnaros`, `murloc`…) or by display ID.
+- The **filter** button picks what's listed (right-click goes back):
+  - **All models**
+  - **Creatures**: models with a creature's name, from the world database (white).
+  - **Other models**: every look no creature uses, named after its model file, for example "Tiger (Turquoise)" or "High Elf Female NPC" (blue).
+  - **New in OctoWoW**: the models OctoWoW added to 1.12 (green).
+- **List view** shows the same models as a list; hover over a row to see a preview next to it. The window remembers which view you used.
+- Under the grid, type any display ID and press **Morph**, or use **<** and **>** to step through IDs one at a time.
 
 ### Races tab
 
-- Pick any race as **Male** or **Female**: Human, Orc, Dwarf, Night Elf, Undead, Tauren, Gnome, Troll, Goblin and High Elf.
+- Pick any race as **male** or **female** by its portrait: Human, Orc, Dwarf, Night Elf, Undead, Tauren, Gnome, Troll, Goblin and High Elf. The race you wear is ringed in gold.
 - Your own skin, face and hair carry over. **Swap gender** flips the current one.
 
 ### Items tab
@@ -93,8 +102,11 @@ Dot commands that aren't DMorph's (for example `.help`) still go to the server a
 
 ## Good to know
 
-- The catalogue lists the stock 1.12 creatures and items. OctoWoW's own custom models and items aren't in it, but you can still use them by ID.
+- The models list is built from the client's own model table, so it has every display ID the client can show. 25 IDs whose model file is missing from the game data are left out, because they would make you invisible.
+- Previews show a creature's portrait view. Dressed NPCs (the "… NPC" models) appear in their outfits but without weapons: the game only sends NPC weapons for creatures you meet.
+- OctoWoW's custom items aren't in the item lists (they come from the 1.12 database), but you can still use them by item ID.
 - An item the client hasn't seen this session shows as "?" until its details arrive. If it doesn't appear on your character, click it again after a moment.
+- Item morphs make VanillaHelpers rebuild your character in the world, which can blink for a moment there. The window's own preview doesn't.
 - While your model is morphed, shapeshift and transform visuals (druid forms and the like) show your morph instead. Reset your model before shapeshifting if you want to see the form.
 - A display ID that doesn't exist in the client's data can leave you invisible. Press **Reset model** to recover. Your look is only saved to disk on logout or `/reload`, so a morph that crashes the client won't come back on the next login.
 - Morphs are visual changes on your own client only. VanillaHelpers is a launcher-shipped mod, but check OctoWoW's rules if you're unsure about client mods.
@@ -104,28 +116,41 @@ Dot commands that aren't DMorph's (for example `.help`) still go to the server a
 DMorph itself is a DLL built for WotLK 3.3.5a (build 12340) that calls that client's code at fixed addresses, so it can't run on OctoWoW's 1.12 client. This addon instead uses **VanillaHelpers**, a 1.12.1 client mod that OctoLauncher ships, which has a morph API since v1.1.0.
 
 - `DmorphOcto.lua` keeps the morph state and the wardrobe, searches the catalogue and handles the chat commands. It calls VanillaHelpers' `SetUnitDisplayID`, `SetUnitVisibleItemID` and `UnitDisplayInfo` for the `player` unit. VanillaHelpers hooks the client's object updates, so the server can't overwrite a morph. For player race models it also swaps race and gender, which keeps your own customisation.
-- `UI.lua` is the window and the minimap button. It calls the same functions as the chat commands.
-- `Data/Creatures.lua` and `Data/Items.lua` are the catalogue. They're stored as text and only parsed the first time you open the window.
-- Saved data lives in `WTF\Account\<account>\SavedVariables\DmorphOcto.lua` (`DmorphOctoAccount`: outfits and minimap button) and in each character's `SavedVariables\DmorphOcto.lua` (`DmorphOctoDB`: the current look). To start over, delete those files while the game is closed.
+- `UI.lua` is the window and the minimap button. It calls the same functions as the chat commands. The previews use ClassicAPI's `Model:SetDisplayInfo`.
+- `Data/Creatures.lua`, `Data/Models.lua` and `Data/Items.lua` are the catalogue. They're stored as text and only parsed the first time you open the window.
+- Saved data lives in `WTF\Account\<account>\SavedVariables\DmorphOcto.lua` (`DmorphOctoAccount`: outfits, window settings and minimap button) and in each character's `SavedVariables\DmorphOcto.lua` (`DmorphOctoDB`: the current look). To start over, delete those files while the game is closed.
 
 ## Development
 
 The addon is written for the client's Lua 5.0: no `#`, no `%`, no `string.match`, and `table.getn` counts element by element.
 
-- **Tests:** `tests/run_tests.lua` loads the addon in `.toc` order into `tests/mock_wow.lua`, a strict mock of the 1.12 UI. The mock only accepts widget methods, templates, fonts and script names that exist in 1.12, and its fake VanillaHelpers follows its `Morph.cpp`. The tests then drive the chat commands, the window (search, clicks, scrolling, slots, wardrobe, the minimap button), `/reload` and logins. Run them from the repository root with a Lua 5.0 interpreter:
+- **Tests:** `tests/run_tests.lua` loads the addon in `.toc` order into `tests/mock_wow.lua`, a strict mock of the 1.12 UI. The mock only accepts widget methods, templates, fonts and script names that exist in 1.12, and its fake VanillaHelpers follows its `Morph.cpp`. The tests then drive the chat commands, the window (previews, search, filters, paging, clicks, scrolling, slots, races, wardrobe, the minimap button), `/reload` and logins. Run them from the repository root with a Lua 5.0 interpreter:
 
   ```sh
   lua tests/run_tests.lua
   ```
 
-- **Catalogue:** `tools/build_data.py` regenerates `Data/` from a 1.12.1 world database dump, such as `Full_DB/ClassicDB_1_12_1_*.sql.gz` from [cmangos/classic-db](https://github.com/cmangos/classic-db):
+  On Windows without Lua, `tools/run_tests.ps1` builds `tools/LuaHost` (.NET 8 SDK) and runs the tests on the Lua 5.1 runtime that OBS Studio installs, with the 5.0 names added (set `LUA51_DLL` to use another `lua51.dll`):
+
+  ```powershell
+  powershell -ExecutionPolicy Bypass -File tools\run_tests.ps1
+  ```
+
+- **Catalogue:** `tools/build_data.py` regenerates `Data/Creatures.lua` and `Data/Items.lua` from a 1.12.1 world database dump, such as `Full_DB/ClassicDB_1_12_1_*.sql.gz` from [cmangos/classic-db](https://github.com/cmangos/classic-db):
 
   ```sh
   python3 tools/build_data.py ClassicDB_1_12_1_z2815.sql.gz
+  ```
+
+  `tools/build_models.ps1` then writes `Data/Models.lua` from the client's own `CreatureDisplayInfo.dbc` (read straight from the MPQs, newest patch first): every display ID that `Creatures.lua` doesn't name. Run it again after a client patch:
+
+  ```powershell
+  powershell -ExecutionPolicy Bypass -File tools\build_models.ps1 -GameDir C:\Games\OctoWoW
   ```
 
 ## Credits
 
 - [DMorph](https://darksectordds.github.io/html/dmorph/index.html) by DDS (darksectordds), for the original commands.
 - [VanillaHelpers](https://github.com/isfir/VanillaHelpers) by isfir, which does the actual morphing on the 1.12.1 client.
+- [ClassicAPI](https://github.com/brues-code/ClassicAPI) by brues-code, whose `Model:SetDisplayInfo` draws the previews.
 - Creature and item names come from the [cmangos classic-db](https://github.com/cmangos/classic-db) 1.12.1 world database.

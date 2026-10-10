@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "1.1.0"
+local VERSION = "1.2.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 local MISSING_API = "VanillaHelpers v1.1.0 or newer is not loaded, so morphing is unavailable. "
 	.. "Enable the 'vanillaHelpers' mod in OctoLauncher (or add VanillaHelpers.dll to dlls.txt) "
@@ -145,29 +145,61 @@ end
 
 -- Catalogue -----------------------------------------------------------------
 
--- Data/Creatures.lua and Data/Items.lua hold the catalogue as text so the
--- game loads it quickly; each list is parsed the first time it's needed.
+-- Data/*.lua hold the catalogue as text so the game loads it quickly; each
+-- list is parsed the first time it's needed.
 local function NewCatalog()
-	return { ids = {}, names = {}, lower = {}, quality = {}, byID = {}, count = 0 }
+	return { ids = {}, names = {}, lower = {}, quality = {}, kind = {}, byID = {}, count = 0 }
 end
 
-local function AddEntry(catalog, id, name, quality)
+local function AddEntry(catalog, id, name, quality, kind)
 	local n = catalog.count + 1
 	catalog.count = n
 	catalog.ids[n], catalog.names[n], catalog.lower[n] = id, name, strlower(name)
-	catalog.quality[n] = quality
+	catalog.quality[n], catalog.kind[n] = quality, kind
 	if not catalog.byID[id] then
 		catalog.byID[id] = n
 	end
 end
 
+-- What a creature model entry is: a creature from the world database, a
+-- model the client has that no creature names (called after its model file),
+-- or one of those that OctoWoW added to the stock 1.12.1 client.
+M.KIND_CREATURE, M.KIND_MODEL, M.KIND_OCTOWOW = 0, 1, 2
+M.MODEL_FILTERS = {
+	{ text = "All models" },
+	{ text = "Creatures", kinds = { [0] = true } },
+	{ text = "Other models", kinds = { [1] = true, [2] = true } },
+	{ text = "New in OctoWoW", kinds = { [2] = true } },
+}
+
+-- Creatures.lua (named creatures) and Models.lua (every other display ID the
+-- client has) are both sorted by name, so one pass merges them in order.
 function M.GetCreatureCatalog()
-	if not creatures then
-		creatures = NewCatalog()
-		for id, name in string.gfind(DmorphOcto_CreatureData or "", "(%d+)\t([^\r\n]+)") do
-			AddEntry(creatures, tonumber(id), name)
+	if creatures then
+		return creatures
+	end
+	local named, other = {}, {}
+	local n, m = 0, 0
+	for id, name in string.gfind(DmorphOcto_CreatureData or "", "(%d+)\t([^\r\n]+)") do
+		n = n + 1
+		named[n] = { tonumber(id), name, strlower(name), M.KIND_CREATURE }
+	end
+	for id, flag, name in string.gfind(DmorphOcto_ModelData or "", "(%d+)\t(%d)\t([^\r\n]+)") do
+		m = m + 1
+		other[m] = { tonumber(id), name, strlower(name), M.KIND_MODEL + tonumber(flag) }
+	end
+	DmorphOcto_CreatureData, DmorphOcto_ModelData = nil, nil -- the parsed tables replace the text
+	creatures = NewCatalog()
+	local i, j = 1, 1
+	while i <= n or j <= m do
+		local a, b = named[i], other[j]
+		local entry
+		if not b or (a and (a[3] < b[3] or (a[3] == b[3] and a[1] <= b[1]))) then
+			entry, i = a, i + 1
+		else
+			entry, j = b, j + 1
 		end
-		DmorphOcto_CreatureData = nil -- the parsed tables replace the text
+		AddEntry(creatures, entry[1], entry[2], nil, entry[4])
 	end
 	return creatures
 end
@@ -189,26 +221,31 @@ end
 
 -- Positions of the catalogue entries matching the text, plus how many there
 -- are: an exact ID first, then names starting with the text, then names
--- containing it.
-function M.FilterCatalog(catalog, text)
+-- containing it. kinds (optional) keeps only entries of those kinds.
+function M.FilterCatalog(catalog, text, kinds)
 	local query = strlower(Trim(text))
 	local result, n = {}, 0
 	if query == "" then
 		for i = 1, catalog.count do
-			result[i] = i
+			if not kinds or kinds[catalog.kind[i]] then
+				n = n + 1
+				result[n] = i
+			end
 		end
-		return result, catalog.count
+		return result, n
 	end
 	local number = ParseID(query)
 	local later, m = {}, 0
 	for i = 1, catalog.count do
-		local at = strfind(catalog.lower[i], query, 1, true)
-		if catalog.ids[i] == number or at == 1 then
-			n = n + 1
-			result[n] = i
-		elseif at then
-			m = m + 1
-			later[m] = i
+		if not kinds or kinds[catalog.kind[i]] then
+			local at = strfind(catalog.lower[i], query, 1, true)
+			if catalog.ids[i] == number or at == 1 then
+				n = n + 1
+				result[n] = i
+			elseif at then
+				m = m + 1
+				later[m] = i
+			end
 		end
 	end
 	for i = 1, m do
@@ -217,11 +254,19 @@ function M.FilterCatalog(catalog, text)
 	return result, n + m
 end
 
-function M.DescribeDisplay(displayID)
+-- The catalogue's name for a display ID and what kind of entry it is, or nil.
+function M.GetDisplayName(displayID)
 	local catalog = M.GetCreatureCatalog()
 	local index = catalog.byID[displayID]
 	if index then
-		return catalog.names[index] .. " (" .. displayID .. ")"
+		return catalog.names[index], catalog.kind[index]
+	end
+end
+
+function M.DescribeDisplay(displayID)
+	local name = M.GetDisplayName(displayID)
+	if name then
+		return name .. " (" .. displayID .. ")"
 	end
 	return "display " .. displayID
 end

@@ -257,56 +257,193 @@ check(count == 1 and heads.ids[result[1]] == 2955, "head items can be searched b
 local offhands = DmorphOcto.GetItemCatalog(17)
 check(offhands.count > 500, "off hand lists weapons and shields")
 
-------------------------------------------------------------------------------
--- The window
+-- Every display ID the client has: the named creatures plus Data/Models.lua.
+local file = io.open("Data/Models.lua")
+local modelText = file:read("*a")
+file:close()
+local fileModels, wrongKind, octo = 0, 0, 0
+for id, flag in string.gfind(modelText, "\n(%d+)\t(%d)\t") do
+	fileModels = fileModels + 1
+	local index = creatures.byID[tonumber(id)]
+	if not index or creatures.kind[index] ~= 1 + tonumber(flag) then
+		wrongKind = wrongKind + 1
+	end
+	if flag == "1" then
+		octo = octo + 1
+	end
+end
+check(fileModels > 4000 and wrongKind == 0, "every model in Models.lua is in the catalogue, with its kind")
+check(octo > 2800, "the models OctoWoW added are in the catalogue")
+local sorted = true
+for i = 2, creatures.count do
+	if creatures.lower[i - 1] > creatures.lower[i] then
+		sorted = false
+	end
+end
+check(sorted, "the merged catalogue is sorted by name")
+result, count = DmorphOcto.FilterCatalog(creatures, "zuljin", DmorphOcto.MODEL_FILTERS[4].kinds)
+check(count >= 1 and creatures.ids[result[1]] == 18082, "OctoWoW's models can be searched and filtered")
+local _, named = DmorphOcto.FilterCatalog(creatures, "", DmorphOcto.MODEL_FILTERS[2].kinds)
+local _, other = DmorphOcto.FilterCatalog(creatures, "", DmorphOcto.MODEL_FILTERS[3].kinds)
+local _, added = DmorphOcto.FilterCatalog(creatures, "", DmorphOcto.MODEL_FILTERS[4].kinds)
+check(named > 10000 and named + other == creatures.count and added == octo, "the filters split the catalogue")
+result, count = DmorphOcto.FilterCatalog(creatures, "thrall", DmorphOcto.MODEL_FILTERS[3].kinds)
+check(count == 0, "a filter hides the other kinds from a search")
+check(DmorphOcto.DescribeDisplay(18082) == "Zuljin (18082)", "OctoWoW's models have names in chat too")
 
+------------------------------------------------------------------------------
+-- The window, with ClassicAPI's model previews
+
+Mock.classicAPI = true
+loadUI()
 slash("")
 local window = DmorphOctoFrame
 check(window ~= nil and window:IsVisible(), "/dmorph opens the window")
 check(contains(UISpecialFrames[1], "DmorphOctoFrame"), "Escape closes the window")
-check(Mock.modelRefreshes > 0 and DmorphOctoModel.unit == "player", "the preview shows your character")
+Mock.Tick(0.2)
+Mock.Tick(0.5)
 
--- Models tab: search, pick, step through IDs.
+-- The character preview has two PlayerModels: the one in front is never
+-- reloaded (a reloading model draws white), the new look loads behind the
+-- backdrop and then takes its place.
+local function previews()
+	local a, b = DmorphOctoModel1, DmorphOctoModel2
+	if b:IsShown() and (not a:IsShown() or b.level > a.level) then
+		return b, a
+	end
+	return a, b
+end
+local front, back = previews()
+check(front:IsShown() and front.unit == "player", "the preview shows your character")
+check(DmorphOctoArt1.texture == "Interface\\DressUpFrame\\DressUpBackground-Human1",
+	"the preview stands in your race's dressing room")
+check(DmorphOctoLookName.text == "Tester" and DmorphOctoLookInfo.text == "Not morphed", "the name plate shows your own look")
+local frontLoads = front.unitLoads
+say(".morph 4527")
+Mock.Tick(0.05)
+check(front.unitLoads == frontLoads and not back:IsShown(), "a change doesn't touch the model you see")
+Mock.Tick(0.1)
+check(back:IsShown() and back.unit == "player" and back.level < front.level,
+	"the new look loads behind the backdrop")
+check(DmorphOctoArt1:GetParent().level > back.level and DmorphOctoArt1:GetParent().level < front.level,
+	"the backdrop sits between the two models")
+Mock.Tick(0.5)
+local newFront = previews()
+check(newFront == back and front.unitLoads == frontLoads, "then it replaces the old one, which was never reloaded")
+check(DmorphOctoLookName.text == "Thrall" and DmorphOctoLookInfo.text == "Display ID 4527", "the name plate names the morph")
+local refreshes = Mock.modelRefreshes
+say(".morph 4528")
+say(".item 1 2955")
+say(".race 2")
+Mock.Tick(0.15)
+Mock.Tick(0.5)
+check(Mock.modelRefreshes == refreshes + 1, "a burst of changes loads the preview once")
+check(DmorphOctoArt1.texture == "Interface\\DressUpFrame\\DressUpBackground-Orc1", "a race morph moves to that race's room")
+check(DmorphOctoLookInfo.text == "Race morph - 1 item morphed", "the name plate counts item morphs")
+refreshes = Mock.modelRefreshes
+Mock.Fire("UNIT_MODEL_CHANGED", "player")
+Mock.Tick(0.15)
+check(Mock.modelRefreshes == refreshes + 1, "the preview follows model changes from the game")
+DmorphOcto_ResetAll()
+Mock.Tick(0.15)
+Mock.Tick(0.5)
+
+-- Models tab: a grid of previews, 8 to a page.
+local catalog = DmorphOcto.GetCreatureCatalog()
+check(DmorphOctoModelGrid:IsVisible() and not DmorphOctoModelListRow1:IsVisible(),
+	"with ClassicAPI the models tab shows previews")
+check(DmorphOctoTile1Model.displayInfo == catalog.ids[1] and DmorphOctoTile1.title.text == catalog.names[1]
+	and DmorphOctoTile8Model.displayInfo == catalog.ids[8], "the tiles preview the first 8 models")
+check(DmorphOctoTile1Model.camera == 0, "previews use the model's portrait camera")
+check(contains(DmorphOctoPagerText.text, "Page 1 of 2,0"), "the pager counts the pages")
+Mock.Click(DmorphOctoNextPage)
+check(DmorphOctoTile1Model.displayInfo == catalog.ids[9], "the next page shows the next 8")
+check(DmorphOctoTile1Model.level == 2, "a new preview loads behind its cover")
+Mock.Tick(0.5)
+check(DmorphOctoTile1Model.level == 4, "and comes out once it has loaded")
+Mock.RunScript(DmorphOctoTile3, "OnMouseWheel", 1)
+check(DmorphOctoTile1Model.displayInfo == catalog.ids[1] and DmorphOctoPrevPage.disabled,
+	"the mouse wheel turns pages, and the first page can't go back")
+local loads = Mock.displayLoads
+Mock.Click(DmorphOctoTabRaces)
+Mock.Click(DmorphOctoTabModels)
+check(Mock.displayLoads == loads, "previews that are already loaded aren't loaded again")
+Mock.RunScript(DmorphOctoTile2, "OnEnter")
+Mock.Tick(0.5)
+check(DmorphOctoTile2Model.facing ~= 0 and GameTooltip.lines[1] == "Display ID " .. catalog.ids[2],
+	"hovering a preview turns it and shows its ID")
+Mock.RunScript(DmorphOctoTile2, "OnLeave")
+
 local modelSearch = DmorphOctoModelSearch
 Mock.Type(modelSearch, "thrall")
-local firstRow = DmorphOctoModelListRow1
-check(firstRow:IsVisible() and firstRow.text.text == "Thrall" and firstRow.info.text == "4527",
-	"searching models shows Thrall first")
-Mock.Click(firstRow)
-check(vh.display == 4527 and DmorphOctoDB.display == 4527, "clicking a model morphs you")
-check(firstRow.locked, "the model you wear is highlighted")
-check(contains(DmorphOctoFrameStatus.text, "Thrall"),
-	"the status line confirms the morph")
+check(DmorphOctoTile1:IsVisible() and DmorphOctoTile1.title.text == "Thrall" and DmorphOctoTile1Model.displayInfo == 4527,
+	"searching shows Thrall first")
+Mock.Click(DmorphOctoTile1)
+check(vh.display == 4527 and DmorphOctoDB.display == 4527, "clicking a preview morphs you")
+check(DmorphOctoTile1.border[1] == 1 and DmorphOctoTile1.border[2] == 0.82, "the model you wear has a gold frame")
+check(contains(DmorphOctoFrameStatus.text, "Thrall"), "the status line confirms the morph")
 Mock.Click(Mock.FindButton(">"))
 check(vh.display == 4528, "> steps to the next model ID")
 Mock.Click(Mock.FindButton("<"))
 Mock.Click(Mock.FindButton("<"))
 check(vh.display == 4526, "< steps back")
 
--- Scrolling a long list.
 Mock.Type(modelSearch, "")
-local bar = DmorphOctoModelListScrollBar
+local filter = DmorphOctoModelFilter
+Mock.Click(filter)
+Mock.Click(filter)
+Mock.Click(filter)
+check(filter.text == "New in OctoWoW" and catalog.kind[catalog.byID[DmorphOctoTile1Model.displayInfo]] == 2,
+	"the filter shows only OctoWoW's models")
+Mock.Click(filter, "RightButton")
+check(filter.text == "Other models" and DmorphOctoAccount.ui.filter == 3, "right-click goes back, and it's remembered")
+Mock.Click(filter)
+Mock.Click(filter)
+check(filter.text == "All models", "the filter cycles round")
+
+-- List view, with a preview card for the row under the mouse.
+Mock.Click(DmorphOctoModelView)
+check(not DmorphOctoModelGrid:IsVisible() and DmorphOctoModelListRow1:IsVisible(), "list view swaps the grid for a list")
+check(DmorphOctoAccount.ui.list == true, "the view is remembered")
+Mock.RunScript(DmorphOctoModelListRow2, "OnEnter")
+check(DmorphOctoPreviewCard:IsVisible() and DmorphOctoPreviewCardModel.displayInfo == catalog.ids[2],
+	"hovering a row previews its model")
+Mock.RunScript(DmorphOctoModelListRow2, "OnLeave")
+check(not DmorphOctoPreviewCard:IsVisible(), "the preview card goes when the mouse does")
+Mock.Type(modelSearch, "thrall")
+local firstRow = DmorphOctoModelListRow1
+check(firstRow:IsVisible() and firstRow.text.text == "Thrall" and firstRow.info.text == "4527",
+	"searching the list shows Thrall first")
+Mock.Click(firstRow)
+check(vh.display == 4527 and firstRow.locked, "clicking a row morphs you, and the model you wear is highlighted")
+
+-- Scrolling a long list, then back to the grid at the same place.
+Mock.Type(modelSearch, "")
 check(DmorphOctoModelList:IsShown(), "a long list shows its scroll bar")
 Mock.RunScript(DmorphOctoModelListRow1, "OnMouseWheel", -1)
 check(DmorphOctoModelList.offset == 3, "the mouse wheel over the rows scrolls the list")
 check(DmorphOctoModelListRow1.text.text == creatures.names[4], "scrolled rows show later entries")
+Mock.RunScript(DmorphOctoModelListRow1, "OnMouseWheel", -2)
+Mock.Click(DmorphOctoModelView)
+check(DmorphOctoModelGrid:IsVisible() and DmorphOctoTile1Model.displayInfo == catalog.ids[9],
+	"the grid opens on the page the list was showing")
 
 -- Races tab.
-Mock.Click(Mock.FindButton("Races"))
-check(DmorphOctoModelListRow1:IsVisible() == false, "switching tabs hides the models list")
-for i = 1, table.getn(Mock.frames) do
-	local f = Mock.frames[i]
-	if f.race == 4 and f.gender == 1 then
-		Mock.Click(f)
-	end
-end
+Mock.Click(DmorphOctoTabRaces)
+check(not DmorphOctoModelGrid:IsVisible(), "switching tabs hides the models")
+check(DmorphOctoTabRaces.label.color[2] == 0.82, "the open tab is lit")
+Mock.Click(DmorphOctoRace4Female)
 check(vh.display == 56, "the races tab morphs into Night Elf female")
+check(DmorphOctoRace4Female.ring.shown and not DmorphOctoRace4Male.ring.shown, "the race you wear is ringed")
+check(DmorphOctoRace1Male.ring.shown == false, "other races aren't")
+Mock.Tick(0.15)
+check(DmorphOctoArt1.texture == "Interface\\DressUpFrame\\DressUpBackground-NightElf1", "the room follows the race")
 Mock.Click(Mock.FindButton("Swap gender"))
 check(vh.display == 55, "swap gender works from the window")
 
 -- Items: click the head slot next to the model, search and pick.
 Mock.Click(DmorphOctoSlot1)
-check(DmorphOctoSlot1.locked, "the chosen slot is highlighted")
+check(DmorphOctoSlot1.locked and DmorphOctoItemSlotLabel.text == "Head", "a slot opens its items")
 local itemSearch = DmorphOctoItemSearch
 Mock.Type(itemSearch, "first mate")
 local itemRow = DmorphOctoItemListRow1
@@ -316,7 +453,7 @@ check(vh.items[1] == 2955, "clicking an item morphs that slot")
 Mock.Type(itemSearch, "")
 Mock.Click(DmorphOctoItemListRow3)
 local locked = {}
-for i = 1, 14 do
+for i = 1, 15 do
 	if getglobal("DmorphOctoItemListRow" .. i).locked then
 		table.insert(locked, i)
 	end
@@ -329,7 +466,7 @@ check(DmorphOctoSlot1.icon.texture == "Interface\\Icons\\INV_Misc_Bandana_03" an
 Mock.RunScript(DmorphOctoSlot1, "OnEnter")
 check(contains(table.concat(GameTooltip.lines, "\n"), "First Mate Hat"), "the slot tooltip names the item")
 Mock.Click(Mock.FindButton(">"))
-check(DmorphOctoItemSlotLabel.text == "Items: Shoulder", "> moves to the next slot")
+check(DmorphOctoItemSlotLabel.text == "Shoulder", "> moves to the next slot")
 Mock.Click(DmorphOctoSlot1, "RightButton")
 check(vh.items[1] == nil, "right-clicking a slot puts your own gear back")
 check(DmorphOctoSlot5.icon.texture == "Interface\\Icons\\INV_Chest_Plate01", "unmorphed slots show your gear")
@@ -339,7 +476,7 @@ Mock.Click(Mock.FindButton("Apply"))
 check(vh.items[1] == 2955, "typing an item ID and pressing Apply works")
 
 -- Wardrobe: save, reset, load, delete.
-Mock.Click(Mock.FindButton("Wardrobe"))
+Mock.Click(DmorphOctoTabWardrobe)
 check(DmorphOctoOutfitListRow1:IsVisible() == false, "the wardrobe starts empty")
 Mock.Type(DmorphOctoOutfitName, "Elf Pirate")
 Mock.Click(Mock.FindButton("Save current look"))
@@ -363,7 +500,8 @@ check(vh.display == 55, "clicking the selected outfit again puts it on")
 loadUI()
 check(vh.display == 55 and vh.items[1] == 2955, "the look survives /reload")
 slash("")
-Mock.Click(Mock.FindButton("Wardrobe"))
+check(DmorphOctoModelGrid:IsVisible(), "the window opens in the view you left it in")
+Mock.Click(DmorphOctoTabWardrobe)
 check(DmorphOctoOutfitListRow1:IsVisible() and DmorphOctoOutfitListRow1.text.text == "Elf Pirate",
 	"saved outfits survive /reload")
 newClient(49)
@@ -371,7 +509,7 @@ loadUI()
 check(vh.display == 55 and vh.items[1] == 2955, "the look comes back after logging in again")
 
 slash("")
-Mock.Click(Mock.FindButton("Wardrobe"))
+Mock.Click(DmorphOctoTabWardrobe)
 Mock.Click(DmorphOctoOutfitListRow1)
 Mock.Click(Mock.FindButton("Delete"))
 check(Mock.popups[1] and Mock.popups[1].which == "DMORPHOCTO_DELETE_OUTFIT", "delete asks first")
@@ -392,6 +530,18 @@ check(DmorphOctoAccount.minimap.x == 80 and DmorphOctoAccount.minimap.y == 0,
 	"dragging moves the minimap button around the edge")
 DmorphOcto_ToggleUI()
 check(not DmorphOctoFrame:IsVisible(), "the key binding closes the window")
+
+-- Without ClassicAPI there are no previews: the models tab is a list, and the
+-- grid is still chosen for when ClassicAPI is back.
+Mock.classicAPI = nil
+loadUI()
+slash("")
+check(DmorphOctoModelListRow1:IsVisible() and not DmorphOctoModelGrid:IsVisible() and not DmorphOctoModelView:IsVisible(),
+	"without ClassicAPI the models tab is a list")
+Mock.RunScript(DmorphOctoModelListRow1, "OnEnter")
+check(not DmorphOctoPreviewCard:IsVisible(), "and rows have no preview card")
+check(DmorphOctoAccount.ui.list == false, "the grid stays chosen for later")
+DmorphOcto_ToggleUI()
 
 ------------------------------------------------------------------------------
 -- Saved data from older versions or hand edits
