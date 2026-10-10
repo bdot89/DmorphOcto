@@ -1,8 +1,12 @@
 ## Interface: 11200
 ## Title: DMorph |cff33ff99(OctoWoW)|r
-## Notes: DMorph's morph commands for OctoWoW: .morph, .race, .gender and .item. Type /dmorph for help. Needs VanillaHelpers v1.1.0+ (OctoLauncher's vanillaHelpers mod).
+## Notes: Morph window for OctoWoW: browse 12,000+ creature models, every race and visible item, preview them on your character and save outfits in a wardrobe. Type /dmorph. Needs VanillaHelpers v1.1.0+ (OctoLauncher's vanillaHelpers mod).
 ## Author: bdot89
-## Version: 1.0.0
+## Version: 1.1.0
 ## X-Website: https://github.com/bdot89/DmorphOcto
+## SavedVariables: DmorphOctoAccount
 ## SavedVariablesPerCharacter: DmorphOctoDB
+Data\Creatures.lua
+Data\Items.lua
 DmorphOcto.lua
+UI.lua

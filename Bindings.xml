@@ -1,5 +1,8 @@
 <Bindings>
-	<Binding name="DMORPHOCTO_RESET" header="DMORPHOCTO">
+	<Binding name="DMORPHOCTO_TOGGLE" header="DMORPHOCTO">
+		DmorphOcto_ToggleUI();
+	</Binding>
+	<Binding name="DMORPHOCTO_RESET">
 		DmorphOcto_Reset();
 	</Binding>
 	<Binding name="DMORPHOCTO_RESETALL">
