@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.8.4"
+local VERSION = "2.9.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1077,6 +1077,14 @@ function InitDB()
 	if type(db.defaultLanguage) ~= "string" then
 		db.defaultLanguage = nil
 	end
+	local weatherKind = type(db.weather) == "table" and tonumber(db.weather[1])
+	local weatherStrength = type(db.weather) == "table" and tonumber(db.weather[2])
+	if weatherKind and weatherStrength and weatherKind >= 0 and weatherKind <= 3 and weatherStrength >= 0
+		and weatherStrength <= 1 then
+		db.weather = { weatherKind, weatherStrength }
+	else
+		db.weather = nil
+	end
 	for _, key in ipairs({ "scale", "scaleReal", "scaleWritten" }) do
 		local v = tonumber(db[key])
 		if not (v and v >= 0.1 and v <= 10) then
@@ -1560,7 +1568,7 @@ local MISSING_HELPER = "DmorphHelper.dll isn't loaded, so weapon glows, your siz
 M.MISSING_HELPER = MISSING_HELPER
 -- The DmorphHelper_Version() the DLL in helper\ reports. An older one in the
 -- game folder (DMorph was updated, the DLL wasn't copied again) is flagged.
-local HELPER_VERSION = 7
+local HELPER_VERSION = 8
 -- Rows 1-5 of the Races tab, in DmorphHelper_GetLook's order.
 local OWN_LOOK_NPC = { "npcSkin", "npcFace", "npcHairStyle", "npcHairColour" }
 
@@ -1943,6 +1951,105 @@ function M.GetScale()
 	return db.scale, db.scaleReal
 end
 
+-- Weather (DmorphHelper v8) ---------------------------------------------------------
+
+-- The game draws four kinds of weather, each from 0 to 1 strong (the server
+-- picks per zone). A picked one stays on in every zone, on your screen only,
+-- until you go back to the server's.
+M.WEATHER_KINDS = { [0] = "Clear skies", "Rain", "Snow", "Sandstorm" }
+M.WEATHERS = {
+	{ key = "Clear", kind = 0, intensity = 0, text = "Clear skies" },
+	{ key = "LightRain", kind = 1, intensity = 0.25, text = "Light rain" },
+	{ key = "Rain", kind = 1, intensity = 0.55, text = "Rain" },
+	{ key = "HeavyRain", kind = 1, intensity = 1, text = "Heavy rain" },
+	{ key = "LightSnow", kind = 2, intensity = 0.25, text = "Light snow" },
+	{ key = "Snow", kind = 2, intensity = 0.55, text = "Snow" },
+	{ key = "HeavySnow", kind = 2, intensity = 1, text = "Blizzard" },
+	{ key = "LightSandstorm", kind = 3, intensity = 0.25, text = "Light sandstorm" },
+	{ key = "Sandstorm", kind = 3, intensity = 0.55, text = "Sandstorm" },
+	{ key = "HeavySandstorm", kind = 3, intensity = 1, text = "Heavy sandstorm" },
+}
+local WEATHER_WORDS = { clear = 0, sun = 0, sunny = 0, fine = 0, none = 0, rain = 1, snow = 2, sand = 3,
+	sandstorm = 3, storm = 3, dust = 3 }
+local WEATHER_STRENGTH = { light = 0.25, medium = 0.55, normal = 0.55, heavy = 1, strong = 1 }
+
+local function HasWeather()
+	return type(DmorphHelper_SetWeather) == "function" and type(DmorphHelper_ClearWeather) == "function"
+		and type(DmorphHelper_GetWeather) == "function"
+end
+M.HasWeather = HasWeather
+
+-- "Heavy rain (100%)", "Clear skies".
+function M.DescribeWeather(kind, intensity)
+	local name = M.WEATHER_KINDS[kind] or "Unknown weather"
+	if not kind or kind == 0 then
+		return name
+	end
+	return format("%s (%d%%)", name, math.floor((intensity or 0) * 100 + 0.5))
+end
+
+-- Puts the picked weather on (after a loading screen or zone change, the
+-- helper has usually done it already; this is the backup).
+local function ApplyWeather()
+	if db and db.weather and HasWeather() then
+		pcall(DmorphHelper_SetWeather, db.weather[1], db.weather[2])
+	end
+end
+
+-- kind: 0 clear, 1 rain, 2 snow, 3 sandstorm, or nil for the server's
+-- weather; intensity 0-1 (rain, snow and sandstorm need more than 0).
+function M.SetWeather(kind, intensity)
+	local ok, err = HelperBegin()
+	if not ok then
+		return false, err
+	end
+	if not HasWeather() then
+		return false, "Changing the weather needs DmorphHelper v8 (this DMorph comes with it). " .. INSTALL_HELPER
+	end
+	if kind == nil then
+		if not pcall(DmorphHelper_ClearWeather) then
+			return false, "There's no weather to change outside the world."
+		end
+		db.weather = nil
+		Notify()
+		return true, "The server's weather again."
+	end
+	kind = tonumber(kind)
+	if not (kind and kind >= 0 and kind <= 3 and kind == math.floor(kind)) then
+		return false, "Weather is 0 (clear), 1 (rain), 2 (snow) or 3 (sandstorm)."
+	end
+	intensity = tonumber(intensity) or 0.55
+	if kind == 0 then
+		intensity = 0
+	elseif not (intensity >= 0.05 and intensity <= 1) then
+		return false, "Weather strength is 5% to 100%."
+	end
+	intensity = math.floor(intensity * 100 + 0.5) / 100
+	if not pcall(DmorphHelper_SetWeather, kind, intensity) then
+		return false, "There's no weather to change outside the world."
+	end
+	db.weather = { kind, intensity }
+	Notify()
+	return true, "Weather: " .. M.DescribeWeather(kind, intensity) .. ". Only you see it, outdoors."
+end
+
+-- The weather you picked (kind, intensity; nil: the server's) and the
+-- server's (kind, intensity; nil without DmorphHelper v8).
+function M.GetWeather()
+	InitDB()
+	local serverKind, serverIntensity
+	if HasWeather() then
+		local ok, _, _, _, k, i = pcall(DmorphHelper_GetWeather)
+		if ok then
+			serverKind, serverIntensity = k, i
+		end
+	end
+	if db.weather then
+		return db.weather[1], db.weather[2], serverKind, serverIntensity
+	end
+	return nil, nil, serverKind, serverIntensity
+end
+
 -- enchantID: an enchant whose glow the slot shows, 0 for no glow, nil for
 -- your own.
 function M.SetGlow(slot, enchantID)
@@ -2122,6 +2229,7 @@ local function ApplySaved()
 		ApplyItem(slot)
 	end
 	WatchHelper()
+	ApplyWeather()
 	Notify()
 end
 
@@ -2493,6 +2601,7 @@ local function ShowHelp()
 	Print(".outfit [name] - list or put on saved outfits; .outfit save <name>; .outfit delete <name>")
 	Print(".mount <displayID> - morph your mount (.mount 0 resets)")
 	Print(".scale <size> - your size, e.g. .scale 0.5 or .scale 2 (.scale 0 resets; needs DmorphHelper)")
+	Print(".weather <clear/rain/snow/sandstorm> [light/heavy/5-100%] - the weather on your screen (.weather off: the server's; needs DmorphHelper)")
 	Print(".glow <mainhand/offhand/ranged> <enchantID> - a weapon's enchant glow (0 none, own your own); needs DmorphHelper.dll")
 	Print(".share on/off - whether other DMorph users see your morph; .share others on/off - whether you see theirs")
 	Print(".dmorph status - show what is morphed; .dmorph check - is everything DMorph needs running, and how to fix it. Keys: Key Bindings > DMorph.")
@@ -2558,6 +2667,9 @@ local function ShowStatus()
 	end
 	if db.scale then
 		Print(format("Size: %d%%.", math.floor(db.scale * 100 + 0.5)))
+	end
+	if db.weather then
+		Print("Weather: " .. M.DescribeWeather(db.weather[1], db.weather[2]) .. ".")
 	end
 	for real, skin in pairs(db.mountSkins) do
 		Print("Skin for " .. M.DescribeDisplay(real) .. ": " .. M.DescribeDisplay(skin) .. ".")
@@ -2643,6 +2755,29 @@ function commands.scale(args)
 		return Print("Usage: .scale <size>, e.g. .scale 0.5 (half), .scale 2 or .scale 200% (double); .scale 0 resets.")
 	end
 	Report(M.SetScale(scale))
+end
+
+-- .weather rain heavy, .weather snow 40, .weather 3 0.8, .weather off
+function commands.weather(args)
+	local word = strlower(args[1] or "")
+	if word == "off" or word == "server" or word == "reset" or word == "own" then
+		return Report(M.SetWeather(nil))
+	end
+	local kind = WEATHER_WORDS[word] or tonumber(word)
+	local strength = strlower(args[2] or "")
+	local intensity = WEATHER_STRENGTH[strength]
+	if not intensity and strength ~= "" then
+		local _, _, number, percent = strfind(strength, "^([%d%.]+)(%%?)$")
+		intensity = tonumber(number or "")
+		if intensity and (percent == "%" or intensity > 1) then
+			intensity = intensity / 100
+		end
+	end
+	if not kind or (strength ~= "" and not intensity) then
+		return Print("Usage: .weather <clear/rain/snow/sandstorm> [light/heavy or 5-100%], e.g. .weather rain heavy; "
+			.. ".weather off for the server's weather.")
+	end
+	Report(M.SetWeather(kind, intensity))
 end
 
 function commands.demorph(args)
@@ -2909,6 +3044,14 @@ loginFrame:SetScript("OnEvent", function()
 	end
 	lookupFrame.elapsed = -15 -- let the login settle first
 	lookupFrame:Show()
+end)
+
+-- A picked weather: the helper keeps it when the server sends a zone's
+-- weather; entering a new zone puts it on again in case none came.
+local weatherFrame = CreateFrame("Frame")
+weatherFrame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+weatherFrame:SetScript("OnEvent", function()
+	ApplyWeather()
 end)
 
 -- The mount watcher: puts the mount skin on while you ride (see Mount skins).

@@ -1808,12 +1808,13 @@ local OPTIONS = {
 local game
 local function installHelper(look)
 	game = { look = look, real = look, enchants = { [16] = { 803, 0 }, [17] = { 0, 0 }, [18] = { 0, 0 } }, lookWrites = 0,
-		scale = 1, race = 1, ownRace = 0, rebuilds = 0 }
+		scale = 1, race = 1, ownRace = 0, rebuilds = 0,
+		weather = { 0, 0 }, serverWeather = { 1, 0.3 }, weatherOn = false, inWorld = true }
 	local function whole(v, max)
 		return type(v) == "number" and v >= 0 and v <= max and v == math.floor(v)
 	end
 	function DmorphHelper_Version()
-		return 7
+		return 8
 	end
 	-- The race byte: VanillaHelpers writes the morph's race there (tests set
 	-- game.race); DmorphHelper_SetRace writes it without a rebuild, and
@@ -1835,6 +1836,22 @@ local function installHelper(look)
 	end
 	function DmorphHelper_Rebuild(unit)
 		game.rebuilds = game.rebuilds + 1
+	end
+	-- Weather: what shows, and the server's (rain at 30% here).
+	function DmorphHelper_SetWeather(kind, intensity)
+		if not whole(kind, 3) or type(intensity) ~= "number" or intensity < 0 or intensity > 1 then
+			error("Usage: DmorphHelper_SetWeather(type 0-3, intensity 0-1)")
+		end
+		if not game.inWorld then
+			error("There's no weather outside the world.")
+		end
+		game.weather, game.weatherOn = { kind, intensity }, true
+	end
+	function DmorphHelper_ClearWeather()
+		game.weather, game.weatherOn = { game.serverWeather[1], game.serverWeather[2] }, false
+	end
+	function DmorphHelper_GetWeather()
+		return game.weather[1], game.weather[2], game.weatherOn and 1 or 0, game.serverWeather[1], game.serverWeather[2]
 	end
 	function DmorphHelper_GetScale(unit)
 		return game.scale
@@ -1878,6 +1895,7 @@ local function removeHelper()
 	DmorphHelper_GetLook, DmorphHelper_SetLook = nil, nil
 	DmorphHelper_GetScale, DmorphHelper_SetScale = nil, nil
 	DmorphHelper_GetRace, DmorphHelper_SetRace, DmorphHelper_SetOwnRace, DmorphHelper_Rebuild = nil, nil, nil, nil
+	DmorphHelper_SetWeather, DmorphHelper_ClearWeather, DmorphHelper_GetWeather = nil, nil, nil
 end
 
 local function sameLook(a, b)
@@ -1940,16 +1958,16 @@ DmorphOctoDB, DmorphOctoAccount = nil, nil
 loadWithHelper()
 Mock.Tick(1.1)
 slash("dmorph status")
-check(contains(allChat(), "DmorphHelper v7 is loaded"), "status shows the helper's version")
+check(contains(allChat(), "DmorphHelper v8 is loaded"), "status shows the helper's version")
 slash("dmorph check")
 check(contains(allChat(), "DmorphHelper: |cff33ff99OK"), "the check says the helper runs")
-check(contains(allChat(), "Running v7 (this DMorph comes with v7)"), "and which version runs")
+check(contains(allChat(), "Running v8 (this DMorph comes with v8)"), "and which version runs")
 local openedForSetup = not (DmorphOctoFrame and DmorphOctoFrame:IsVisible())
 if openedForSetup then
 	slash("")
 end
 Mock.Click(DmorphOctoSetupButton)
-check(contains(DmorphOctoSetupButton.text, "Helper v7") and contains(DmorphOctoSetupText2.text, "Running v7"),
+check(contains(DmorphOctoSetupButton.text, "Helper v8") and contains(DmorphOctoSetupText2.text, "Running v8"),
 	"the Setup button and panel show the helper version")
 Mock.Click(DmorphOctoSetupClose)
 local currentVersion = DmorphHelper_Version
@@ -1967,6 +1985,64 @@ slash("dmorph check")
 check(contains(allChat(), "An older DmorphHelper (v3)") and contains(allChat(), "Install DmorphHelper.bat"),
 	"an older DLL in the game folder is flagged, with how to update it")
 DmorphHelper_Version = currentVersion
+
+-- Weather (DmorphHelper v8).
+slash("weather rain heavy")
+check(game.weatherOn and game.weather[1] == 1 and game.weather[2] == 1 and contains(lastChat(), "Rain (100%)"),
+	".weather rain heavy makes it pour")
+slash("weather snow 40")
+check(game.weather[1] == 2 and math.abs(game.weather[2] - 0.4) < 0.001, ".weather snow 40 snows at 40%")
+slash("weather sandstorm light")
+check(game.weather[1] == 3 and game.weather[2] == 0.25, ".weather sandstorm light")
+slash("weather clear")
+check(game.weatherOn and game.weather[1] == 0 and contains(lastChat(), "Clear skies"), ".weather clear clears the sky")
+slash("weather fog")
+check(game.weather[1] == 0 and contains(lastChat(), "Usage: .weather"), "an unknown weather explains the command")
+slash("weather rain 0")
+check(game.weather[1] == 0 and contains(lastChat(), "5% to 100%"), "rain with no strength is refused")
+slash("weather rain")
+slash("dmorph status")
+check(contains(allChat(), "Weather: Rain (55%)"), "status shows the picked weather")
+game.weather = { 1, 0.3 } -- a loading screen: the game shows the server's weather
+Mock.Fire("PLAYER_ENTERING_WORLD")
+Mock.Tick(0.6)
+check(game.weather[1] == 1 and game.weather[2] == 0.55, "the picked weather comes back after a loading screen")
+game.weather = { 0, 0 }
+Mock.Fire("ZONE_CHANGED_NEW_AREA")
+check(game.weather[1] == 1 and game.weather[2] == 0.55, "and in a new zone")
+game.inWorld = false
+slash("weather snow")
+check(game.weather[1] == 1 and contains(lastChat(), "outside the world"), "no weather change outside the world")
+game.inWorld = true
+local openedForWeather = not (DmorphOctoFrame and DmorphOctoFrame:IsVisible())
+if openedForWeather then
+	slash("")
+end
+press(DmorphOctoTabWeather)
+check(DmorphOctoPageWeather:IsVisible() and DmorphOctoWeatherRain.locked and not DmorphOctoWeatherMissing:IsVisible()
+	and contains(DmorphOctoWeatherState.text, "Rain (55%)") and contains(DmorphOctoWeatherState.text, "Rain (30%)"),
+	"the Weather tab shows the picked weather and the server's")
+check(DmorphOctoTabWeather:GetWidth() > 0 and DmorphOctoTabFavourites:GetWidth() > DmorphOctoTabSets:GetWidth(),
+	"tabs are as wide as their names")
+press(DmorphOctoWeatherHeavySnow)
+check(game.weather[1] == 2 and game.weather[2] == 1 and DmorphOctoWeatherHeavySnow.locked
+	and not DmorphOctoWeatherRain.locked, "a weather button puts that weather on")
+DmorphOctoWeatherStrength:SetValue(0.5)
+Mock.Tick(0.4)
+check(game.weather[1] == 2 and game.weather[2] == 0.5 and DmorphOctoWeatherStrengthLabel.text == "Strength 50%",
+	"the slider sets how strong it is")
+Mock.Tick(1.1)
+press(DmorphOctoWeatherServer)
+check(not game.weatherOn and game.weather[1] == 1 and DmorphOcto.GetWeather() == nil
+	and contains(DmorphOctoWeatherState.text, "the server's weather"), "Server's weather gives it back")
+Mock.Tick(1.1)
+DmorphOctoWeatherStrength:SetValue(0.9)
+Mock.Tick(0.4)
+check(not game.weatherOn and contains(DmorphOctoFrameStatus.text, "Pick rain, snow"),
+	"the slider needs a weather first")
+if openedForWeather then
+	DmorphOcto_ToggleUI()
+end
 
 -- Your size.
 slash("scale 2")

@@ -178,6 +178,8 @@ function methods:SetText(text)
 		RunScript(self, "OnTextChanged")
 	end
 end
+-- About the width of GameFontNormalSmall text.
+function methods:GetStringWidth() return strlen(self.text or "") * 5.5 end
 function methods:GetText()
 	if self.kind == "EditBox" then
 		return self.text or ""

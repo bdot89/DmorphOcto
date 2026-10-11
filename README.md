@@ -1,6 +1,6 @@
 # DMorph for OctoWoW
 
-Become any creature, ride any mount, wear any item. A morph window for WoW 1.12 (OctoWoW), version 2.8.4.
+Become any creature, ride any mount, wear any item. A morph window for WoW 1.12 (OctoWoW), version 2.9.0.
 
 Morphs only change what you and other DMorph users see. Everyone else, and the server, sees your real character.
 
@@ -26,7 +26,7 @@ DMorph needs it. Without it, nothing can morph.
 
    OctoWoW\Interface\AddOns\DmorphOcto\DmorphOcto.toc
 
-### Step 3: Run the installer (for glows, real skin, face and hair, and size)
+### Step 3: Run the installer (for glows, real skin, face and hair, size and weather)
 
 1. Close the game completely.
 2. Open the folder: OctoWoW\Interface\AddOns\DmorphOcto
@@ -36,14 +36,14 @@ DMorph needs it. Without it, nothing can morph.
    - "Do you want to run this file?": click **Run**.
 5. A black window opens and ends with "DmorphHelper is installed". Press any key to close it.
 
-You can skip this step: everything else still works, just without glows, real looks and size.
+You can skip this step: everything else still works, just without glows, real looks, size and weather.
 
 ### Step 4: Play
 
 1. Start the game from **OctoLauncher** (not WoW.exe).
 2. Click the polymorph button by the minimap, or type **/dmorph**
 3. Check the **Setup** button at the bottom left of the window:
-   - Green "Setup OK": you're ready. It also shows which DmorphHelper version is running (for example "Helper v7").
+   - Green "Setup OK": you're ready. It also shows which DmorphHelper version is running (for example "Helper v8").
    - Yellow "Old helper": close the game and run Install DmorphHelper.bat again.
    - Red "Setup: fix me": click it. It tells you what isn't working and how to fix it.
 
@@ -73,6 +73,7 @@ You can skip this step: everything else still works, just without glows, real lo
 - Mount skins: give your mount any model's look (Ashes of Al'ar included). You mount and dismount with your keys as usual.
 - Races: any race and gender, with its real skin colour, face, hair style, hair colour and facial hair.
 - Size: make your character smaller or bigger, 25% to 300%.
+- Weather: clear skies, rain, snow or a sandstorm, from light to heavy, on your screen in every zone.
 - Weapon glows: Crusader, Fiery, Icy and every other glow in the game.
 - 12,000+ weapons and armour pieces, and 352 item sets in one click.
 - Wardrobe of saved outfits and favourites, for all your characters.
@@ -94,6 +95,7 @@ Open the window with the minimap button, /dmorph, or a key under Key Bindings > 
 - **Glows tab:** pick main hand, off hand or ranged, then click a glow.
 - **Items and Sets tabs:** filter by type, quality and source. Hover an item or set to see your character wearing it, then click to wear it.
 - **Wardrobe tab:** save and load whole outfits.
+- **Weather tab:** pick clear skies or light, normal or heavy rain, snow or sandstorm; the Strength slider fine-tunes it. Server's weather gives the real one back. Only you see it, and only outdoors.
 - **Setup (bottom left):** shows whether everything works, which DmorphHelper version is running, and how to fix what doesn't.
 - **Sharing (bottom):** whether others see your morph, and whether you see theirs.
 
@@ -107,6 +109,7 @@ Type these in the chat box. They never reach the server. Each also works after /
 - **.item 1 2955** - morph one item slot (0 resets it)
 - **.mount 4527** - skin for all your mounts (.mount 0 removes it)
 - **.scale 1.5** - your size (.scale 0 resets)
+- **.weather rain heavy** - the weather: clear, rain, snow or sandstorm, then light, heavy or 5-100 (.weather off: the server's)
 - **.glow mainhand 1900** - a weapon glow (0 = none, own = yours)
 - **.demorph** / **.demorph all** - reset your model / reset everything
 - **.outfit save name** / **.outfit name** / **.outfit delete name** - save, wear or delete outfits
@@ -148,7 +151,7 @@ Project page: https://bdot89.github.io/DmorphOcto/
 ## For developers
 
 - **Files:** DmorphOcto.lua is the core (morphs, wardrobe, commands), Share.lua shares morphs between DMorph users, UI.lua is the window. Data/ holds the model, item and set lists. helper/ holds DmorphHelper (C source and DLL).
-- **How it works:** DMorph uses VanillaHelpers (SetUnitDisplayID, SetUnitVisibleItemID, SetUnitMountDisplayID) to morph, and ClassicAPI for the 3D previews. DmorphHelper adds weapon glows, real skin, face and hair, size, and keeps your own race (faction, languages, reputation) during race morphs. It only switches on when it finds VanillaHelpers' hooks in the game.
+- **How it works:** DMorph uses VanillaHelpers (SetUnitDisplayID, SetUnitVisibleItemID, SetUnitMountDisplayID) to morph, and ClassicAPI for the 3D previews. DmorphHelper adds weapon glows, real skin, face and hair, size, weather, and keeps your own race (faction, languages, reputation) during race morphs. It only switches on when it finds VanillaHelpers' hooks in the game.
 - **Tests:** powershell -ExecutionPolicy Bypass -File tools\run_tests.ps1 (or lua tests/run_tests.lua with Lua 5.0).
 - **Rebuilding the lists after an OctoWoW update:** close the game and run powershell -ExecutionPolicy Bypass -File tools\update_from_game.ps1
 - **Building DmorphHelper:** sh helper/build.sh with 32-bit MinGW (on Windows: winlibs i686, from Git Bash).

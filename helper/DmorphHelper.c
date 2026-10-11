@@ -21,6 +21,9 @@
 //   DmorphHelper_SetRace(unit, race)                         (no rebuild)
 //   DmorphHelper_SetOwnRace(race)                            (0 = off; see Race morphs)
 //   DmorphHelper_Rebuild(unit)
+//   DmorphHelper_SetWeather(type, intensity)                 (0 clear, 1 rain, 2 snow, 3 sandstorm; 0-1)
+//   DmorphHelper_ClearWeather()                              (the server's weather again)
+//   DmorphHelper_GetWeather()                                -> type, intensity, yours (1/0), server type, intensity
 // unit is a unit token for a player you could help ("player", "target", ...);
 // slot is an inventory slot, 1-19. The functions only write the values: the
 // addon keeps what it wants and puts it back after the server resends them.
@@ -41,7 +44,7 @@
 #define GAME_FASTCALL __attribute__((fastcall))
 #define GAME_THISCALL __attribute__((thiscall))
 
-#define HELPER_VERSION 7
+#define HELPER_VERSION 8
 
 // Game functions, build 5875 (from VanillaHelpers' Offsets.h).
 #define FUN_INVALID_FUNCTION_PTR_CHECK 0x42A320
@@ -69,6 +72,14 @@
 // (thiscall: array, how many more, round up; ret 8).
 #define WORLD_LINE_CELLS 0xC962C0
 #define FUN_GROWABLE_ARRAY_RESERVE 0x4291F0
+// The world's CWeather (NULL outside the world), its SetWeather (thiscall:
+// type, intensity, blend; ret 0xC) and the weather sound loop (fastcall:
+// sound ID; 0 stops it). The SMSG_WEATHER handler's calls return to RET_*.
+#define WEATHER_OBJECT 0xC6326C
+#define FUN_CWEATHER_SET_WEATHER 0x67BAF0
+#define FUN_PLAY_WEATHER_SOUND 0x4586B0
+#define RET_WEATHER_PACKET_SET 0x48FAAA
+#define RET_WEATHER_PACKET_SOUND 0x48FAB2
 #define HIGHEST_ADDRESS 0xC962D0
 
 // Descriptor fields, as indexes into a unit's uint32 field array.
@@ -404,6 +415,115 @@ static int GAME_FASTCALL Script_Rebuild(void *L) {
     return 0;
 }
 
+// Weather. The server sends it (SMSG_WEATHER: type, intensity, sound) and the
+// handler hands it to the world's weather object, CWeather::SetWeather
+// (0x67BAF0: type 0 clear, 1 rain, 2 snow, 3 sandstorm; intensity 0-1; then
+// whether to blend into it), and plays the weather's sound loop (0x4586B0).
+// A weather picked here replaces what the server sends while it's on, also
+// on entering another zone; what the server sent is kept for when it's off.
+// Only on your screen.
+typedef void(GAME_THISCALL *SetWeather_t)(void *weather, uint32_t type, float intensity, uint32_t blend);
+typedef void(GAME_FASTCALL *WeatherSound_t)(uint32_t sound);
+static SetWeather_t SetWeather_o = NULL;
+static WeatherSound_t WeatherSound_o = NULL;
+static BOOL g_weatherOn = FALSE;
+static uint32_t g_weatherType = 0, g_serverWeatherType = 0, g_serverWeatherSound = 0;
+static float g_weatherIntensity = 0, g_serverWeatherIntensity = 0;
+
+static void *WeatherObject(void) {
+    return *(void **)WEATHER_OBJECT;
+}
+
+// The server's sounds for each weather: light below 40%, heavy from 70%.
+static uint32_t WeatherSound(uint32_t type, float intensity) {
+    static const uint32_t sounds[4][3] = {
+        { 0, 0, 0 }, { 8533, 8534, 8535 }, { 8536, 8537, 8538 }, { 8556, 8557, 8558 },
+    };
+    return sounds[type][intensity < 0.4f ? 0 : intensity < 0.7f ? 1 : 2];
+}
+
+static void GAME_FASTCALL SetWeather_h(void *weather, void *edx, uint32_t type, float intensity, uint32_t blend) {
+    (void)edx;
+    if (__builtin_return_address(0) == (void *)RET_WEATHER_PACKET_SET) {
+        g_serverWeatherType = type;
+        g_serverWeatherIntensity = intensity;
+        if (g_weatherOn) {
+            type = g_weatherType;
+            intensity = g_weatherIntensity;
+        }
+    }
+    SetWeather_o(weather, type, intensity, blend);
+}
+
+static void GAME_FASTCALL WeatherSound_h(uint32_t sound) {
+    if (__builtin_return_address(0) == (void *)RET_WEATHER_PACKET_SOUND) {
+        g_serverWeatherSound = sound;
+        if (g_weatherOn) {
+            sound = WeatherSound(g_weatherType, g_weatherIntensity);
+        }
+    }
+    WeatherSound_o(sound);
+}
+
+static const char *SET_WEATHER_USAGE = "Usage: DmorphHelper_SetWeather(type 0-3, intensity 0-1)";
+
+static BOOL WeatherReady(void *L) {
+    if (!SetWeather_o || !WeatherSound_o) {
+        LuaError(L, "DmorphHelper couldn't hook the game's weather.");
+        return FALSE;
+    }
+    if (!WeatherObject()) {
+        LuaError(L, "There's no weather outside the world.");
+        return FALSE;
+    }
+    return TRUE;
+}
+
+// Your weather, until DmorphHelper_ClearWeather.
+static int GAME_FASTCALL Script_SetWeather(void *L) {
+    uint32_t type = NumberArg(L, 1, 0, 3, SET_WEATHER_USAGE);
+    if (!LuaIsNumber(L, 2)) {
+        LuaError(L, SET_WEATHER_USAGE);
+        return 0;
+    }
+    double v = LuaToNumber(L, 2);
+    if (!(v >= 0 && v <= 1)) {
+        LuaError(L, SET_WEATHER_USAGE);
+        return 0;
+    }
+    if (!WeatherReady(L)) {
+        return 0;
+    }
+    g_weatherOn = TRUE;
+    g_weatherType = type;
+    g_weatherIntensity = (float)v;
+    SetWeather_o(WeatherObject(), type, (float)v, 0);
+    WeatherSound_o(WeatherSound(type, (float)v));
+    return 0;
+}
+
+// The server's weather again.
+static int GAME_FASTCALL Script_ClearWeather(void *L) {
+    if (!WeatherReady(L)) {
+        return 0;
+    }
+    g_weatherOn = FALSE;
+    SetWeather_o(WeatherObject(), g_serverWeatherType, g_serverWeatherIntensity, 0);
+    WeatherSound_o(g_serverWeatherSound);
+    return 0;
+}
+
+// type, intensity, whether it's yours (1) or the server's (0), and the
+// server's type and intensity.
+static int GAME_FASTCALL Script_GetWeather(void *L) {
+    LuaPushNumber(L, g_weatherOn ? g_weatherType : g_serverWeatherType);
+    LuaPushNumber(L, g_weatherOn ? g_weatherIntensity : g_serverWeatherIntensity);
+    LuaPushNumber(L, g_weatherOn ? 1 : 0);
+    LuaPushNumber(L, g_serverWeatherType);
+    LuaPushNumber(L, g_serverWeatherIntensity);
+    return 5;
+}
+
 // The game lists the map cells a line crosses (the mouse pointer's line into
 // the world, line of sight) in a buffer it sizes once for 2048 cells and
 // never checks. The pointer's line reaches as far as your view distance, so
@@ -435,6 +555,9 @@ static void GAME_FASTCALL LoadScriptFunctions_h(void) {
     RegisterFunction("DmorphHelper_SetRace", (uintptr_t)&Script_SetRace);
     RegisterFunction("DmorphHelper_SetOwnRace", (uintptr_t)&Script_SetOwnRace);
     RegisterFunction("DmorphHelper_Rebuild", (uintptr_t)&Script_Rebuild);
+    RegisterFunction("DmorphHelper_SetWeather", (uintptr_t)&Script_SetWeather);
+    RegisterFunction("DmorphHelper_ClearWeather", (uintptr_t)&Script_ClearWeather);
+    RegisterFunction("DmorphHelper_GetWeather", (uintptr_t)&Script_GetWeather);
 }
 
 // The game's own image must reach every address used here (a 1.12.1 exe).
@@ -482,6 +605,14 @@ static void InstallHook(void) {
                       (LPVOID *)&SkillRaceClass_o) != MH_OK ||
         MH_EnableHook((LPVOID)FUN_SKILL_RACE_CLASS_INFO) != MH_OK) {
         SkillRaceClass_o = NULL;
+    }
+    if (MH_CreateHook((LPVOID)FUN_CWEATHER_SET_WEATHER, (LPVOID)&SetWeather_h, (LPVOID *)&SetWeather_o) != MH_OK ||
+        MH_EnableHook((LPVOID)FUN_CWEATHER_SET_WEATHER) != MH_OK) {
+        SetWeather_o = NULL;
+    }
+    if (MH_CreateHook((LPVOID)FUN_PLAY_WEATHER_SOUND, (LPVOID)&WeatherSound_h, (LPVOID *)&WeatherSound_o) != MH_OK ||
+        MH_EnableHook((LPVOID)FUN_PLAY_WEATHER_SOUND) != MH_OK) {
+        WeatherSound_o = NULL;
     }
 }
 
