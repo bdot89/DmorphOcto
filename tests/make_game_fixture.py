@@ -16,7 +16,8 @@ Glows: visuals 25 (enchant 1900, "Crusader; Holy Power"), 26 (803), 28 (20) and 
 (30, no name), not 27 (its effect model is missing). CharOptions: "1:0" skins 0-3
 (3 NPC-only; 4 is left out, its texture is missing), faces [0]={0,1} [1]..[3]={0},
 hair styles 0-2, hair colours [0]={0,1} [1]={0}, facial hair 0-2; "1:1", "2:0" and "2:1" (hair
-styles 0-3 with colours 0-9, all sharing one texture) too.
+styles 0-3 with colours 0-9, all sharing one texture) too; "2:0" hair style 1 has colour 0
+(its texture is named with "/").
 """
 import os
 import struct
@@ -285,6 +286,9 @@ def main():
     section(2, 0, 1, 0, 0)
     section(2, 0, 1, 0, 1)
     section(2, 0, 3, 0, 0)
+    # A texture named with forward slashes, which the game reads like "\\".
+    sections.append([len(sections) + 1, 2, 0, 3, 1, 0, "Character/Orc/Hair01.blp", "", "", 1])
+    base["Character\\Orc\\Hair01.blp"] = b"BLP2"
     # Orc women share one hair texture for every style and colour, as hair
     # often does: few different texture names in the table.
     section(2, 1, 0, 0, 0)

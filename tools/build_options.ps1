@@ -327,15 +327,19 @@ if (-not $cols) {
   # Rows whose texture isn't in the MPQs would draw white; leave them out,
   # unless that's more than a quarter of the rows (then the check is wrong).
   $rows = New-Object System.Collections.ArrayList
-  $dropped = 0; $withTexture = 0
+  $dropped = 0; $withTexture = 0; $missingTex = New-Object System.Collections.ArrayList
   for ($r = 0; $r -lt $sections.Count; $r++) {
     $tex = @()
     for ($j = 0; $j -lt 3; $j++) { $t = $sections.TryStr($r, $cols.text + $j); if ($t) { $tex += $t } }
     $shows = $true
     if ($tex.Count) {
       $withTexture++
-      $shows = @($tex | Where-Object { Test-GameFile $_ }).Count -eq $tex.Count
-      if (-not $shows) { $dropped++ }
+      $absent = @($tex | Where-Object { -not (Test-GameFile $_) })
+      $shows = $absent.Count -eq 0
+      if (-not $shows) {
+        $dropped++
+        if ($missingTex.Count -lt 3) { [void]$missingTex.Add($absent[0]) }
+      }
     }
     [void]$rows.Add([pscustomobject]@{ race = $sections.Int($r, 1); gender = $sections.Int($r, 2); section = $sections.Int($r, 3)
       variation = $sections.Int($r, $cols.variation); colour = $sections.Int($r, $cols.colour)
@@ -377,7 +381,7 @@ if (-not $cols) {
     }
   }
   $optionNote = "{0} races and genders" -f $options.Count
-  if ($dropped) { $optionNote += ", {0} looks left out (texture missing)" -f $dropped }
+  if ($dropped) { $optionNote += ", {0} of {1} looks left out (texture missing, e.g. {2})" -f $dropped, $withTexture, ($missingTex -join ", ") }
 }
 
 # A Lua list of numbers, and the NPC-only ones of a value set as a Lua set.

@@ -18,10 +18,11 @@ public class Mpq {
     }
     return t;
   }
+  // Like the game's Storm: upper case, and "/" read as "\".
   public static uint Hs(string s, int ht) {
     uint s1 = 0x7FED7FED, s2 = 0xEEEEEEEE;
     foreach (char c0 in s.ToUpperInvariant()) {
-      uint ch = (uint)c0;
+      uint ch = c0 == '/' ? (uint)'\\' : (uint)c0;
       s1 = CT[(ht << 8) + ch] ^ (s1 + s2);
       s2 = ch + s1 + s2 + (s2 << 5) + 3;
     }
