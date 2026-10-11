@@ -917,6 +917,15 @@ Mock.Type(itemSearch, "first mate")
 local itemRow = DmorphOctoItemListRow1
 check(itemRow:IsVisible() and itemRow.text.text == "First Mate Hat", "the head list finds the hat")
 check(DmorphOctoItemCount.text == "1 item", "one result says \"1 item\"")
+-- Hovering an item: your character wearing it, nothing put on.
+local itemsBefore = vh.calls
+Mock.RunScript(itemRow, "OnEnter")
+check(DmorphOctoItemCard:IsVisible() and DmorphOctoItemCardModel.unit == "player"
+	and DmorphOctoItemCardModel.tried[1] == 2955 and DmorphOctoItemCardTitle.text == "First Mate Hat",
+	"hovering an item shows your character wearing it")
+check(vh.calls == itemsBefore and vh.items[1] == nil, "without putting it on")
+Mock.RunScript(itemRow, "OnLeave")
+check(not DmorphOctoItemCard:IsVisible(), "the preview goes when the mouse leaves")
 press(itemRow)
 check(vh.items[1] == 2955, "clicking an item morphs that slot")
 Mock.Type(itemSearch, "")
@@ -1016,6 +1025,20 @@ check(DmorphOctoSetListRow1:IsVisible() and DmorphOctoSetListRow1.text.text == "
 	"the sets tab finds a set")
 Mock.RunScript(DmorphOctoSetListRow1, "OnEnter")
 check(contains(table.concat(GameTooltip.lines, "\n"), "Breastplate of Wrath"), "hovering a set lists its pieces")
+check(DmorphOctoItemCard:IsVisible() and DmorphOctoItemCardStatus.text == "Loading from the server..."
+	and contains(" " .. table.concat(Mock.itemRequests, " ") .. " ", " 16966 "),
+	"and shows you wearing it: pieces the game hasn't seen yet are asked for")
+Mock.serverItems[16966] = { "Breastplate of Wrath", 4, "INVTYPE_CHEST" }
+Mock.Tick(0.3)
+local triedWrath = false
+for _, id in ipairs(DmorphOctoItemCardModel.tried) do
+	if id == 16966 then
+		triedWrath = true
+	end
+end
+check(triedWrath, "and put on once they arrive")
+Mock.RunScript(DmorphOctoSetListRow1, "OnLeave")
+Mock.serverItems[16966] = nil
 press(DmorphOctoSetListRow1)
 check(vh.items[5] == 16966 and vh.items[1] == 16963 and contains(DmorphOctoFrameStatus.text, "Battlegear of Wrath"),
 	"clicking a set wears its pieces")

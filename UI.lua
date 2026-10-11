@@ -489,6 +489,9 @@ local function List(parent, name, x, y, infoWidth, fill, click, enter, width, ro
 		row:EnableMouseWheel(true)
 		row:SetScript("OnMouseWheel", function()
 			ui.card:Hide()
+			if ui.itemCard then
+				ui.itemCard:Hide()
+			end
 			local bar = getglobal(name .. "ScrollBar")
 			bar:SetValue(bar:GetValue() - arg1 * ROW_HEIGHT * 3)
 		end)
@@ -501,6 +504,9 @@ local function List(parent, name, x, y, infoWidth, fill, click, enter, width, ro
 			end)
 			row:SetScript("OnLeave", function()
 				ui.card:Hide()
+				if ui.itemCard then
+					ui.itemCard:Hide()
+				end
 				GameTooltip:Hide()
 			end)
 		end
@@ -1049,6 +1055,113 @@ local function ShowCardFor(row, displayID, name, color, left)
 	card:Show()
 	if card.view.displayID ~= displayID then
 		LoadView(card.view, displayID)
+	end
+end
+
+-- The try-on card next to an item or set row: your character wearing it, in
+-- the Dressing Room's own model (TryOn). The game can only put on items it
+-- knows: one it hasn't seen yet is asked for (ClassicAPI) and goes on when
+-- it arrives.
+local function TryOnAll(card)
+	local missing = false
+	for i = 1, table.getn(card.items) do
+		local id = card.items[i]
+		if not card.on[id] then
+			if GetItemInfo(id) then
+				pcall(card.model.TryOn, card.model, id)
+				card.on[id] = true
+			else
+				missing = true
+				if not card.asked[id] and type(C_Item) == "table" and type(C_Item.RequestLoadItemDataByID) == "function" then
+					card.asked[id] = true
+					pcall(C_Item.RequestLoadItemDataByID, id)
+				end
+			end
+		end
+	end
+	card.pending = missing or nil
+	if missing then
+		card.status:SetText("Loading from the server...")
+	else
+		card.status:SetText("")
+	end
+end
+
+local function BuildItemCard()
+	local card = CreateFrame("Frame", "DmorphOctoItemCard", UIParent)
+	card:Hide()
+	card:SetFrameStrata("TOOLTIP")
+	card:SetWidth(190)
+	card:SetHeight(260)
+	card:SetClampedToScreen(true)
+	Panel(card, 0.06, 0.06, 0.07)
+	card.base = card:GetFrameLevel()
+	-- It loads below the cover and is raised once loaded (no white flash).
+	card.model = CreateFrame("DressUpModel", "DmorphOctoItemCardModel", card)
+	card.model:SetFrameLevel(card.base + 1)
+	card.model:SetPoint("TOPLEFT", card, "TOPLEFT", 5, -5)
+	card.model:SetPoint("BOTTOMRIGHT", card, "BOTTOMRIGHT", -5, 46)
+	local cover = Layer(card, 2)
+	cover:SetAllPoints(card.model)
+	Gradient(cover, "BACKGROUND", 0.05, 0.05, 0.06, 1, 0.12, 0.11, 0.09, 1):SetAllPoints(cover)
+	local text = Layer(card, 4)
+	text:SetAllPoints(card)
+	card.title = text:CreateFontString("DmorphOctoItemCardTitle", "OVERLAY", "GameFontNormalSmall")
+	card.title:SetPoint("BOTTOMLEFT", card, "BOTTOMLEFT", 6, 20)
+	card.title:SetWidth(178)
+	card.title:SetHeight(24)
+	card.title:SetJustifyH("CENTER")
+	card.idText = text:CreateFontString("DmorphOctoItemCardInfo", "OVERLAY", "GameFontDisableSmall")
+	card.idText:SetPoint("BOTTOM", card, "BOTTOM", 0, 8)
+	card.status = text:CreateFontString("DmorphOctoItemCardStatus", "OVERLAY", "GameFontHighlightSmall")
+	card.status:SetPoint("CENTER", card.model, "CENTER", 0, 0)
+	card.items, card.on, card.asked = {}, {}, {}
+	card:SetScript("OnUpdate", function()
+		if this.wait then
+			this.wait = this.wait - arg1
+			if this.wait <= 0 then
+				this.wait = nil
+				this.model:SetFrameLevel(this.base + 3)
+			end
+		end
+		this.rotation = (this.rotation or 0) + arg1 * 0.8
+		this.model:SetRotation(this.rotation)
+		if this.pending then
+			this.retry = (this.retry or 0) - arg1
+			if this.retry <= 0 then
+				this.retry = 0.25
+				TryOnAll(this)
+			end
+		end
+	end)
+	return card
+end
+
+-- Shows the card on the left of row, with items (item IDs) tried on.
+local function ShowItemCard(row, items, title, r, g, b, info)
+	local card = ui.itemCard
+	card:ClearAllPoints()
+	card:SetPoint("RIGHT", row, "LEFT", -12, 0)
+	card.title:SetText(title)
+	card.title:SetTextColor(r, g, b)
+	card.idText:SetText(info)
+	if not card.loaded then
+		-- Your character as it is now (once per opening of the window).
+		card.loaded = true
+		card.model:SetFrameLevel(card.base + 1)
+		card.model:SetUnit("player")
+		card.wait = REVEAL
+	end
+	card.model:Dress()
+	card.items, card.on, card.rotation = items, {}, 0
+	card:Show()
+	TryOnAll(card)
+end
+
+local function HideCards()
+	ui.card:Hide()
+	if ui.itemCard then
+		ui.itemCard:Hide()
 	end
 end
 
@@ -2273,7 +2386,15 @@ local function BuildItemsPage(page)
 		local itemID = M.GetItemCatalog(itemSlot).ids[ui.itemResult[index]]
 		ui.itemBox:SetText(itemID)
 		Morph(M.SetItem, itemSlot, itemID)
-	end, nil, nil, 14)
+	end, function(index, row)
+		-- Hover: your character wearing it, without putting it on.
+		local catalog = M.GetItemCatalog(itemSlot)
+		local i = ui.itemResult[index]
+		if i then
+			local r, g, b = QualityColor(catalog.quality[i])
+			ShowItemCard(row, { catalog.ids[i] }, catalog.names[i], r, g, b, "Item " .. catalog.ids[i] .. " - click to wear it")
+		end
+	end, nil, 14)
 
 	local y = -352
 	Label(page, "Item ID:", nil, 10, y - 5)
@@ -2327,6 +2448,9 @@ local function SetTooltip(index, row)
 	end
 	GameTooltip:AddLine("Click to wear every piece.", 0.6, 1, 0.6)
 	GameTooltip:Show()
+	-- And your character wearing the whole set.
+	local r, g, b = QualityColor(catalog.quality[i])
+	ShowItemCard(row, pieces, catalog.names[i], r, g, b, table.getn(pieces) .. " pieces - click to wear them")
 end
 
 local function BuildSetsPage(page)
@@ -2997,6 +3121,10 @@ local function Build()
 	frame:SetScript("OnHide", function()
 		PlaySound("igCharacterInfoClose")
 		ui.card:Hide()
+		if ui.itemCard then
+			ui.itemCard:Hide()
+			ui.itemCard.loaded = nil
+		end
 		ui.menu:Hide()
 		-- A click still waiting at the gate is applied now.
 		local nextCall = ui.gateNext
@@ -3042,6 +3170,7 @@ local function Build()
 	ui.revealTimer = NewTimer()
 	ui.gateTimer = NewTimer()
 	ui.card = BuildCard()
+	ui.itemCard = BuildItemCard()
 	ui.canPreview = type(ui.card.view.model.SetDisplayInfo) == "function"
 	ui.menu = BuildMenu()
 

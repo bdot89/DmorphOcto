@@ -26,7 +26,7 @@ local FONTS = {
 	GameFontHighlight = 1, GameFontHighlightSmall = 1, GameFontHighlightLarge = 1,
 	GameFontDisable = 1, GameFontDisableSmall = 1, GameFontGreenSmall = 1, GameFontRedSmall = 1,
 }
-local FRAME_TYPES = { Frame = 1, Button = 1, EditBox = 1, ScrollFrame = 1, Model = 1, PlayerModel = 1, Slider = 1 }
+local FRAME_TYPES = { Frame = 1, Button = 1, EditBox = 1, ScrollFrame = 1, Model = 1, PlayerModel = 1, DressUpModel = 1, Slider = 1 }
 local TEMPLATES = {
 	UIPanelButtonTemplate = 1, InputBoxTemplate = 1, FauxScrollFrameTemplate = 1, UIPanelCloseButton = 1,
 }
@@ -212,7 +212,7 @@ function methods:SetBlendMode(mode) assert(mode == "ADD" or mode == "BLEND" or m
 
 -- Models
 function methods:SetUnit(unit)
-	assert(self.kind == "PlayerModel", "SetUnit needs a PlayerModel")
+	assert(self.kind == "PlayerModel" or self.kind == "DressUpModel", "SetUnit needs a PlayerModel")
 	self.unit = unit
 	self.unitLoads = (self.unitLoads or 0) + 1
 	Mock.modelRefreshes = (Mock.modelRefreshes or 0) + 1
@@ -220,8 +220,18 @@ end
 -- Blizzard's 1.12 FrameXML only turns PlayerModels with SetRotation; addons
 -- here turn plain Models with SetFacing.
 function methods:SetRotation(r)
-	assert(self.kind == "PlayerModel", "SetRotation is a PlayerModel method; use SetFacing")
+	assert(self.kind == "PlayerModel" or self.kind == "DressUpModel", "SetRotation is a PlayerModel method; use SetFacing")
 	self.rotation = r
+end
+-- DressUpModel (the Dressing Room's): TryOn an item ID, Dress = back to your gear.
+function methods:TryOn(item)
+	assert(self.kind == "DressUpModel", "TryOn is a DressUpModel method")
+	self.tried = self.tried or {}
+	table.insert(self.tried, item)
+end
+function methods:Dress()
+	assert(self.kind == "DressUpModel", "Dress is a DressUpModel method")
+	self.tried = {}
 end
 function methods:SetCamera(n) self.camera = n end
 function methods:SetLight() end

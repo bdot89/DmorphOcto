@@ -1,6 +1,6 @@
 # DMorph for OctoWoW
 
-Become any creature, ride any mount, wear any item. A morph window for WoW 1.12 (OctoWoW), version 2.6.1.
+Become any creature, ride any mount, wear any item. A morph window for WoW 1.12 (OctoWoW), version 2.7.0.
 
 Morphs only change what you and other DMorph users see. Everyone else, and the server, sees your real character.
 
@@ -90,7 +90,7 @@ Open the window with the minimap button, /dmorph, or a key under Key Bindings > 
 - **Favourites tab:** your starred models and mount skins.
 - **Races tab:** click a portrait to become that race with your own face. The arrow rows change skin colour, face, hair and facial hair. The dice picks a random look.
 - **Glows tab:** pick main hand, off hand or ranged, then click a glow.
-- **Items and Sets tabs:** filter by type, quality and source, then click to wear.
+- **Items and Sets tabs:** filter by type, quality and source. Hover an item or set to see your character wearing it, then click to wear it.
 - **Wardrobe tab:** save and load whole outfits.
 - **Setup (bottom left):** shows whether everything works, and how to fix it.
 - **Sharing (bottom):** whether others see your morph, and whether you see theirs.
