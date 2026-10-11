@@ -6,7 +6,7 @@
 
 **Become any creature, ride any mount, wear any item** · WoW 1.12 · OctoWoW
 
-![Version](https://img.shields.io/badge/version-2.5.0-33ff99?style=flat-square)
+![Version](https://img.shields.io/badge/version-2.5.1-33ff99?style=flat-square)
 ![WoW 1.12.1](https://img.shields.io/badge/WoW-1.12.1-c79c6e?style=flat-square)
 ![Lua 5.0](https://img.shields.io/badge/Lua-5.0-2c2d72?style=flat-square)
 ![Models](https://img.shields.io/badge/models-16%2C000%2B-b46bff?style=flat-square)
@@ -166,12 +166,12 @@ Slots: `1` head, `3` shoulder, `4` shirt, `5` chest, `6` waist, `7` legs, `8` fe
 - **Glows and looks stay on.** The server sends your real enchants and looks again now and then (a new enchant, a loading screen); DMorph puts yours back within a second. Like every morph, only you see them: other DMorph users don't see your glows or picked face yet.
 - **Glows are the 1.12 client's.** Every glow in the game files is in the list, Turtle WoW's and OctoWoW's included. Glows from The Burning Crusade onwards (Mongoose, Berserking, Executioner, ...) aren't in these files, so no addon can show them.
 - **Later expansions aren't in the game.** Models, mounts, races, items, sets and glows from The Burning Crusade onwards (Draenei, Blood Elf hair, Outland mounts, ...) aren't in the 1.12 client's files, and the server doesn't know their items, so no addon can show them. Everything OctoWoW and Turtle WoW added to the client is in the lists.
-- **Mount skins wait for you to mount.** VanillaHelpers would otherwise keep you on a mount after you dismount, so the skin goes on when you mount (the addon sees your mount's buff) and comes off when that buff goes.
+- **Mount skins wait for you to mount.** VanillaHelpers would otherwise keep you on a mount after you dismount, so the skin goes on when you mount (the addon sees your mount's buff) and comes off when that buff goes. Flight master birds keep their own look: no skin goes on during a flight path, so nothing is left on when you land.
 - **OctoWoW-only items** that no list knows yet are looked up in the background after you log in (with ClassicAPI, a few a second, once per account). The Items and Sets tabs say how many are left. Any item also works by its ID.
 - **Fast clicking is safe:** the game rebuilds your character after each change, so a click within a third of a second of the last one waits its turn instead of mixing two looks' textures.
 - **"?" icon on a slot:** the game hasn't loaded that item yet. It turns into the icon after a moment.
 - **Flight paths and spellbook after a race morph:** the game shows flight paths and sorts your spellbook by the race it thinks you are, so as a Human morph a Horde character would see no flight paths and spells would move. While the flight map or the spellbook is open, DMorph puts your own race back (you'll see your own model for that moment); the morph returns when you close it.
-- **Chat after a race morph:** a race morph also changes the race the game thinks you are, and with it the language it speaks by default (an Undead morphed into a Human would try Common: "You don't know that language"). DMorph sends your chat in a language your character knows instead: the one you picked, else your own default, else Orcish or Common for your faction.
+- **Chat after a race morph:** a race morph also changes the race the game thinks you are, and with it the language it speaks by default and the languages it lists (an Undead morphed into a Human or Gnome would try Common: "You don't know that language"). DMorph reads the languages your own character speaks while your own race is showing, and sends your chat in one of them: the one you picked, else your own default, else Orcish or Common for your faction. So a Horde character morphed into a Goblin speaks Orcish, the Horde language you know.
 - **Shapeshifting** (druid forms and the like) shows your morph instead of the form. Reset your model first if you want the form.
 - No Draenei (race 11 isn't in 1.12), and F5/F10 aren't taken over: set the reset keys under *Key Bindings > DMorph*.
 

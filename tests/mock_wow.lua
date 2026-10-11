@@ -343,8 +343,22 @@ function Mock.ResetUI()
 	-- Languages: the ones the character knows (from its skills) and the
 	-- race's default, which a race morph changes (Mock.defaultLanguage).
 	Mock.languages = Mock.languages or { "Common" }
-	function GetLanguageByIndex(i) return Mock.languages[i] end
-	function GetDefaultLanguage() return Mock.defaultLanguage or Mock.languages[1] end
+	-- Mock.raceLanguages(), when set, gives the list and default of the race
+	-- the game thinks you are (a race morph changes it, as in the client).
+	local function Languages()
+		if Mock.raceLanguages then
+			return Mock.raceLanguages()
+		end
+		return Mock.languages, Mock.defaultLanguage
+	end
+	function GetLanguageByIndex(i)
+		local list = Languages()
+		return list[i]
+	end
+	function GetDefaultLanguage()
+		local list, default = Languages()
+		return default or list[1]
+	end
 	function UnitFactionGroup() return Mock.faction or "Alliance", Mock.faction or "Alliance" end
 	function SendAddonMessage(prefix, text, distribution)
 		assert(distribution == "PARTY" or distribution == "RAID" or distribution == "GUILD" or distribution == "BATTLEGROUND",
@@ -441,6 +455,7 @@ function Mock.ResetUI()
 		return u and u.name
 	end
 	function UnitBuff(unit, index) return Mock.buffs and Mock.buffs[index] end
+	function UnitOnTaxi(unit) return Mock.onTaxi and 1 or nil end
 	function UnitSex() return 2 end
 	function GetInventoryItemTexture(unit, slot)
 		if slot == 5 then

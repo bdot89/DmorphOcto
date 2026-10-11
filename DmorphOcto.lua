@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.5.0"
+local VERSION = "2.5.1"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1062,6 +1062,21 @@ function InitDB()
 	db.lookReal, db.lookWritten = ValidLook(db.lookReal), ValidLook(db.lookWritten)
 	-- Your size (DmorphHelper v2): the picked one, the real one last seen and
 	-- what was last written, each 0.1-10.
+	-- The languages your character speaks (CaptureNative): names, or nil.
+	if type(db.languages) == "table" then
+		local names = {}
+		for i = 1, table.getn(db.languages) do
+			if type(db.languages[i]) == "string" then
+				table.insert(names, db.languages[i])
+			end
+		end
+		db.languages = table.getn(names) > 0 and names or nil
+	else
+		db.languages = nil
+	end
+	if type(db.defaultLanguage) ~= "string" then
+		db.defaultLanguage = nil
+	end
 	for _, key in ipairs({ "scale", "scaleReal", "scaleWritten" }) do
 		local v = tonumber(db[key])
 		if not (v and v >= 0.1 and v <= 10) then
@@ -1171,6 +1186,23 @@ local function CaptureNative()
 		elseif sex == 2 then
 			nativeGender = 0
 		end
+	end
+	-- The game lists the languages of the race it thinks you are, and a race
+	-- morph changes that (a Gnome morph lists Common and Gnomish), so the
+	-- ones your character speaks are read now, with your own race showing,
+	-- and kept for chat (see SpeakableLanguage).
+	local languages = {}
+	for i = 1, 20 do
+		local got, name = pcall(GetLanguageByIndex, i)
+		if not (got and type(name) == "string") then
+			break
+		end
+		table.insert(languages, name)
+	end
+	if table.getn(languages) > 0 then
+		local got, default = pcall(GetDefaultLanguage)
+		db.languages = languages
+		db.defaultLanguage = got and default or nil
 	end
 end
 
@@ -1331,8 +1363,23 @@ local function RememberRidden(real)
 end
 
 -- Runs every tenth of a second.
+local function OnTaxi()
+	local ok, flying = pcall(UnitOnTaxi, "player")
+	return ok and flying and true or false
+end
+
 local function WatchMount()
 	if not (sessionReady and HasMountAPI()) then
+		return
+	end
+	-- A flight path's bird is the game's, not your mount: no skin on it (and
+	-- one already on comes off as the flight starts).
+	if OnTaxi() then
+		if watch.active then
+			StopSkin()
+			Notify()
+		end
+		watch.real = nil
 		return
 	end
 	if watch.active then
@@ -1378,10 +1425,15 @@ local function WatchMount()
 					candidates[texture], found = true, true
 				end
 			end
-			if not found then
-				candidates = buffs -- mounted before we could look: any buff going counts
+			-- The mount's buff comes with it. Without a new one there's
+			-- nothing that would say when you dismount (a skin would then
+			-- stay on, and the game would think you still ride), so wait
+			-- for it; only if you were mounted before we could look (a
+			-- login or /reload in the saddle) does any buff going count.
+			if not found and not watch.last then
+				candidates, found = buffs, any
 			end
-			if any then
+			if found then
 				watch.candidates, watch.skin, watch.active = candidates, skin, true
 				Morph(SetUnitMountDisplayID, "player", skin)
 				Notify()
@@ -2580,28 +2632,34 @@ local SPOKEN = {
 }
 
 -- A race morph also changes your race in VanillaHelpers, and the game then
--- speaks that race's language by default: as an Undead morphed into a Human,
--- "You don't know that language" (Common). The languages you know come from
--- your skills, which no morph changes, so chat goes out in a language from
--- that list: the one asked for if you know it, else your default if you know
--- it, else your faction's (Orcish / Common), else the first you know.
+-- speaks that race's language by default and lists that race's languages: as
+-- an Undead morphed into a Gnome, "You don't know that language" (Common).
+-- So chat goes out in a language your own character speaks (read with your
+-- own race showing, see CaptureNative): the one asked for if you speak it,
+-- else your own default, else your faction's (Orcish / Common), else the first.
 local function SpeakableLanguage(language)
-	local known, count = {}, 0
-	for i = 1, 20 do
-		local ok, name = pcall(GetLanguageByIndex, i)
-		if not (ok and name) then
-			break
+	local list, default = db and db.languages, db and db.defaultLanguage
+	if not list then
+		-- Not read yet (no morph this session): the game's own list is right.
+		list = {}
+		for i = 1, 20 do
+			local ok, name = pcall(GetLanguageByIndex, i)
+			if not (ok and name) then
+				break
+			end
+			table.insert(list, name)
 		end
-		known[name], count = true, count + 1
-		if count == 1 then
-			known[1] = name
-		end
+		local ok, live = pcall(GetDefaultLanguage)
+		default = ok and live or nil
+	end
+	local known, count = {}, table.getn(list)
+	for i = 1, count do
+		known[list[i]] = true
 	end
 	if count == 0 or (language and known[language]) then
 		return language
 	end
-	local ok, default = pcall(GetDefaultLanguage)
-	if ok and default and known[default] then
+	if default and known[default] then
 		return default
 	end
 	local faction = UnitFactionGroup("player")
@@ -2610,7 +2668,7 @@ local function SpeakableLanguage(language)
 	elseif faction == "Alliance" and known["Common"] then
 		return "Common"
 	end
-	return known[1]
+	return list[1]
 end
 
 -- DMorph's interface: commands typed into chat with a leading dot. Anything
@@ -2762,6 +2820,18 @@ mountFrame:SetScript("OnUpdate", function()
 	if this.wait <= 0 then
 		this.wait = 0.1
 		WatchMount()
+	end
+end)
+-- Losing and getting back control (a flight path starts and lands, a fear,
+-- a stun) takes the skin off: if you're still on your mount, the watcher
+-- sees its buff and puts the skin on again a tenth of a second later.
+mountFrame:RegisterEvent("PLAYER_CONTROL_LOST")
+mountFrame:RegisterEvent("PLAYER_CONTROL_GAINED")
+mountFrame:SetScript("OnEvent", function()
+	if watch.active then
+		StopSkin()
+		watch.real = nil
+		Notify()
 	end
 end)
 

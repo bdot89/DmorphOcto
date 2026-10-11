@@ -693,6 +693,31 @@ vh.serverMount = 0
 Mock.buffs = {}
 Mock.Tick(0.15)
 check(vh.mount == nil, "dismounting takes the skin off")
+-- A flight path's bird keeps its own look, and nothing is stuck after landing.
+local fortitude = "Interface\\Icons\\Spell_Holy_WordFortitude" -- a long buff
+Mock.buffs = { fortitude }
+Mock.Tick(0.15)
+vh.serverMount, Mock.onTaxi = 1149, true -- flying: the mount field holds the bird
+Mock.Fire("PLAYER_CONTROL_LOST")
+Mock.Tick(0.3)
+check(vh.mount == nil, "a flight path's bird doesn't get your mount skin")
+vh.serverMount, Mock.onTaxi = 0, nil
+Mock.Fire("PLAYER_CONTROL_GAINED")
+Mock.Tick(0.3)
+check(vh.mount == nil and UnitDisplayInfo("player") == vh.display, "and nothing is left on after landing")
+vh.serverMount = 10671
+Mock.Tick(0.3)
+check(vh.mount == nil, "a mount with no new buff gets no skin (nothing would show when you dismount)")
+Mock.buffs = { fortitude, "Interface\\Icons\\Ability_Mount_Undeadhorse" }
+Mock.Tick(0.15)
+check(vh.mount == skin, "once the mount's buff shows, the skin goes on")
+Mock.Fire("PLAYER_CONTROL_GAINED") -- a stun ends while riding
+check(vh.mount == nil, "getting control back takes it off")
+Mock.Tick(0.15)
+check(vh.mount == skin, "and it's back a tick later while you still ride")
+vh.serverMount, Mock.buffs = 0, {}
+Mock.Tick(0.15)
+check(vh.mount == nil, "dismounting takes it off again")
 Mock.Click(DmorphOctoMountFor)
 pickMenu("All my mounts")
 press(Mock.FindButton("Remove skin"))
@@ -1580,29 +1605,51 @@ Mock.Fire("TAXIMAP_CLOSED")
 TaxiFrame, TaxiFrame_OnEvent, SpellBookFrame = nil, nil, nil
 
 ------------------------------------------------------------------------------
--- Chat language: a race morph to the other faction changes the game's
--- default language to one the character doesn't know.
+-- Chat language: a race morph makes the game speak and list the morph's
+-- languages, which the character may not know ("You don't know that language").
 
-newClient(1478) -- an Undead (the user's report)
+newClient(1478) -- a Troll (Horde)
 DmorphOctoDB = nil
-Mock.languages, Mock.faction = { "Orcish", "Gutterspeak" }, "Horde"
+Mock.faction = "Horde"
+-- What the game lists and speaks by default for the race it thinks you are.
+local LANGUAGES = {
+	[1478] = { { "Orcish", "Troll" }, "Orcish" },
+	[49] = { { "Common" }, "Common" },
+	[1563] = { { "Common", "Gnomish" }, "Common" },
+	[6894] = { { "Orcish", "Goblin" }, "Orcish" },
+}
+Mock.raceLanguages = function()
+	local l = LANGUAGES[vh.display] or LANGUAGES[1478]
+	return l[1], l[2]
+end
 loadUI()
 say(".race human")
-Mock.defaultLanguage = "Common" -- what the game now thinks your race speaks
 SendChatMessage("hello", "SAY")
 check(Mock.lastLanguage == "Orcish" and Mock.sent[table.getn(Mock.sent)] == "hello",
 	"as a Human morph, /say goes out in Orcish instead of Common")
 SendChatMessage("hello", "GUILD", "Common")
 check(Mock.lastLanguage == "Orcish", "a language you don't know is swapped for one you do")
-SendChatMessage("hello", "SAY", "Gutterspeak")
-check(Mock.lastLanguage == "Gutterspeak", "a language you picked and know is kept")
+say(".race gnome")
+SendChatMessage("hello", "SAY")
+check(Mock.lastLanguage == "Orcish", "as a Gnome morph too, though the game lists Common and Gnomish")
+SendChatMessage("hello", "SAY", "Gnomish")
+check(Mock.lastLanguage == "Orcish", "a Gnome's language picked from the game's menu isn't sent either")
+say(".race goblin")
+SendChatMessage("hello", "SAY")
+check(Mock.lastLanguage == "Orcish", "a Goblin morph speaks Orcish, the Horde's language you know")
+SendChatMessage("hello", "SAY", "Troll")
+check(Mock.lastLanguage == "Troll", "a language you picked and know is kept")
 SendChatMessage("waves", "EMOTE")
 check(Mock.lastLanguage == nil, "emotes aren't spoken, so they're left alone")
-Mock.defaultLanguage = nil
+loadUI() -- VanillaHelpers keeps the morph over a /reload
+Mock.Tick(0.6)
+SendChatMessage("hello", "SAY", "Goblin")
+check(vh.display == 6894 and Mock.lastLanguage == "Orcish" and DmorphOctoDB.languages[2] == "Troll",
+	"after a /reload your own languages are read again with your own race showing")
 say(".demorph")
 SendChatMessage("hello", "SAY")
 check(Mock.lastLanguage == "Orcish", "unmorphed, your own default is used")
-Mock.languages, Mock.faction, Mock.defaultLanguage = nil, nil, nil
+Mock.raceLanguages, Mock.faction = nil, nil
 
 ------------------------------------------------------------------------------
 -- Without VanillaHelpers, everything explains what is missing and stays local.
