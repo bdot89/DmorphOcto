@@ -1737,6 +1737,9 @@ slash("glow mainhand 1900")
 check(contains(lastChat(), "DmorphHelper.dll isn't loaded"), ".glow without the DLL says it's missing")
 slash("dmorph status")
 check(contains(allChat(), "DmorphHelper.dll is not loaded"), "status says the helper isn't loaded")
+slash("dmorph check")
+check(contains(allChat(), "DmorphHelper: |cffaaaaaanot running") and contains(allChat(), "Install DmorphHelper.bat"),
+	"the check says to double-click the installer")
 slash("")
 Mock.Click(DmorphOctoTabGlows)
 check(contains(DmorphOctoGlowState.text, "isn't loaded"), "the Glows tab says the helper isn't loaded")
@@ -1756,6 +1759,14 @@ loadWithHelper()
 Mock.Tick(1.1)
 slash("dmorph status")
 check(contains(allChat(), "DmorphHelper v1 is loaded"), "status shows the helper's version")
+slash("dmorph check")
+check(contains(allChat(), "DmorphHelper: |cff33ff99OK"), "the check says the helper runs")
+local currentVersion = DmorphHelper_Version
+DmorphHelper_Version = function() return 0 end
+slash("dmorph check")
+check(contains(allChat(), "An older DmorphHelper (v0)") and contains(allChat(), "Install DmorphHelper.bat"),
+	"an older DLL in the game folder is flagged, with how to update it")
+DmorphHelper_Version = currentVersion
 slash("")
 Mock.Click(DmorphOctoTabGlows)
 check(DmorphOctoGlowState.text == "Main hand: your own (Fiery Weapon)", "the tab shows your own glow by name")

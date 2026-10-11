@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.3.0"
+local VERSION = "2.3.1"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1382,9 +1382,16 @@ end
 -- enchant, a loading screen), so a watcher puts the chosen ones back once a
 -- second. Whatever it reads that it didn't write is the real value, kept so
 -- "your own" can put it back.
+-- How to install it: the .bat in the addon folder copies the DLL into the
+-- game folder and adds it to dlls.txt (an addon can't write files there).
+local INSTALL_HELPER = "Close the game, double-click \"Install DmorphHelper.bat\" in Interface\\AddOns\\DmorphOcto, "
+	.. "then start the game from OctoLauncher."
 local MISSING_HELPER = "DmorphHelper.dll isn't loaded, so weapon glows and real skin, face and hair changes "
-	.. "are unavailable. Close the game, run tools\\install_helper.ps1 from the DmorphOcto folder, and start it again."
+	.. "are unavailable. " .. INSTALL_HELPER
 M.MISSING_HELPER = MISSING_HELPER
+-- The DmorphHelper_Version() the DLL in helper\ reports. An older one in the
+-- game folder (DMorph was updated, the DLL wasn't copied again) is flagged.
+local HELPER_VERSION = 1
 -- Rows 1-5 of the Races tab, in DmorphHelper_GetLook's order.
 local OWN_LOOK_NPC = { "npcSkin", "npcFace", "npcHairStyle", "npcHairColour" }
 
@@ -1410,11 +1417,16 @@ function M.GetSetupReport()
 	else
 		Add("VanillaHelpers", "bad", MissingAPI())
 	end
-	if HasHelper() then
+	local ok, helperVersion = pcall(DmorphHelper_Version)
+	helperVersion = ok and tonumber(helperVersion) or 0
+	if HasHelper() and helperVersion < HELPER_VERSION then
+		Add("DmorphHelper", "bad", "An older DmorphHelper (v" .. helperVersion .. ") is in the game folder; this DMorph "
+			.. "comes with v" .. HELPER_VERSION .. ". " .. INSTALL_HELPER)
+	elseif HasHelper() then
 		Add("DmorphHelper", "ok", "Running: weapon glows and real skin, face and hair work.")
 	else
 		Add("DmorphHelper", "off", "Optional, not running: weapon glows and real skin, face and hair need it. "
-			.. "Close the game and run tools\\install_helper.ps1 in the DmorphOcto folder.")
+			.. INSTALL_HELPER)
 	end
 	if type(C_Item) == "table" then
 		Add("ClassicAPI", "ok", "Running: 3D previews of models work.")
@@ -2237,7 +2249,7 @@ local function ShowStatus()
 		local ok, version = pcall(DmorphHelper_Version)
 		Print("DmorphHelper v" .. tostring(ok and version or "?") .. " is loaded: weapon glows and real skin, face and hair work.")
 	else
-		Print("DmorphHelper.dll is not loaded: weapon glows and real skin, face and hair changes need it (tools\\install_helper.ps1).")
+		Print("DmorphHelper.dll is not loaded: weapon glows and real skin, face and hair changes need it. " .. INSTALL_HELPER)
 	end
 	if nativeRace then
 		Print("Your character: " .. M.DescribeBody(nativeRace, nativeGender) .. ".")

@@ -6,7 +6,7 @@
 
 **Become any creature, ride any mount, wear any item** · WoW 1.12 · OctoWoW
 
-![Version](https://img.shields.io/badge/version-2.3.0-33ff99?style=flat-square)
+![Version](https://img.shields.io/badge/version-2.3.1-33ff99?style=flat-square)
 ![WoW 1.12.1](https://img.shields.io/badge/WoW-1.12.1-c79c6e?style=flat-square)
 ![Lua 5.0](https://img.shields.io/badge/Lua-5.0-2c2d72?style=flat-square)
 ![Models](https://img.shields.io/badge/models-16%2C000%2B-b46bff?style=flat-square)
@@ -80,15 +80,15 @@ More creature morphs:
 
 ### DmorphHelper: weapon glows and real skin, face and hair
 
-VanillaHelpers can't change weapon glows or your own skin, face and hair, so DMorph comes with a small extra DLL for that, **DmorphHelper** (`helper\DmorphHelper.dll`). To install it, close the game, then in the `DmorphOcto` folder run:
+VanillaHelpers can't change weapon glows or your own skin, face and hair, so DMorph comes with a small extra DLL for that, **DmorphHelper** (`helper\DmorphHelper.dll`). An addon can't put files into the game folder itself, so it takes one double-click:
 
-```
-powershell -ExecutionPolicy Bypass -File tools\install_helper.ps1
-```
+1. Close the game.
+2. In `Interface\AddOns\DmorphOcto`, double-click **`Install DmorphHelper.bat`**. It finds your game folder, copies the DLL next to `WoW.exe` and adds it to `dlls.txt` after `VanillaHelpers.dll` (OctoLauncher keeps that line). If Windows asks whether to run it, choose *Run*.
+3. Start the game from OctoLauncher. The window's **Setup** button (or `/dmorph check`) shows *DmorphHelper: OK*.
 
-It copies the DLL into your game folder and adds it to `dlls.txt` after `VanillaHelpers.dll` (OctoLauncher keeps that line). Start the game as usual: `/dmorph status` should say *DmorphHelper v1 is loaded*. Then run `tools\update_from_game.ps1` (below) once, which reads the glows and the skin, face and hair choices from your game files.
+**After updating DMorph, double-click it again.** It only copies the DLL when it changed, and the Setup check tells you when the one in your game folder is older than the one DMorph came with.
 
-**DmorphHelper is new and hasn't been tried in game yet.** It only switches itself on when it finds VanillaHelpers' hooks at the exact game addresses it uses, and does nothing otherwise. If the game won't start, or something looks wrong, take it out again with `tools\install_helper.ps1 -Remove` (or delete the `DmorphHelper.dll` line from `dlls.txt`). Everything else in DMorph works without it.
+DmorphHelper only switches itself on when it finds VanillaHelpers' hooks at the exact game addresses it uses, and does nothing otherwise. If the game won't start, or something looks wrong, double-click **`Remove DmorphHelper.bat`** (or delete the `DmorphHelper.dll` line from `dlls.txt`). Everything else in DMorph works without it.
 
 Optional: [ClassicAPI](https://github.com/brues-code/ClassicAPI) (`ClassicAPI.dll` in `dlls.txt`) for the 3D previews.
 Without it the Models tab is a plain list and everything else works the same.
