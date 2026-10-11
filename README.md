@@ -1,6 +1,6 @@
 # DMorph for OctoWoW
 
-Become any creature, ride any mount, wear any item. A morph window for WoW 1.12 (OctoWoW), version 2.8.3.
+Become any creature, ride any mount, wear any item. A morph window for WoW 1.12 (OctoWoW), version 2.8.4.
 
 Morphs only change what you and other DMorph users see. Everyone else, and the server, sees your real character.
 
@@ -43,7 +43,7 @@ You can skip this step: everything else still works, just without glows, real lo
 1. Start the game from **OctoLauncher** (not WoW.exe).
 2. Click the polymorph button by the minimap, or type **/dmorph**
 3. Check the **Setup** button at the bottom left of the window:
-   - Green "Setup OK": you're ready. It also shows which DmorphHelper version is running (for example "Helper v6").
+   - Green "Setup OK": you're ready. It also shows which DmorphHelper version is running (for example "Helper v7").
    - Yellow "Old helper": close the game and run Install DmorphHelper.bat again.
    - Red "Setup: fix me": click it. It tells you what isn't working and how to fix it.
 
@@ -64,6 +64,7 @@ You can skip this step: everything else still works, just without glows, real lo
 - **The game won't start after installing:** double-click **Remove DmorphHelper.bat** in the DmorphOcto folder.
 - **DMorph doesn't show in game:** check the folder name and place (Step 2), and that DMorph is ticked in the AddOns list on the character screen.
 - **You turned invisible:** that model can't show in your game. Press Reset model.
+- **The game crashes with ERROR #132 at 0x0069C... (often with UnitXP_SP3):** a view distance (farClip) above 777 overflows a buffer in the game. DmorphHelper (v7) makes that buffer big enough; without it, type /console farclip 777
 
 
 ## What it does

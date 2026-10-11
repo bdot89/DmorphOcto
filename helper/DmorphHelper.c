@@ -41,7 +41,7 @@
 #define GAME_FASTCALL __attribute__((fastcall))
 #define GAME_THISCALL __attribute__((thiscall))
 
-#define HELPER_VERSION 6
+#define HELPER_VERSION 7
 
 // Game functions, build 5875 (from VanillaHelpers' Offsets.h).
 #define FUN_INVALID_FUNCTION_PTR_CHECK 0x42A320
@@ -64,7 +64,12 @@
 #define LUA_IS_STRING 0x6F3510
 #define LUA_TO_STRING 0x6F3690
 #define LUA_ERROR 0x6F4940
-#define HIGHEST_ADDRESS 0x704CD0
+// TSGrowableArray<uint32_t> { alloc, count, data, chunk } of the map cells a
+// line crosses (mouse picking, line of sight), and its reserve function
+// (thiscall: array, how many more, round up; ret 8).
+#define WORLD_LINE_CELLS 0xC962C0
+#define FUN_GROWABLE_ARRAY_RESERVE 0x4291F0
+#define HIGHEST_ADDRESS 0xC962D0
 
 // Descriptor fields, as indexes into a unit's uint32 field array.
 #define OBJECT_FIELD_SCALE_X 0x4 // a float
@@ -399,8 +404,26 @@ static int GAME_FASTCALL Script_Rebuild(void *L) {
     return 0;
 }
 
+// The game lists the map cells a line crosses (the mouse pointer's line into
+// the world, line of sight) in a buffer it sizes once for 2048 cells and
+// never checks. The pointer's line reaches as far as your view distance, so
+// with a long one (farClip above the game's 777, as launchers allow) it runs
+// past the end and the game crashes (ERROR #132 at 0x0069C6DA..0x0069C8A9).
+// The game's own reserve function makes it big enough for a line across a
+// whole continent (64 tiles of 128 cells, up to 4 entries per cell).
+#define WORLD_LINE_CELLS_WANTED 0x10000
+typedef void(GAME_THISCALL *ArrayReserve_t)(void *array, uint32_t more, uint32_t roundUp);
+
+static void GrowWorldLineCells(void) {
+    uint32_t *cells = (uint32_t *)WORLD_LINE_CELLS;
+    if (cells[0] < WORLD_LINE_CELLS_WANTED && cells[1] < WORLD_LINE_CELLS_WANTED) {
+        ((ArrayReserve_t)FUN_GROWABLE_ARRAY_RESERVE)(cells, WORLD_LINE_CELLS_WANTED - cells[1], 1);
+    }
+}
+
 static void GAME_FASTCALL LoadScriptFunctions_h(void) {
     LoadScriptFunctions_o();
+    GrowWorldLineCells();
     RegisterFunction("DmorphHelper_Version", (uintptr_t)&Script_Version);
     RegisterFunction("DmorphHelper_GetItemEnchants", (uintptr_t)&Script_GetItemEnchants);
     RegisterFunction("DmorphHelper_SetItemEnchants", (uintptr_t)&Script_SetItemEnchants);
