@@ -82,6 +82,37 @@ function Test-GameFile([string]$path) {
   return $files.Has($path) -or $files.Has($path + ".blp")
 }
 
+# When a table can't be read, a line to send in: per field its smallest and
+# largest value, how many different values and texts it holds, and with $ids,
+# how many of its non-zero values are keys of $ids. Then the first two rows.
+function Show-Table($table, [string]$label, $ids) {
+  $parts = @(); $texts = @{}
+  for ($f = 0; $f -lt $table.Fields; $f++) {
+    $min = [int]::MaxValue; $max = [int]::MinValue; $seen = @{}; $hits = 0; $nonZero = 0
+    for ($r = 0; $r -lt $table.Count; $r++) {
+      $v = $table.Int($r, $f)
+      if ($v -lt $min) { $min = $v }
+      if ($v -gt $max) { $max = $v }
+      $seen[$v] = $true
+      if ($v -ne 0) { $nonZero++; if ($ids -and $ids.ContainsKey($v)) { $hits++ } }
+    }
+    $part = "{0}:{1}..{2}/{3}" -f $f, $min, $max, $seen.Count
+    $t = Get-TextCount $table $f
+    if ($t -ge 3 -and $f -gt 0) { $part += " text$t"; $texts[$f] = $true }
+    if ($ids) { $part += " v$hits/$nonZero" }
+    $parts += $part
+  }
+  Write-Output ("report {0}: {1} rows, {2} fields of {3} bytes: {4}" -f $label, $table.Count, $table.Fields, $table.Size, ($parts -join "; "))
+  for ($r = 0; $r -lt [Math]::Min(2, $table.Count); $r++) {
+    $values = @()
+    for ($f = 0; $f -lt $table.Fields; $f++) {
+      $t = $table.TryStr($r, $f)
+      if ($t -and $texts.ContainsKey($f)) { $values += """$t""" } else { $values += $table.Int($r, $f) }
+    }
+    Write-Output ("report {0} row {1}: {2}" -f $label, $r, ($values -join ", "))
+  }
+}
+
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 
 # Glows ---------------------------------------------------------------------------
@@ -89,8 +120,9 @@ $utf8 = New-Object System.Text.UTF8Encoding($false)
 # 1.12.1 layouts: SpellItemEnchantment 0 ID, 1-12 effects, 13-21 name (8
 # locales and a mask), 22 ItemVisual, 23 flags. ItemVisuals 0 ID, 1-5
 # ItemVisualEffects IDs. ItemVisualEffects 0 ID, 1 model. The name is the text
-# field most rows fill; the visual is the first field after the last text field
-# whose values are all 0 or ItemVisuals IDs.
+# field with the most different texts. The visual is field 22 if at least 4
+# in 5 of its non-zero values are ItemVisuals IDs (some may point at a visual
+# the client doesn't have), else the field after the name that does best.
 $glows = New-Object System.Collections.ArrayList
 $glowNote = ""
 $enchants = Read-Newest "DBFilesClient\SpellItemEnchantment.dbc"
@@ -114,33 +146,45 @@ if (-not ($enchants -and $visuals -and $effects)) {
     $visualEffects[$visuals.Int($r, 0)] = $list
   }
 
-  $nameField = -1; $best = 0; $lastText = 0
+  $nameField = -1; $best = 2
   for ($f = 1; $f -lt $enchants.Fields; $f++) {
     $n = Get-TextCount $enchants $f
     if ($n -gt $best) { $best = $n; $nameField = $f }
-    if ($n -ge [Math]::Max(2, $enchants.Count / 5)) { $lastText = $f }
   }
-  if ($best -lt [Math]::Max(2, $enchants.Count / 5)) { $nameField = -1 }
-  $visualField = -1
-  for ($f = $lastText + 1; $f -lt $enchants.Fields -and $visualField -lt 0; $f++) {
-    $ok = $true; $seen = @{}
+  # How many different ItemVisuals IDs a field holds, or 0 if fewer than 4 in
+  # 5 of its non-zero values are ItemVisuals IDs.
+  function Get-VisualScore([int]$f) {
+    $nonZero = 0; $hits = 0; $seen = @{}
     for ($r = 0; $r -lt $enchants.Count; $r++) {
       $v = $enchants.Int($r, $f)
       if ($v -eq 0) { continue }
-      if (-not $visualEffects.ContainsKey($v)) { $ok = $false; break }
-      $seen[$v] = $true
+      $nonZero++
+      if ($visualEffects.ContainsKey($v)) { $hits++; $seen[$v] = $true }
     }
-    if ($ok -and $seen.Count -ge 3) { $visualField = $f }
+    if ($hits -lt 0.8 * $nonZero -or $seen.Count -lt 3) { return 0 }
+    return $seen.Count
+  }
+  $visualField = -1
+  if ($enchants.Fields -gt 22 -and $nameField -ne 22 -and (Get-VisualScore 22) -gt 0) {
+    $visualField = 22
+  } else {
+    $bestScore = 0
+    for ($f = [Math]::Max(1, $nameField + 1); $f -lt $enchants.Fields; $f++) {
+      $score = Get-VisualScore $f
+      if ($score -gt $bestScore) { $bestScore = $score; $visualField = $f }
+    }
   }
 
   if ($visualField -lt 0) {
-    Write-Output "warning: couldn't find the ItemVisual field in SpellItemEnchantment.dbc, so no glows"
+    Write-Output "warning: couldn't find the ItemVisual field in SpellItemEnchantment.dbc, so no glows. Please send these lines:"
+    Show-Table $enchants "SpellItemEnchantment" $visualEffects
+    Show-Table $visuals "ItemVisuals" $null
   } else {
     # visual -> @{ enchant (lowest ID); names }
     $byVisual = @{}; $withGlow = 0
     for ($r = 0; $r -lt $enchants.Count; $r++) {
       $v = $enchants.Int($r, $visualField)
-      if ($v -eq 0) { continue }
+      if ($v -eq 0 -or -not $visualEffects.ContainsKey($v)) { continue }
       $withGlow++
       $id = $enchants.Int($r, 0)
       $name = ""
@@ -201,37 +245,57 @@ $sections = Read-Newest "DBFilesClient\CharSections.dbc"
 $hairGeo = Read-Newest "DBFilesClient\CharHairGeosets.dbc"
 $facialGeo = Read-Newest "DBFilesClient\CharacterFacialHairStyles.dbc"
 
-function Find-Columns($table) {
-  if (-not $table -or $table.Fields -lt 4) { return $null }
-  $text = -1
-  for ($f = 4; $f -lt $table.Fields; $f++) {
-    if ((Get-TextCount $table $f) -ge $table.Count / 2) { $text = $f; break }
-  }
-  if ($text -lt 0) { return $null }
-  $ints = @()
-  for ($f = 4; $f -lt $table.Fields; $f++) { if ($f -lt $text -or $f -gt $text + 2) { $ints += $f } }
-  if ($ints.Count -lt 3) { return $null }
-  if ($text -eq 4) { $c = @{ flags = $ints[0]; variation = $ints[1]; colour = $ints[2] } }
-  else { $c = @{ variation = $ints[0]; colour = $ints[1]; flags = $ints[2] } }
-  $c.text = $text
-  # Sections 0-4 and genders 0-1; skin rows have variation 0 (else the two are
-  # the other way round).
-  $bad = 0; $skins = 0; $zeroVar = 0; $zeroCol = 0
+# How well a CharSections layout reads: $null unless at least 9 in 10 rows
+# have a section 0-4, a gender 0-1 and a variation and colour 0-255, at least
+# 3 in 10 have a texture, and the skin rows have variation 0 (a layout with
+# the two the other way round is swapped).
+function Test-Layout($table, $c) {
+  if ($table.Fields -le [Math]::Max($c.flags, $c.text + 2)) { return $null }
+  $good = 0; $textRows = 0; $skins = 0; $zeroVar = 0; $zeroCol = 0
   for ($r = 0; $r -lt $table.Count; $r++) {
-    $s = $table.Int($r, 3)
-    if ($s -lt 0 -or $s -gt 4 -or $table.Int($r, 2) -lt 0 -or $table.Int($r, 2) -gt 1) { $bad++ }
+    $s = $table.Int($r, 3); $g = $table.Int($r, 2); $v = $table.Int($r, $c.variation); $k = $table.Int($r, $c.colour)
+    if ($s -ge 0 -and $s -le 4 -and $g -ge 0 -and $g -le 1 -and $v -ge 0 -and $v -le 255 -and $k -ge 0 -and $k -le 255) { $good++ }
+    if ($null -ne $table.TryStr($r, $c.text)) { $textRows++ }
     if ($s -eq 0) {
       $skins++
-      if ($table.Int($r, $c.variation) -eq 0) { $zeroVar++ }
-      if ($table.Int($r, $c.colour) -eq 0) { $zeroCol++ }
+      if ($v -eq 0) { $zeroVar++ }
+      if ($k -eq 0) { $zeroCol++ }
     }
   }
-  if ($bad -gt $table.Count / 20 -or $skins -eq 0) { return $null }
-  if ($zeroVar -lt $skins * 0.8) {
-    if ($zeroCol -lt $skins * 0.8) { return $null }
+  if ($good -lt 0.9 * $table.Count -or $textRows -lt 0.3 * $table.Count -or $skins -eq 0) { return $null }
+  if ((Get-TextCount $table $c.text) -lt 10) { return $null }
+  $c = $c.Clone()
+  if ($zeroVar -lt 0.8 * $skins) {
+    if ($zeroCol -lt 0.8 * $skins) { return $null }
     $v = $c.variation; $c.variation = $c.colour; $c.colour = $v
   }
   return $c
+}
+
+# The 1.12.1 layout, then the later one (textures before the flags, variation
+# and colour), then whatever the texts say.
+function Find-Columns($table) {
+  if (-not $table -or $table.Fields -lt 7 -or $table.Count -eq 0) { return $null }
+  $layouts = @(
+    @{ variation = 4; colour = 5; text = 6; flags = 9 },
+    @{ text = 4; flags = 7; variation = 8; colour = 9 }
+  )
+  for ($f = 4; $f -lt $table.Fields; $f++) {
+    if ((Get-TextCount $table $f) -ge 10) {
+      $ints = @()
+      for ($i = 4; $i -lt $table.Fields; $i++) { if ($i -lt $f -or $i -gt $f + 2) { $ints += $i } }
+      if ($ints.Count -ge 3) {
+        if ($f -eq 4) { $layouts += @{ flags = $ints[0]; variation = $ints[1]; colour = $ints[2]; text = $f } }
+        else { $layouts += @{ variation = $ints[0]; colour = $ints[1]; flags = $ints[2]; text = $f } }
+      }
+      break
+    }
+  }
+  foreach ($c in $layouts) {
+    $found = Test-Layout $table $c
+    if ($found) { return $found }
+  }
+  return $null
 }
 
 # Race, gender and variation columns of CharHairGeosets (after an ID) or
@@ -240,28 +304,25 @@ function Find-Columns($table) {
 function Find-Variations($table) {
   if (-not $table -or $table.Count -eq 0) { return $null }
   for ($c = 0; $c -le 1 -and $c + 2 -lt $table.Fields; $c++) {
-    $ok = $true; $seen = @{}
+    $list = @{}; $good = 0
     for ($r = 0; $r -lt $table.Count; $r++) {
       $race = $table.Int($r, $c); $g = $table.Int($r, $c + 1); $v = $table.Int($r, $c + 2)
-      if ($race -lt 1 -or $race -gt 63 -or $g -lt 0 -or $g -gt 1 -or $v -lt 0 -or $v -gt 99) { $ok = $false; break }
-      $seen["$race`:$g`:$v"] = $true
+      if ($race -lt 1 -or $race -gt 63 -or $g -lt 0 -or $g -gt 1 -or $v -lt 0 -or $v -gt 99) { continue }
+      $good++
+      if (-not $list.ContainsKey("$race`:$g")) { $list["$race`:$g"] = @{} }
+      $list["$race`:$g"][$v] = $true
     }
-    if ($ok -and $seen.Count -ge $table.Count * 0.9) {
-      $list = @{}
-      for ($r = 0; $r -lt $table.Count; $r++) {
-        $key = "$($table.Int($r, $c)):$($table.Int($r, $c + 1))"
-        if (-not $list.ContainsKey($key)) { $list[$key] = @{} }
-        $list[$key][$table.Int($r, $c + 2)] = $true
-      }
-      return $list
-    }
+    $distinct = 0
+    foreach ($k in $list.Keys) { $distinct += $list[$k].Count }
+    if ($good -ge $table.Count * 0.95 -and $distinct -ge $table.Count * 0.9) { return $list }
   }
   return $null
 }
 
 $cols = Find-Columns $sections
 if (-not $cols) {
-  Write-Output "warning: CharSections.dbc is missing or doesn't look as expected, so no character options"
+  Write-Output "warning: CharSections.dbc is missing or doesn't look as expected, so no character options. Please send these lines:"
+  if ($sections) { Show-Table $sections "CharSections" $null }
 } else {
   # Rows whose texture isn't in the MPQs would draw white; leave them out,
   # unless that's more than a quarter of the rows (then the check is wrong).

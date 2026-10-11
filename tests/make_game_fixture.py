@@ -8,13 +8,15 @@ Then run tools/build_models.ps1, tools/build_items.ps1 and tools/build_options.p
 item_displays.tsv, turtle_items.tsv, empty.tsv) and every output path pointed outside
 Data/ (PowerShell 7 works on Linux).
 Expected: HiddenModels "2029,4528,9999,11121", HiddenItems "2,3,11", ModelTags
-mounts 90001-90005 (named Riding...) and 90010-90011 (Spectral Tiger, by its rider
-point); with --mostly-empty the model check turns itself off, with --no-rider-points
-the rider point rule does (only 90001-90005 are mounts).
+mounts 90001-90005 (named Riding...), 90010-90011 (Spectral Tiger, by its rider
+point) and 90012 (a shop mount, by its mount spell's name), not 90013 (a wolf named
+like a mount spell, no rider point); with --mostly-empty the model check turns itself
+off, with --no-rider-points the rider point rule does (90001-90005 and 90012 are mounts).
 Glows: visuals 25 (enchant 1900, "Crusader; Holy Power"), 26 (803), 28 (20) and 29
 (30, no name), not 27 (its effect model is missing). CharOptions: "1:0" skins 0-3
 (3 NPC-only; 4 is left out, its texture is missing), faces [0]={0,1} [1]..[3]={0},
-hair styles 0-2, hair colours [0]={0,1} [1]={0}, facial hair 0-2; "1:1" and "2:0" too.
+hair styles 0-2, hair colours [0]={0,1} [1]={0}, facial hair 0-2; "1:1", "2:0" and "2:1" (hair
+styles 0-3 with colours 0-9, all sharing one texture) too.
 """
 import os
 import struct
@@ -176,6 +178,12 @@ def main():
         base["Creature\\RidingBeast%d\\RidingBeast%d.m2" % (k, k)] = m2(rider=None if no_rider else True)
     model_rows.append((60, 0, "Creature\\SpectralTiger\\SpectralTiger.mdx"))
     base["Creature\\SpectralTiger\\SpectralTiger.m2"] = m2(rider=True, pad=9000)
+    # A shop mount only its mount spell names, and a wild wolf that shares a
+    # mount spell's name but has no rider point.
+    model_rows.append((61, 0, "Creature\\ShopCat\\ShopCat.mdx"))
+    base["Creature\\ShopCat\\ShopCat.m2"] = m2(rider=True)
+    model_rows.append((62, 0, "Creature\\Wolf\\Wolf.mdx"))
+    base["Creature\\Wolf\\Wolf.m2"] = m2(rider=False)
 
     # Displays: 0 ID, 1 model, 3 extra, 6-8 skins.
     display_rows = [
@@ -193,7 +201,7 @@ def main():
         display_rows.append([80000 + k, k, 0, 0, 0, 0, "Beast%dSkin" % k])
     for k in range(1, 6):
         display_rows.append([90000 + k, 50 + k])
-    display_rows += [[90010, 60], [90011, 60]]
+    display_rows += [[90010, 60], [90011, 60], [90012, 61], [90013, 62]]
     extra = [[1, 1, 1, 3, 2, 4, 5, 0] + [0] * 10 + [0, ""]]
     patch["DBFilesClient\\CreatureModelData.dbc"] = dbc(model_rows, 16)
     patch["DBFilesClient\\CreatureDisplayInfo.dbc"] = dbc(display_rows, 11)
@@ -215,6 +223,17 @@ def main():
     base["Item\\TextureComponents\\TorsoUpperTexture\\Plate_Chest_A_U.blp"] = b"BLP2"
     base["Item\\ObjectComponents\\Head\\Helm_Plate_A_OrM.m2"] = m2()
 
+    # Spell.dbc (1.12.1): 0 ID, 91-93 auras, 106-108 misc values, 120 name.
+    # The 1.12 mount spells the tool checks the layout on, and a shop mount.
+    def spell(sid, name, aura):
+        row = [0] * 173
+        row[0], row[91], row[120] = sid, aura, name
+        return row
+    mounts = [(458, "Brown Horse"), (470, "Black Stallion"), (472, "Pinto"), (580, "Timber Wolf"),
+              (6648, "Chestnut Mare"), (6653, "Dire Wolf"), (6654, "Brown Wolf"), (6777, "Gray Ram"),
+              (6898, "White Ram"), (6899, "Brown Ram"), (8394, "Striped Frostsaber"), (90000, "Crimson Spectral Tiger")]
+    patch["DBFilesClient\\Spell.dbc"] = dbc([spell(i, n, 78) for i, n in mounts] + [spell(133, "Fireball", 3)], 173)
+
     # Glows. SpellItemEnchantment (1.12.1): 0 ID, 1-12 effects, 13-20 name, 21
     # locale mask, 22 ItemVisual, 23 flags.
     def enchant(eid, name, visual, flags=0):
@@ -222,7 +241,8 @@ def main():
     patch["DBFilesClient\\SpellItemEnchantment.dbc"] = dbc([
         enchant(1900, "Crusader", 25), enchant(1901, "Holy Power", 25), enchant(803, "Fiery Weapon", 26, 1),
         enchant(900, "Ghost Glow", 27), enchant(10, "+1 Agility", 0), enchant(20, "Frost", 28), enchant(30, "", 29),
-    ], 24)
+        enchant(40, "Broken Glow", 999),  # a visual the client doesn't have: skipped, not a reason to give up
+    ] + [enchant(100 + k, "+%d Stamina" % k, 0) for k in range(20)], 24)
     patch["DBFilesClient\\ItemVisuals.dbc"] = dbc([[25, 1], [26, 2, 3], [27, 3], [28, 4], [29, 1]], 6)
     patch["DBFilesClient\\ItemVisualEffects.dbc"] = dbc([
         [1, "Spells\\Enchantments\\HolyGlow.mdx"], [2, "Spells\\Enchantments\\FireGlow.mdx"],
@@ -265,6 +285,14 @@ def main():
     section(2, 0, 1, 0, 0)
     section(2, 0, 1, 0, 1)
     section(2, 0, 3, 0, 0)
+    # Orc women share one hair texture for every style and colour, as hair
+    # often does: few different texture names in the table.
+    section(2, 1, 0, 0, 0)
+    section(2, 1, 1, 0, 0)
+    for style in range(4):
+        for colour in range(10):
+            sections.append([len(sections) + 1, 2, 1, 3, style, colour, "Character\\Shared\\Hair.blp", "", "", 1])
+    base["Character\\Shared\\Hair.blp"] = b"BLP2"
     patch["DBFilesClient\\CharSections.dbc"] = dbc(sections, 10)
     hair = [(1, 0, 0), (1, 0, 1), (1, 0, 2), (1, 1, 0), (2, 0, 0), (2, 0, 1)]
     patch["DBFilesClient\\CharHairGeosets.dbc"] = dbc([[i + 1, r, g, v, v, 0] for i, (r, g, v) in enumerate(hair)], 6)
@@ -276,7 +304,8 @@ def main():
     write_mpq(os.path.join(data, "patch.MPQ"), patch, compress={"DBFilesClient\\CreatureDisplayInfo.dbc"})
 
     # Inputs that normally come from the repository.
-    named = [(4527, "Thrall"), (11121, "Ragnaros"), (2029, "Edwin VanCleef"), (4528, "Old Thing"), (9999, "Not In Client")]
+    named = [(4527, "Thrall"), (11121, "Ragnaros"), (2029, "Edwin VanCleef"), (4528, "Old Thing"), (9999, "Not In Client"),
+             (90012, "Crimson Spectral Tiger"), (90013, "Timber Wolf")]
     named += [(70000 + k, "Beast %d" % k) for k in range(10, 40)]
     with open(os.path.join(out, "Creatures.lua"), "w") as f:
         f.write("DmorphOcto_CreatureData = [[\n")
