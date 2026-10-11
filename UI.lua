@@ -34,7 +34,10 @@ local REVEAL = 0.45
 -- has finished can mix the two looks' textures. Clicks closer than this wait.
 local GATE = 0.35
 local MIN_SCALE, MAX_SCALE = 0.6, 1.6
-local MENU_ROWS, MENU_WIDTH = 14, 170
+-- Zooming the character: how far it comes towards you (model units, about a
+-- yard each), per mouse wheel notch and at most.
+local ZOOM_STEP, ZOOM_MIN, ZOOM_MAX = 0.3, -1.5, 3
+local MENU_ROWS, MENU_WIDTH = 20, 170
 local WHITE = "Interface\\Buttons\\WHITE8X8"
 local EDGE = "Interface\\Tooltips\\UI-Tooltip-Border"
 local RACE_ICONS_FILE = "Interface\\Glues\\CharacterCreate\\UI-CharacterCreate-Races"
@@ -156,6 +159,18 @@ local function Prefs()
 	end
 	if not M.QUALITY_FILTERS[p.setQuality] then
 		p.setQuality = 1
+	end
+	-- The item kind per slot (cloth, dagger, ...), and the sets' armour.
+	if type(p.itemTypes) ~= "table" then
+		p.itemTypes = {}
+	end
+	for slot, kind in pairs(p.itemTypes) do
+		if not (M.SLOT_NAMES[slot] and M.ITEM_TYPE_NAMES[kind]) then
+			p.itemTypes[slot] = nil
+		end
+	end
+	if not M.ITEM_TYPE_NAMES[p.setType or 0] then
+		p.setType = nil
 	end
 	if not FAV_FILTERS[p.favFilter] then
 		p.favFilter = 1
@@ -293,7 +308,7 @@ local function OpenMenu(anchor, options, pick, above)
 		return
 	end
 	menu.anchor, menu.pick = anchor, pick
-	local count = table.getn(options)
+	local count = math.min(table.getn(options), MENU_ROWS)
 	for i = 1, MENU_ROWS do
 		local row, option = menu.rows[i], options[i]
 		if option then
@@ -364,13 +379,19 @@ end
 -- A scrolling list of LIST_ROWS rows over a FauxScrollFrame. fill(row, index)
 -- draws entry `index` (row.text, row.info), click(index, mouseButton) handles
 -- a click, enter(index, row) a hover. infoWidth is the right-hand column.
-local function List(parent, name, x, y, infoWidth, fill, click, enter, width)
+local function List(parent, name, x, y, infoWidth, fill, click, enter, width, rows)
 	local list = { rows = {}, count = 0 }
+	local LIST_ROWS = rows or LIST_ROWS
 	width = width or LIST_WIDTH
 	local scroll = CreateFrame("ScrollFrame", name, parent, "FauxScrollFrameTemplate")
 	scroll:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
 	scroll:SetWidth(width)
 	scroll:SetHeight(LIST_ROWS * ROW_HEIGHT)
+	-- A dark track behind the scroll bar, so it reads as one.
+	local track = scroll:CreateTexture(nil, "BACKGROUND")
+	track:SetTexture(0, 0, 0, 0.45)
+	track:SetPoint("TOPLEFT", getglobal(name .. "ScrollBar"), "TOPLEFT", 2, 16)
+	track:SetPoint("BOTTOMRIGHT", getglobal(name .. "ScrollBar"), "BOTTOMRIGHT", -2, -16)
 
 	function list.Refresh()
 		local offset = FauxScrollFrame_GetOffset(scroll) or 0
@@ -604,11 +625,31 @@ end
 local RequestPreview
 
 -- The new look has loaded behind the backdrop: bring it to the front.
+-- Puts a preview model where the zoom and the panning say. Closer also means
+-- a little lower, so zooming in heads for the face rather than the belt.
+local function ApplyView(model)
+	local p = ui.preview
+	model:SetPosition(p.zoom, p.panX, p.panY - p.zoom * 0.28)
+end
+
+local function Zoom(step)
+	local p = ui.preview
+	p.zoom = math.max(ZOOM_MIN, math.min(ZOOM_MAX, p.zoom + step * ZOOM_STEP))
+	ApplyView(p.models[p.front])
+end
+
+local function ResetView()
+	local p = ui.preview
+	p.zoom, p.panX, p.panY = 0, 0, 0
+	ApplyView(p.models[p.front])
+end
+
 local function SwapPreview()
 	local p = ui.preview
 	p.front = 3 - p.front
 	local front, back = p.models[p.front], p.models[3 - p.front]
 	front:SetRotation(p.rotation)
+	ApplyView(front)
 	front:SetFrameLevel(p.high)
 	back:SetFrameLevel(p.low)
 	back:Hide()
@@ -634,6 +675,7 @@ local function LoadPreview()
 	back:Show()
 	back:SetUnit("player")
 	back:SetRotation(p.rotation)
+	ApplyView(back)
 	Debounce(ui.revealTimer, REVEAL, SwapPreview)
 end
 
@@ -1930,7 +1972,6 @@ end
 -- the main hand, off hand or ranged slot. Needs DmorphHelper.dll.
 
 local glowSlot = 16
-local glowSecond -- clicks pick the second glow (the temporary enchant's place)
 
 local function FilterGlows(keep)
 	local count
@@ -1947,20 +1988,14 @@ local function RefreshGlows()
 			button:UnlockHighlight()
 		end
 	end
-	local picked, real, second = M.GetGlow(glowSlot)
-	local text = M.DescribeGlows(glowSlot)
-	if not picked and real and real > 0 then
+	local picked, real = M.GetGlow(glowSlot)
+	local text = "your own"
+	if picked then
+		text = M.DescribeGlow(picked)
+	elseif real and real > 0 then
 		text = "your own (" .. M.DescribeGlow(real) .. ")"
-		if second then
-			text = text .. " + " .. M.DescribeGlow(second)
-		end
 	end
 	ui.glowState:SetText(M.SLOT_NAMES[glowSlot] .. ": " .. text)
-	if glowSecond then
-		ui.glowWhich:SetText("Picking: 2nd glow")
-	else
-		ui.glowWhich:SetText("Picking: glow")
-	end
 	if M.HasHelper() then
 		ui.glowState:SetTextColor(1, 1, 1)
 	else
@@ -1997,11 +2032,7 @@ local function GlowTooltip(index, row)
 		GameTooltip:AddLine("Effect: " .. all.models[i], 0.8, 0.8, 0.8)
 	end
 	GameTooltip:AddLine("Glow " .. all.visual[i] .. ", shown with enchant " .. all.enchant[i] .. ".", 0.6, 0.6, 0.6)
-	if glowSecond then
-		GameTooltip:AddLine("Click: second glow on your " .. strlower(M.SLOT_NAMES[glowSlot]) .. ".", 0.6, 1, 0.6)
-	else
-		GameTooltip:AddLine("Click: on your " .. strlower(M.SLOT_NAMES[glowSlot]) .. ".", 0.6, 1, 0.6)
-	end
+	GameTooltip:AddLine("Click: on your " .. strlower(M.SLOT_NAMES[glowSlot]) .. ".", 0.6, 1, 0.6)
 	GameTooltip:Show()
 end
 
@@ -2026,34 +2057,18 @@ local function BuildGlowsPage(page)
 		FilterGlows()
 	end)
 	ui.glowCount = Label(page, "", "GameFontDisableSmall", 214, -40, "DmorphOctoGlowCount")
-	ui.glowWhich = Button(page, "Picking: glow", 128, 336, -35, function()
-		glowSecond = not glowSecond
-		RefreshGlows()
-	end, "DmorphOctoGlowWhich")
-	ui.glowWhich:SetScript("OnEnter", function()
-		Tooltip(this, "Glow or second glow", "Switches what a click picks: the weapon's glow, or a second one.",
-			"An experiment: the second goes where a poison's or oil's glow goes, and shows only if the game draws both.")
-	end)
-	ui.glowWhich:SetScript("OnLeave", HideTooltip)
 
 	ui.glowList = List(page, "DmorphOctoGlowList", 8, -62, 80, function(row, index)
 		local all = M.GetGlows()
 		local i = ui.glowResult[index]
 		row.text:SetText(all.name[i])
 		row.info:SetText("glow " .. all.visual[i])
-		local first, _, second = M.GetGlow(glowSlot)
-		if first == all.enchant[i] then
+		if M.GetGlow(glowSlot) == all.enchant[i] then
 			row.tick:Show()
 		end
-		if second == all.enchant[i] then
-			row.star:Show() -- the second glow
-		end
 	end, function(index)
-		local enchant = M.GetGlows().enchant[ui.glowResult[index]]
-		local slot, second = glowSlot, glowSecond
-		Morph(function()
-			return M.SetGlow(slot, enchant, second)
-		end)
+		local all = M.GetGlows()
+		Morph(M.SetGlow, glowSlot, all.enchant[ui.glowResult[index]])
 	end, GlowTooltip)
 	ui.glowEmpty = Label(page, "No glow list yet. Close the game, run tools\\update_from_game.ps1 from the "
 		.. "DmorphOcto folder (it reads every glow from the game files), and start the game again.",
@@ -2062,11 +2077,6 @@ local function BuildGlowsPage(page)
 
 	ui.glowState = Label(page, "", "GameFontHighlightSmall", 10, -336, "DmorphOctoGlowState")
 	Button(page, "No glow", 90, 8, -352, function()
-		if glowSecond then
-			return Morph(function()
-				return M.SetGlow(glowSlot, nil, true)
-			end)
-		end
 		Morph(M.SetGlow, glowSlot, 0)
 	end, "DmorphOctoGlowNone")
 	Button(page, "My own glow", 110, 102, -352, function()
@@ -2077,33 +2087,50 @@ end
 
 -- Items tab -------------------------------------------------------------------------
 
-local function ItemFilterText(filters, source, quality)
-	if quality > 1 and source > 1 then
-		return M.QUALITY_FILTERS[quality].text .. ", " .. (source == 2 and "1.12" or "new")
-	elseif quality > 1 then
-		return M.QUALITY_FILTERS[quality].text
-	end
-	return filters[source].text
+-- The three filter buttons of the Items and Sets tabs: the kind (cloth,
+-- plate, dagger, ...), the quality and where the item comes from.
+local function TypeText(kind)
+	return kind and M.ITEM_TYPE_NAMES[kind] or "Any type"
 end
 
--- A menu with the source filters (all, 1.12, new) and the quality filters.
-local function SourceQualityMenu(anchor, filters, sourceKey, qualityKey, done)
-	local prefs, options = Prefs(), { { text = "Show", header = true } }
-	for i = 1, table.getn(filters) do
-		table.insert(options, { text = filters[i].text, source = i, checked = prefs[sourceKey] == i })
+local function QualityText(quality)
+	if quality > 1 then
+		return M.QUALITY_FILTERS[quality].text
 	end
-	table.insert(options, { text = "Quality", header = true })
-	for i = 1, table.getn(M.QUALITY_FILTERS) do
-		table.insert(options, { text = M.QUALITY_FILTERS[i].text, quality = i, checked = prefs[qualityKey] == i })
+	return "Any quality"
+end
+
+-- The kinds a catalogue has, with how many of each.
+local function TypeMenu(anchor, catalog, current, pick)
+	local options = { { text = "Any type", checked = not current } }
+	local kinds = M.GetCatalogTypes(catalog)
+	for i = 1, table.getn(kinds) do
+		local k = kinds[i]
+		table.insert(options, { text = k[2] .. " (" .. Commas(k[3]) .. ")", kind = k[1], checked = current == k[1] })
 	end
 	OpenMenu(anchor, options, function(option)
-		local p = Prefs()
-		if option.source then
-			p[sourceKey] = option.source
-		else
-			p[qualityKey] = option.quality
-		end
-		anchor:SetText(ItemFilterText(filters, p[sourceKey], p[qualityKey]))
+		pick(option.kind)
+	end)
+end
+
+local function QualityMenu(anchor, key, done)
+	local options = {}
+	for i = 1, table.getn(M.QUALITY_FILTERS) do
+		table.insert(options, { text = M.QUALITY_FILTERS[i].text, quality = i, checked = Prefs()[key] == i })
+	end
+	OpenMenu(anchor, options, function(option)
+		Prefs()[key] = option.quality
+		done()
+	end)
+end
+
+local function SourceMenu(anchor, filters, key, done)
+	local options = {}
+	for i = 1, table.getn(filters) do
+		table.insert(options, { text = filters[i].text, source = i, checked = Prefs()[key] == i })
+	end
+	OpenMenu(anchor, options, function(option)
+		Prefs()[key] = option.source
 		done()
 	end)
 end
@@ -2111,8 +2138,12 @@ end
 local function FilterItems(keep)
 	local prefs = Prefs()
 	local count
+	local kind = prefs.itemTypes[itemSlot]
 	ui.itemResult, count = M.FilterCatalog(M.GetItemCatalog(itemSlot), ui.itemSearch:GetText(),
-		M.ITEM_FILTERS[prefs.itemFilter], M.QUALITY_FILTERS[prefs.itemQuality].quality, prefs.sortItems)
+		M.ITEM_FILTERS[prefs.itemFilter], M.QUALITY_FILTERS[prefs.itemQuality].quality, prefs.sortItems, kind)
+	ui.itemTypeButton:SetText(TypeText(kind))
+	ui.itemQualityButton:SetText(QualityText(prefs.itemQuality))
+	ui.itemSourceButton:SetText(M.ITEM_FILTERS[prefs.itemFilter].text)
 	ui.itemSlotLabel:SetText(M.SLOT_NAMES[itemSlot])
 	local note = Count(count, "item")
 	if itemSlot >= 16 and itemSlot <= 18 then
@@ -2187,7 +2218,7 @@ local function BuildItemsPage(page)
 	end)
 
 	Label(page, "Search:", nil, 10, -42)
-	ui.itemSearch = EditBox(page, "DmorphOctoItemSearch", 140, 58, -38)
+	ui.itemSearch = EditBox(page, "DmorphOctoItemSearch", 200, 58, -38)
 	ui.itemSearch:SetScript("OnTextChanged", function()
 		Debounce(ui.searchTimer, 0.25, FilterItems)
 	end)
@@ -2195,17 +2226,32 @@ local function BuildItemsPage(page)
 		this:ClearFocus()
 		FilterItems()
 	end)
-	local filter = Button(page, ItemFilterText(M.ITEM_FILTERS, prefs.itemFilter, prefs.itemQuality), 150, 212, -37, function()
-		SourceQualityMenu(this, M.ITEM_FILTERS, "itemFilter", "itemQuality", FilterItems)
-	end, "DmorphOctoItemFilter")
-	filter:SetScript("OnEnter", function()
-		Tooltip(this, "Which items to list", "All, 1.12's own or the ones Turtle WoW and OctoWoW added,",
-			"and one quality: Rare, Epic, Legendary, ...")
-	end)
-	filter:SetScript("OnLeave", HideTooltip)
 	SortButton(page, "DmorphOctoItemSort", 368, -37, "sortItems", FilterItems)
 
-	ui.itemList = List(page, "DmorphOctoItemList", 8, -64, 60, function(row, index)
+	-- Type, quality, source: e.g. Cloth + Epic for every epic cloth helmet.
+	ui.itemTypeButton = Button(page, "Any type", 150, 8, -62, function()
+		TypeMenu(this, M.GetItemCatalog(itemSlot), Prefs().itemTypes[itemSlot], function(kind)
+			Prefs().itemTypes[itemSlot] = kind
+			FilterItems()
+		end)
+	end, "DmorphOctoItemType")
+	ui.itemTypeButton:SetScript("OnEnter", function()
+		Tooltip(this, "Type", "Cloth, leather, mail or plate; or the kind of weapon.",
+			"Only the types this slot has are listed, with how many of each.")
+	end)
+	ui.itemTypeButton:SetScript("OnLeave", HideTooltip)
+	ui.itemQualityButton = Button(page, "Any quality", 150, 162, -62, function()
+		QualityMenu(this, "itemQuality", FilterItems)
+	end, "DmorphOctoItemQuality")
+	ui.itemSourceButton = Button(page, "All items", 150, 316, -62, function()
+		SourceMenu(this, M.ITEM_FILTERS, "itemFilter", FilterItems)
+	end, "DmorphOctoItemSource")
+	ui.itemSourceButton:SetScript("OnEnter", function()
+		Tooltip(this, "Which items", "All, 1.12's own, or the ones Turtle WoW and OctoWoW added.")
+	end)
+	ui.itemSourceButton:SetScript("OnLeave", HideTooltip)
+
+	ui.itemList = List(page, "DmorphOctoItemList", 8, -90, 60, function(row, index)
 		local catalog = M.GetItemCatalog(itemSlot)
 		local i = ui.itemResult[index]
 		row.text:SetText(catalog.names[i])
@@ -2218,9 +2264,9 @@ local function BuildItemsPage(page)
 		local itemID = M.GetItemCatalog(itemSlot).ids[ui.itemResult[index]]
 		ui.itemBox:SetText(itemID)
 		Morph(M.SetItem, itemSlot, itemID)
-	end)
+	end, nil, nil, 14)
 
-	local y = -346
+	local y = -352
 	Label(page, "Item ID:", nil, 10, y - 5)
 	ui.itemBox = EditBox(page, "DmorphOctoItemID", 70, 60, y, 9)
 	local function Apply()
@@ -2241,7 +2287,10 @@ local function FilterSets(keep)
 	local prefs = Prefs()
 	local count
 	ui.setResult, count = M.FilterCatalog(M.GetSetCatalog(), ui.setSearch:GetText(),
-		M.SET_FILTERS[prefs.setFilter], M.QUALITY_FILTERS[prefs.setQuality].quality, prefs.sortSets)
+		M.SET_FILTERS[prefs.setFilter], M.QUALITY_FILTERS[prefs.setQuality].quality, prefs.sortSets, prefs.setType)
+	ui.setTypeButton:SetText(TypeText(prefs.setType))
+	ui.setQualityButton:SetText(QualityText(prefs.setQuality))
+	ui.setSourceButton:SetText(M.SET_FILTERS[prefs.setFilter].text)
 	ui.setCount:SetText(Count(count, "set"))
 	ui.setList.SetCount(count, keep)
 end
@@ -2272,9 +2321,8 @@ local function SetTooltip(index, row)
 end
 
 local function BuildSetsPage(page)
-	local prefs = Prefs()
 	Label(page, "Search:", nil, 10, -12)
-	ui.setSearch = EditBox(page, "DmorphOctoSetSearch", 140, 58, -8)
+	ui.setSearch = EditBox(page, "DmorphOctoSetSearch", 200, 58, -8)
 	ui.setSearch:SetScript("OnTextChanged", function()
 		Debounce(ui.searchTimer, 0.25, FilterSets)
 	end)
@@ -2282,17 +2330,25 @@ local function BuildSetsPage(page)
 		this:ClearFocus()
 		FilterSets()
 	end)
-	local filter = Button(page, ItemFilterText(M.SET_FILTERS, prefs.setFilter, prefs.setQuality), 150, 212, -7, function()
-		SourceQualityMenu(this, M.SET_FILTERS, "setFilter", "setQuality", FilterSets)
-	end, "DmorphOctoSetFilter")
-	filter:SetScript("OnEnter", function()
-		Tooltip(this, "Which sets to list", "All, 1.12's own or the ones Turtle WoW and OctoWoW added,",
-			"and one quality: Rare, Epic, Legendary, ...")
-	end)
-	filter:SetScript("OnLeave", HideTooltip)
 	SortButton(page, "DmorphOctoSetSort", 368, -7, "sortSets", FilterSets)
+	ui.setTypeButton = Button(page, "Any type", 150, 8, -32, function()
+		TypeMenu(this, M.GetSetCatalog(), Prefs().setType, function(kind)
+			Prefs().setType = kind
+			FilterSets()
+		end)
+	end, "DmorphOctoSetType")
+	ui.setTypeButton:SetScript("OnEnter", function()
+		Tooltip(this, "Type", "Cloth, leather, mail or plate: what most of the set's armour is made of.")
+	end)
+	ui.setTypeButton:SetScript("OnLeave", HideTooltip)
+	ui.setQualityButton = Button(page, "Any quality", 150, 162, -32, function()
+		QualityMenu(this, "setQuality", FilterSets)
+	end, "DmorphOctoSetQuality")
+	ui.setSourceButton = Button(page, "All sets", 150, 316, -32, function()
+		SourceMenu(this, M.SET_FILTERS, "setFilter", FilterSets)
+	end, "DmorphOctoSetSource")
 
-	ui.setList = List(page, "DmorphOctoSetList", 8, -36, 80, function(row, index)
+	ui.setList = List(page, "DmorphOctoSetList", 8, -60, 80, function(row, index)
 		local catalog = M.GetSetCatalog()
 		local i = ui.setResult[index]
 		row.text:SetText(catalog.names[i])
@@ -2305,9 +2361,9 @@ local function BuildSetsPage(page)
 		ui.selectedSet = ui.setResult[index]
 		ui.setList.Refresh()
 		Morph(M.WearSet, ui.selectedSet)
-	end, SetTooltip)
-	ui.setCount = Label(page, "", "GameFontDisableSmall", 10, -314, "DmorphOctoSetCount")
-	ui.setLookup = Label(page, "", "GameFontDisableSmall", 160, -314, "DmorphOctoSetLookup")
+	end, SetTooltip, nil, 14)
+	ui.setCount = Label(page, "", "GameFontDisableSmall", 10, -318, "DmorphOctoSetCount")
+	ui.setLookup = Label(page, "", "GameFontDisableSmall", 160, -318, "DmorphOctoSetLookup")
 	Label(page, "Click a set to wear every piece it has. Hover to see the pieces.", "GameFontDisableSmall", 10, -352)
 end
 
@@ -2515,7 +2571,7 @@ local function BuildStage()
 	ui.art[3]:SetPoint("TOPLEFT", ui.art[1], "BOTTOMLEFT", 0, 0)
 	ui.art[4]:SetPoint("TOPLEFT", ui.art[1], "BOTTOMRIGHT", 0, 0)
 
-	local p = { models = {}, front = 1, rotation = 0.61, low = base + 1, high = base + 3 }
+	local p = { models = {}, front = 1, rotation = 0.61, low = base + 1, high = base + 3, zoom = 0, panX = 0, panY = 0 }
 	for i = 1, 2 do
 		local model = CreateFrame("PlayerModel", "DmorphOctoModel" .. i, stage)
 		model:SetPoint("TOPLEFT", stage, "TOPLEFT", 0, -4)
@@ -2526,15 +2582,23 @@ local function BuildStage()
 	end
 	ui.preview = p
 
-	-- Dragging anywhere over the model turns it.
-	local drag = Layer(stage, 4)
+	-- Over the model: drag to turn it, right-drag to move it, mouse wheel to
+	-- zoom in and out.
+	local drag = CreateFrame("Frame", "DmorphOctoModelDrag", stage)
+	drag:SetFrameLevel(base + 4)
 	drag:SetAllPoints(p.models[1])
 	drag:EnableMouse(true)
+	drag:EnableMouseWheel(true)
 	drag:SetScript("OnMouseDown", function()
-		this.dragX = GetCursorPosition()
+		local x, y = GetCursorPosition()
+		if arg1 == "RightButton" then
+			this.panX, this.panY = x, y
+		else
+			this.dragX = x
+		end
 	end)
 	drag:SetScript("OnMouseUp", function()
-		this.dragX = nil
+		this.dragX, this.panX, this.panY = nil, nil, nil
 	end)
 	drag:SetScript("OnUpdate", function()
 		if this.dragX then
@@ -2542,8 +2606,35 @@ local function BuildStage()
 			p.rotation = p.rotation + (x - this.dragX) * 0.02
 			this.dragX = x
 			p.models[p.front]:SetRotation(p.rotation)
+		elseif this.panX then
+			-- The farther in, the smaller a step: the model follows the cursor.
+			local x, y = GetCursorPosition()
+			local step = 0.006 / (frame:GetEffectiveScale() * (1 + math.max(p.zoom, 0) * 0.45))
+			p.panX = p.panX + (x - this.panX) * step
+			p.panY = p.panY + (y - this.panY) * step
+			this.panX, this.panY = x, y
+			ApplyView(p.models[p.front])
 		end
 	end)
+	drag:SetScript("OnMouseWheel", function()
+		Zoom(arg1)
+	end)
+	local function ZoomButton(text, width, x, name, onClick, line)
+		local button = Button(stage, text, width, x, -10, onClick, name)
+		button:SetFrameLevel(base + 6)
+		button:SetScript("OnEnter", function()
+			Tooltip(this, "Zoom", line, "Or: mouse wheel over your character to zoom, right-drag to move it, drag to turn it.")
+		end)
+		button:SetScript("OnLeave", HideTooltip)
+	end
+	local middle = ART_W / 2
+	ZoomButton("-", 24, middle - 66, "DmorphOctoZoomOut", function()
+		Zoom(-1)
+	end, "Zoom out.")
+	ZoomButton("+", 24, middle - 40, "DmorphOctoZoomIn", function()
+		Zoom(1)
+	end, "Zoom in, to see the details.")
+	ZoomButton("Reset view", 80, middle - 14, "DmorphOctoZoomReset", ResetView, "Back to the whole character.")
 
 	local plate = Layer(stage, 5)
 	plate:SetPoint("BOTTOMLEFT", stage, "BOTTOMLEFT", 0, 0)

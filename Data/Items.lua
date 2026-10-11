@@ -15,10 +15,6 @@ DmorphOcto_ItemData[1] = [[
 10030	2	Admiral's Hat
 10261	2	Adventurer's Bandana
 9420	3	Adventurer's Pith Helmet
-21434	1	AHNQIRAJ TEST ITEM A CLOTH HELM
-21426	1	AHNQIRAJ TEST ITEM B LEATHER HELM
-21446	1	AHNQIRAJ TEST ITEM C MAIL HELM
-21439	1	AHNQIRAJ TEST ITEM D PLATE HELM
 8317	2	Alabaster Plate Helmet
 15602	2	Ancient Crown
 14293	2	Arachnidian Circlet
@@ -101,7 +97,6 @@ DmorphOcto_ItemData[1] = [[
 11913	2	Clayridge Helm
 18308	2	Clever Hat
 1280	2	Cloaked Hood
-19743	2	Cloaked Hood TEST
 21804	3	Coif of Elemental Fury
 16667	3	Coif of Elements
 22097	4	Coif of The Five Thunders
@@ -154,7 +149,6 @@ DmorphOcto_ItemData[1] = [[
 10289	2	Durable Hat
 10061	2	Duskwoven Turban
 21472	4	Dustwind Turban
-1163	1	Dwarven Explorer's Monocle (Test)
 16842	4	Earthfury Helmet
 22466	4	Earthshatter Headpiece
 19984	3	Ebon Mask
@@ -330,8 +324,6 @@ DmorphOcto_ItemData[1] = [[
 7456	2	Knight's Headguard
 8752	0	Laminated Scale Circlet
 16854	4	Lawbringer Helm
-1021	1	Leather Helmet A (test)
-1020	1	Leather Helmet D (Test)
 23306	3	Lieutenant Commander's Chain Helm
 16428	3	Lieutenant Commander's Chain Helmet
 16416	3	Lieutenant Commander's Crown
@@ -361,9 +353,6 @@ DmorphOcto_ItemData[1] = [[
 16686	3	Magister's Crown
 15670	2	Magnificent Helmet
 4077	2	Mail Combat Headguard
-1027	1	Mail Helmet A (Test)
-1023	1	Mail Helmet C (test)
-1022	1	Mail Helmet D (test)
 15572	2	Marauder's Circlet
 13404	3	Mask of the Unforgiven
 7953	2	Mask of Thero-shan
@@ -402,11 +391,7 @@ DmorphOcto_ItemData[1] = [[
 7420	2	Phalanx Headguard
 15558	2	Pillager's Crown
 19986	3	Pirate's Eye Patch
-1162	1	Pirates Patch (Test)
 22506	4	Plagueheart Circlet
-1025	1	Plate Helmet D1 (Test)
-1024	1	Plate Helmet D2 (test)
-1026	1	Plate Helmet D3 (test)
 8092	1	Platemail Helm
 23020	4	Polar Helmet
 15175	2	Potent Helmet
@@ -594,10 +579,6 @@ DmorphOcto_ItemData[3] = [[
 20637	4	Acid Inscribed Pauldrons
 13533	2	Acid-etched Pauldrons
 10263	2	Adventurer's Shoulders
-21435	1	AHNQIRAJ TEST ITEM A CLOTH SHOULDERS
-21424	1	AHNQIRAJ TEST ITEM B LEATHER SHOULDER
-21447	1	AHNQIRAJ TEST ITEM C MAIL SHOULDERS
-21443	1	AHNQIRAJ TEST ITEM D PLATE SHOULDERS
 8319	2	Alabaster Plate Pauldrons
 15608	2	Ancient Pauldrons
 19928	3	Animist's Spaulders
@@ -629,7 +610,6 @@ DmorphOcto_ItemData[3] = [[
 19373	4	Black Brood Pauldrons
 15051	3	Black Dragonscale Shoulders
 10027	2	Black Mageweave Shoulders
-907	1	Black Mail Shoulderpads of might (Test)
 4733	2	Blackforge Pauldrons
 1445	1	Blackrock Pauldrons
 19689	3	Blood Tiger Shoulders
@@ -654,7 +634,6 @@ DmorphOcto_ItemData[3] = [[
 4661	2	Bright Mantle
 14573	2	Bristlebark Amice
 1777	0	Brocade Shoulderpads
-905	1	Brown Leather Shoulderpads (Test)
 14909	2	Brutish Shoulders
 14170	1	Buccaneer's Mantle
 18493	3	Bulky Iron Spaulders
@@ -869,7 +848,6 @@ DmorphOcto_ItemData[3] = [[
 15067	3	Ironfeather Shoulders
 15647	2	Ironhide Pauldrons
 22305	3	Ironweave Mantle
-18747	3	Item Properties Test
 9796	2	Ivycloth Mantle
 14921	2	Jade Epaulets
 15395	2	Jadefire Epaulets
@@ -983,7 +961,6 @@ DmorphOcto_ItemData[3] = [[
 17749	3	Phytoskin Spaulders
 15562	2	Pillager's Pauldrons
 22507	4	Plagueheart Shoulderpads
-908	1	Plate Shoulderpad (Test)
 15792	2	Plow Wood Spaulders
 22941	4	Polar Shoulder Pads
 21805	3	Polished Obsidian Pauldrons
@@ -1052,7 +1029,6 @@ DmorphOcto_ItemData[3] = [[
 18720	3	Shroud of the Nathrezim
 2913	2	Silk Mantle of Gamn
 14423	2	Silksand Shoulder Pads
-909	1	Silver Mail Shoulderpads (Test)
 6395	2	Silver-thread Amice
 3481	2	Silvered Bronze Shoulders
 13132	3	Skeletal Shoulders
@@ -1094,7 +1070,6 @@ DmorphOcto_ItemData[3] = [[
 22758	3	Sylvan Shoulders
 14830	2	Symbolic Pauldrons
 10657	2	Talbar Mantle
-906	1	Tan Leather Shoulderpads (Test)
 19389	4	Taut Dragonhide Shoulderpads
 10170	2	Templar Pauldrons
 21694	4	Ternary Mantle
@@ -1240,10 +1215,6 @@ DmorphOcto_ItemData[5] = [[
 16607	2	Acolyte's Sacrificial Robes
 17775	2	Acumen Robes
 10264	2	Adventurer's Tunic
-21430	1	AHNQIRAJ TEST ITEM A CLOTH ROBE
-21420	1	AHNQIRAJ TEST ITEM B LEATHER CHEST
-21421	1	AHNQIRAJ TEST ITEM C MAIL CHEST
-21422	1	AHNQIRAJ TEST ITEM D PLATE CHEST
 8312	2	Alabaster Breastplate
 13314	4	Alanna's Embrace
 6527	2	Ancestral Robe
@@ -1297,7 +1268,6 @@ DmorphOcto_ItemData[5] = [[
 4476	2	Beastwalker Robe
 7728	3	Beguiler Robes
 8200	2	Big Voodoo Robe
-11344	2	Big Voodoo Test
 19399	4	Black Ash Robe
 2069	1	Black Bear Hide Vest
 15050	3	Black Dragonscale Breastplate
@@ -2188,10 +2158,6 @@ DmorphOcto_ItemData[6] = [[
 20670	2	Abyssal Mail Clutch
 20673	2	Abyssal Plate Girdle
 10259	2	Adventurer's Belt
-21429	1	AHNQIRAJ TEST ITEM A CLOTH BELT
-21425	1	AHNQIRAJ TEST ITEM B LEATHER BELT
-21451	1	AHNQIRAJ TEST ITEM C MAIL BELT
-21441	1	AHNQIRAJ TEST ITEM D PLATE BELT
 8315	2	Alabaster Plate Girdle
 4672	1	Ancestral Belt
 15606	2	Ancient Belt
@@ -2908,10 +2874,6 @@ DmorphOcto_ItemData[7] = [[
 20671	3	Abyssal Plate Legplates
 1396	0	Acolyte's Pants
 10262	2	Adventurer's Legguards
-21419	1	AHNQIRAJ TEST ITEM A CLOTH LEGS
-21423	1	AHNQIRAJ TEST ITEM B LEATHER PANTS
-21448	1	AHNQIRAJ TEST ITEM C MAIL LEGS
-21440	1	AHNQIRAJ TEST ITEM D PLATE LEGS
 8318	2	Alabaster Plate Leggings
 3291	2	Ancestral Woollies
 20617	4	Ancient Corroded Leggings
@@ -3079,7 +3041,6 @@ DmorphOcto_ItemData[7] = [[
 79	1	Dwarven Cloth Britches
 61	1	Dwarven Leather Pants
 9402	3	Earthborn Kilt
-19742	3	Earthborn Kilt TEST
 16843	4	Earthfury Legguards
 22465	4	Earthshatter Legguards
 8271	2	Ebonhold Leggings
@@ -3654,14 +3615,9 @@ DmorphOcto_ItemData[7] = [[
 3272	1	Zombie Skin Leggings
 ]]
 DmorphOcto_ItemData[8] = [[
-18163	1	10% Test Speed Boots
-18164	1	13% Test Speed Boots
-18165	1	15% Test Speed Boots
-18161	1	5% Test Speed Boots
 20353	2	63 Green Frost Boots
 20312	2	63 Green Rogue Boots
 20291	2	63 Green Warrior Sabatons
-18162	1	8% Test Speed Boots
 20326	4	90 Epic Frost Boots
 20268	4	90 Epic Rogue Boots
 20141	4	90 Epic Warrior Sabatons
@@ -3680,10 +3636,6 @@ DmorphOcto_ItemData[8] = [[
 59	1	Acolyte's Shoes
 10257	2	Adventurer's Boots
 4788	2	Agile Boots
-21431	1	AHNQIRAJ TEST ITEM A CLOTH FEET
-21427	1	AHNQIRAJ TEST ITEM B LEATHER BOOTS
-21449	1	AHNQIRAJ TEST ITEM C MAIL BOOTS
-21442	1	AHNQIRAJ TEST ITEM D PLATE BOOTS
 8316	2	Alabaster Plate Greaves
 17728	3	Albino Crocscale Boots
 2033	2	Ambassador's Boots
@@ -4382,7 +4334,6 @@ DmorphOcto_ItemData[8] = [[
 4464	2	Trouncing Boots
 15458	2	Tundra Boots
 2037	2	Tunneler's Boots
-3896	2	Twain Test
 7434	2	Twilight Boots
 3945	0	Twill Boots
 14839	2	Tyrant's Greaves
@@ -4455,9 +4406,6 @@ DmorphOcto_ItemData[9] = [[
 20684	3	Abyssal Mail Armguards
 20687	3	Abyssal Plate Vambraces
 10256	2	Adventurer's Bracers
-21433	1	AHNQIRAJ TEST ITEM A CLOTH BRACER
-21432	1	AHNQIRAJ TEST ITEM B LEATHER BRACER
-21445	1	AHNQIRAJ TEST ITEM D PLATE BRACER
 8311	2	Alabaster Plate Vambraces
 3642	1	Ancestral Bracers
 15600	2	Ancient Vambraces
@@ -5104,10 +5052,6 @@ DmorphOcto_ItemData[10] = [[
 4768	2	Adept's Gloves
 10260	2	Adventurer's Gloves
 18823	4	Aged Core Leather Gloves
-21437	1	AHNQIRAJ TEST ITEM A CLOTH GLOVES
-21428	1	AHNQIRAJ TEST ITEM B LEATHER GAUNTLETS
-21450	1	AHNQIRAJ TEST ITEM C MAIL GLOVES
-21444	1	AHNQIRAJ TEST ITEM D PLATE GLOVES
 8314	2	Alabaster Plate Gauntlets
 6906	3	Algae Fists
 3290	1	Ancestral Gloves
@@ -5493,7 +5437,6 @@ DmorphOcto_ItemData[10] = [[
 15393	2	Jadefire Gloves
 9632	2	Jangdor's Handcrafted Gloves
 9900	2	Jazeraint Gauntlets
-12962	1	JEFF TEST GLOVES
 2960	1	Journeyman's Gloves
 8158	2	Jouster's Gauntlets
 16956	4	Judgement Gauntlets
@@ -5777,7 +5720,6 @@ DmorphOcto_ItemData[10] = [[
 7049	2	Truefaith Gloves
 7938	3	Truesilver Gauntlets
 8187	2	Turtle Scale Gloves
-6896	0	Twain Component Test
 7433	2	Twilight Gloves
 3948	0	Twill Gloves
 14833	2	Tyrant's Gauntlets
@@ -6300,7 +6242,6 @@ DmorphOcto_ItemData[15] = [[
 4674	1	Tribal Cloak
 15364	2	Trickster's Cloak
 15681	2	Triumphant Cloak
-7248	1	Twain TEST Cloak
 7436	2	Twilight Cape
 3947	0	Twill Cloak
 23017	4	Veil of Eclipse
@@ -6347,40 +6288,6 @@ DmorphOcto_ItemData[15] = [[
 19907	3	Zulian Tigerhide Cloak
 ]]
 DmorphOcto_ItemData[16] = [[
-19810	3	1000 Test dagger 60 blue
-19313	3	1300 Test Dagger 63 blue
-19427	3	1500 Test sword 63 blue
-19457	4	1500 Test sword 80 purple
-19622	3	1800 Test Dagger 63 blue
-19314	3	2000 Test Dagger 63 blue
-21782	3	2000 Test sword 63 blue
-19185	3	2100 Test 2h Axe 63 blue
-19188	3	2200 Test 2h Axe 63 blue
-19502	3	2200 Test sword 63 blue
-19504	4	2200 Test sword 70 purple
-19503	4	2200 Test sword 80 purple
-19189	3	2300 Test 2h Axe 63 blue
-19190	3	2400 Test 2h Axe 63 blue
-19809	3	2500 Test 2h Axe 60 blue
-19811	3	2500 Test 2h Axe 60 blue (bear)
-19191	3	2500 Test 2h Axe 63 blue
-19192	3	2600 Test 2h Axe 63 blue
-19186	3	2700 Test 2h Axe 63 blue
-19193	3	2800 Test 2h Axe 63 blue
-19194	3	2900 Test 2h Axe 63 blue
-19428	3	2900 Test sword 63 blue
-19456	4	2900 Test sword 80 purple
-19195	3	3000 Test 2h Axe 63 blue
-19196	3	3100 Test 2h Axe 63 blue
-19187	3	3200 Test 2h Axe 63 blue
-19197	3	3300 Test 2h Axe 63 blue
-19198	3	3400 Test 2h Axe 63 blue
-19199	3	3500 Test 2h Axe 63 blue
-19455	4	3500 Test 2h Axe 70 purple
-19662	4	3500 Test 2h Axe 80 purple
-19200	3	3600 Test 2h Axe 63 blue
-19201	3	3700 Test 2h Axe 63 blue
-19184	3	3800 Test 2h Axe 63 blue
 20362	2	63 Green Frost Staff
 20317	2	63 Green Rogue Dagger
 20280	2	63 Green Warrior Axe
@@ -6399,7 +6306,6 @@ DmorphOcto_ItemData[16] = [[
 19569	3	Advisor's Gnarled Staff
 20425	3	Advisor's Gnarled Staff
 14555	4	Alcor's Sunrazor
-19879	4	Alex's Test Beatdown Staff
 17113	4	Amberseal Keeper
 20654	3	Amethyst War Staff
 18609	4	Anathema
@@ -6698,8 +6604,6 @@ DmorphOcto_ItemData[16] = [[
 15396	2	Curvewood Dagger
 851	1	Cutlass
 922	1	Dacian Falx
-21516	3	Dagger of Spell Penetration - Fire 150 Resist (TEST)
-21518	3	Dagger of Spell Penetration - Frost 150 Resist (TEST)
 21404	4	Dagger of Veiled Shadows
 12940	3	Dal'Rend's Sacred Charge
 15854	3	Dancing Sliver
@@ -6840,17 +6744,6 @@ DmorphOcto_ItemData[16] = [[
 19903	4	Fang of Venoxis
 3335	1	Farmer's Broom
 3334	1	Farmer's Shovel
-5551	0	Fast Test 1H Axe
-5553	0	Fast Test 1H Mace
-5555	0	Fast Test 1H Sword
-5552	0	Fast Test 2H Axe
-5554	0	Fast Test 2H Mace
-5556	0	Fast Test 2H Sword
-5549	0	Fast Test Dagger
-5561	0	Fast Test Generic
-5545	0	Fast Test Polearm
-5557	0	Fast Test Spear
-5558	0	Fast Test Staff
 1413	0	Feeble Sword
 15239	2	Felstone Reaver
 12590	4	Felstriker
@@ -7122,15 +7015,12 @@ DmorphOcto_ItemData[16] = [[
 9376	4	Jang'thraze
 9380	3	Jang'thraze the Protector
 11086	3	Jang'thraze the Protector
-12971	1	JEFF TEST SWORD
-12972	1	JEFF TEST SWORD II
 19918	4	Jeklik's Crusher
 1917	2	Jeweled Dagger
 19890	4	Jin'do's Hexxer
 19884	4	Jin'do's Judgement
 17054	3	Joonho's Mercy
 6660	3	Julie's Dagger
-1259	0	JYoo test item
 21679	4	Kalimdor's Revenge
 2280	2	Kam's Walking Stick
 2291	4	Kang the Decapitator
@@ -7217,7 +7107,6 @@ DmorphOcto_ItemData[16] = [[
 9449	3	Manual Crowd Pummeler
 4826	2	Marauder Axe
 192	1	Martin Thunder
-3398	1	Martin Thunder3 jesse test
 3359	1	Martin Thunder3.1.2
 13006	3	Mass of McGowan
 15256	2	Massacre Sword
@@ -7683,7 +7572,6 @@ DmorphOcto_ItemData[16] = [[
 9383	3	Obsidian Cleaver
 18822	4	Obsidian Edged Blade
 6318	3	Odo's Ley Staff
-3145	1	Off Hand Test Dagger
 18463	2	Ogre Pocket Knife
 2226	2	Ogremage Staff
 1513	0	Old Greatsword
@@ -7788,7 +7676,6 @@ DmorphOcto_ItemData[16] = [[
 1155	3	Rod of the Sleepwalker
 2281	2	Rodentia Flint Axe
 2282	1	Rodentia Shortsword
-6036	0	Rogue Test Dagger
 2534	1	Rondel
 2483	1	Rough Broad Axe
 1515	0	Rough Wooden Staff
@@ -7977,8 +7864,6 @@ DmorphOcto_ItemData[16] = [[
 12252	2	Staff of Protection
 20581	4	Staff of Rampant Growth
 15109	2	Staff of Soran'ruk
-21101	3	Staff of Spell Penetration - Fire (TEST)
-21102	3	Staff of Spell Penetration - Frost (TEST)
 2271	3	Staff of the Blessed Seer
 3415	3	Staff of the Friar
 5613	2	Staff of the Purifier
@@ -8113,7 +7998,6 @@ DmorphOcto_ItemData[16] = [[
 17223	4	Thunderstrike
 15705	2	Tidecrest Blade
 1465	2	Tigerbane
-2189	6	Tigole's Boomstick (TEST)
 19946	3	Tigule's Harpoon
 18376	3	Timeworn Mace
 9678	2	Tok'kar's Murloc Basher
@@ -8140,8 +8024,6 @@ DmorphOcto_ItemData[16] = [[
 15252	2	Tusker Sword
 6174	0	Twain Random Sword
 7170	0	Twain Random Sword FOO
-7707	0	Twain Test
-7171	1	TWAIN TEST ITEM VISUAL SWORD
 13047	3	Twig of the World Tree
 15268	2	Twin-bladed Axe
 890	3	Twisted Chanter's Staff
@@ -8250,18 +8132,6 @@ DmorphOcto_ItemData[16] = [[
 2529	1	Zweihander
 ]]
 DmorphOcto_ItemData[17] = [[
-19810	3	1000 Test dagger 60 blue
-19313	3	1300 Test Dagger 63 blue
-19427	3	1500 Test sword 63 blue
-19457	4	1500 Test sword 80 purple
-19622	3	1800 Test Dagger 63 blue
-19314	3	2000 Test Dagger 63 blue
-21782	3	2000 Test sword 63 blue
-19502	3	2200 Test sword 63 blue
-19504	4	2200 Test sword 70 purple
-19503	4	2200 Test sword 80 purple
-19428	3	2900 Test sword 63 blue
-19456	4	2900 Test sword 80 purple
 20317	2	63 Green Rogue Dagger
 20279	4	90 Epic Rogue Dagger
 20303	2	90 Green Rogue Dagger
@@ -8413,7 +8283,6 @@ DmorphOcto_ItemData[17] = [[
 12442	1	Charm Pouch (DND)
 4068	2	Chief Brigadier Shield
 18484	3	Cho'Rush's Blade
-1018	1	Chows Blade of DOOM! (Test)
 19352	4	Chromatically Tempered Sword
 8135	2	Chromite Shield
 17738	3	Claw of Celebras
@@ -8460,8 +8329,6 @@ DmorphOcto_ItemData[17] = [[
 15396	2	Curvewood Dagger
 851	1	Cutlass
 15133	2	Cutthroat's Buckler
-21516	3	Dagger of Spell Penetration - Fire 150 Resist (TEST)
-21518	3	Dagger of Spell Penetration - Frost 150 Resist (TEST)
 21404	4	Dagger of Veiled Shadows
 12939	3	Dal'Rend's Tribal Guardian
 12248	2	Daring Dirk
@@ -8571,7 +8438,6 @@ DmorphOcto_ItemData[17] = [[
 13218	3	Fang of the Crystal Spider
 19859	4	Fang of the Faceless
 17070	4	Fang of the Mystics
-5549	0	Fast Test Dagger
 13371	2	Father Flame
 15239	2	Felstone Reaver
 12590	4	Felstriker
@@ -8749,14 +8615,12 @@ DmorphOcto_ItemData[17] = [[
 2207	1	Jambiya
 9380	3	Jang'thraze the Protector
 9899	2	Jazeraint Shield
-12961	1	JEFF TEST SHIELD
 1917	2	Jeweled Dagger
 19891	4	Jin'do's Bag of Whammies
 17054	3	Joonho's Mercy
 15925	2	Journeyman's Stave
 4070	2	Jouster's Crest
 6660	3	Julie's Dagger
-17342	1	JYoo Random Item Test
 12582	3	Keris of Zul'Serak
 14780	2	Khan's Buckler
 22802	4	Kingsfall
@@ -9180,7 +9044,6 @@ DmorphOcto_ItemData[17] = [[
 11870	2	Oblivion Orb
 18485	3	Observer's Shield
 18316	3	Obsidian Bauble
-3145	1	Off Hand Test Dagger
 18463	2	Ogre Pocket Knife
 9404	3	Olaf's All Purpose Shield
 3044	0	OLDMonster - Mace, Standard Basic Offhand
@@ -9274,7 +9137,6 @@ DmorphOcto_ItemData[17] = [[
 11743	2	Rockfist
 19808	2	Rockhide Strongfish
 2565	3	Rod of Molten Fire
-6036	0	Rogue Test Dagger
 2534	1	Rondel
 2377	1	Round Buckler
 17185	1	Round Buckler
@@ -9502,7 +9364,6 @@ DmorphOcto_ItemData[17] = [[
 15687	2	Triumphant Shield
 2787	1	Trogg Dagger
 2040	3	Troll Protector
-7171	1	TWAIN TEST ITEM VISUAL SWORD
 7556	2	Twilight Orb
 14842	2	Tyrant's Shield
 13029	3	Umbral Crystal
@@ -9585,8 +9446,6 @@ DmorphOcto_ItemData[18] = [[
 3128	1	(OLD)Medium Throwing Axe
 2945	1	(OLD)Medium Throwing Knife
 3109	1	(OLD)Wicked Throwing Dagger
-19490	3	2800 Test Bow 63 Blue
-19489	3	3300 Test Crossbow 63 blue
 20363	2	63 Green Frost Wand
 20313	2	63 Green Rogue Bow
 20285	2	63 Green Warrior Gun
@@ -9691,12 +9550,6 @@ DmorphOcto_ItemData[18] = [[
 6797	2	Eyepoker
 22347	3	Fahrad's Reloading Repeater
 13474	2	Farmer Dalson's Shotgun
-5548	0	Fast Test Bow
-5546	0	Fast Test Crossbow
-19226	0	Fast Test Fist
-5550	0	Fast Test Gun
-5559	1	Fast Test Thrown
-5560	0	Fast Test Wand
 2777	0	Feeble Shortbow
 15808	1	Fine Light Crossbow
 11304	2	Fine Longbow
@@ -9989,7 +9842,6 @@ DmorphOcto_ItemData[19] = [[
 19031	1	Frostwolf Battle Tabard
 5976	1	Guild Tabard
 15198	1	Knight's Colors
-746	1	Lord Brandon's Tabard (Test)
 18732	1	Officer's Tabard
 18733	1	Officer's Tabard
 15196	1	Private's Tabard

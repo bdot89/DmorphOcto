@@ -7,7 +7,9 @@ Then run tools/build_models.ps1, tools/build_items.ps1 and tools/build_options.p
 -GameDir <out dir>, their inputs from <out dir> (Creatures.lua, Items.lua,
 item_displays.tsv, turtle_items.tsv, empty.tsv) and every output path pointed outside
 Data/ (PowerShell 7 works on Linux).
-Expected: HiddenModels "2029,4528,9999,11121", HiddenItems "2,3,11", ModelTags
+Expected: HiddenModels "2029,4528,9999,11121", HiddenItems "2,3,11", ItemsExtra head slot
+60001 "Octo Cloth Hat" (from WDB/itemcache.wdb, kind 401 in DmorphOcto_ItemTypeExtra) and no
+"Test" item, ModelTags
 mounts 90001-90005 (named Riding...), 90010-90011 (Spectral Tiger, by its rider
 point) and 90012 (a shop mount, by its mount spell's name), not 90013 (a wolf named
 like a mount spell, no rider point); with --mostly-empty the model check turns itself
@@ -338,6 +340,17 @@ def main():
         f.write("# test\n5000\t13\t3\tTurtle Sword\n")
     with open(os.path.join(out, "empty.tsv"), "w") as f:
         f.write("# empty\n")
+    # The game's item cache (WDB\itemcache.wdb): a 20-byte header, then per
+    # item its ID, the record's size, class, subclass, 4 names, display,
+    # quality, flags, buy and sell price, inventory type. A cloth hat only the
+    # server knows, and one of OctoWoW's test items.
+    def cached(entry, cls, sub, name, display, quality, inv):
+        body = struct.pack("<ii", cls, sub) + name.encode() + b"\0\0\0\0" + struct.pack("<iiiiii", display, quality, 0, 0, 0, inv)
+        return struct.pack("<Ii", entry, len(body)) + body
+    os.makedirs(os.path.join(out, "WDB"), exist_ok=True)
+    with open(os.path.join(out, "WDB", "itemcache.wdb"), "wb") as f:
+        f.write(b"BDIW" + b"\0" * 16 + cached(60001, 4, 1, "Octo Cloth Hat", 103, 4, 1)
+                + cached(60002, 2, 15, "1000 Test dagger 60 blue", 100, 3, 13) + struct.pack("<II", 0, 0))
 
 
 main()

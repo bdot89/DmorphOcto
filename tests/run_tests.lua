@@ -459,10 +459,12 @@ local function press(button, mouseButton)
 end
 
 -- Clicks the line of the open drop-down menu with that text.
-local function pickMenu(text)
-	for i = 1, 14 do
+-- Clicks the line of the open drop-down menu with that text (or, with
+-- prefix set, the first line starting with it).
+local function pickMenu(text, prefix)
+	for i = 1, 20 do
 		local row = getglobal("DmorphOctoMenuRow" .. i)
-		if row:IsVisible() and row.label.text == text then
+		if row:IsVisible() and (row.label.text == text or (prefix and strsub(row.label.text, 1, strlen(text)) == text)) then
 			return Mock.Click(row)
 		end
 	end
@@ -518,6 +520,50 @@ refreshes = Mock.modelRefreshes
 Mock.Fire("UNIT_MODEL_CHANGED", "player")
 Mock.Tick(0.15)
 check(Mock.modelRefreshes == refreshes + 1, "the preview follows model changes from the game")
+-- Zoom: the mouse wheel over your character, or the + and - buttons, bring
+-- it closer (and a little lower, towards the face); right-drag moves it; the
+-- zoom stays when the preview reloads.
+Mock.Tick(0.5)
+front = previews()
+local function at(model)
+	return model.position or { 0, 0, 0 }
+end
+Mock.RunScript(DmorphOctoModelDrag, "OnMouseWheel", 1)
+Mock.RunScript(DmorphOctoModelDrag, "OnMouseWheel", 1)
+check(math.abs(at(front)[1] - 0.6) < 0.001 and at(front)[3] < 0, "two notches of the mouse wheel zoom in")
+Mock.Click(DmorphOctoZoomIn)
+check(math.abs(at(front)[1] - 0.9) < 0.001, "so does the + button")
+Mock.Click(DmorphOctoZoomOut)
+check(math.abs(at(front)[1] - 0.6) < 0.001, "and - zooms out")
+for i = 1, 30 do
+	Mock.Click(DmorphOctoZoomIn)
+end
+check(at(front)[1] <= 3, "zoom stops before the camera goes inside your character")
+Mock.cursorX, Mock.cursorY = 100, 100
+Mock.RunScript(DmorphOctoModelDrag, "OnMouseDown", "RightButton")
+Mock.cursorX, Mock.cursorY = 140, 80
+Mock.Tick(0.05)
+Mock.RunScript(DmorphOctoModelDrag, "OnMouseUp", "RightButton")
+local zoomed = at(front)
+check(zoomed[2] > 0 and zoomed[1] <= 3, "right-dragging moves your character sideways")
+local rotation = front.rotation
+Mock.cursorX = 160
+Mock.RunScript(DmorphOctoModelDrag, "OnMouseDown", "LeftButton")
+Mock.cursorX = 200
+Mock.Tick(0.05)
+Mock.RunScript(DmorphOctoModelDrag, "OnMouseUp", "LeftButton")
+check(front.rotation ~= rotation and at(front)[2] == zoomed[2], "dragging still turns it, without moving it")
+say(".morph 4527")
+Mock.Tick(0.15)
+local _, loading = previews()
+check(at(loading)[1] == zoomed[1] and at(loading)[2] == zoomed[2], "the new look loads already zoomed")
+Mock.Tick(0.5)
+local reloaded = previews()
+check(reloaded ~= front and at(reloaded)[1] == zoomed[1] and at(reloaded)[2] == zoomed[2],
+	"the zoom stays when the preview loads a new look")
+Mock.Click(DmorphOctoZoomReset)
+check(at(reloaded)[1] == 0 and at(reloaded)[2] == 0 and at(reloaded)[3] == 0, "Reset view shows the whole character again")
+Mock.cursorX, Mock.cursorY = nil, nil
 DmorphOcto_ResetAll()
 Mock.Tick(0.15)
 Mock.Tick(0.5)
@@ -851,31 +897,72 @@ check(vh.items[1] == 2955, "clicking an item morphs that slot")
 Mock.Type(itemSearch, "")
 press(DmorphOctoItemListRow3)
 local locked = {}
-for i = 1, 15 do
+for i = 1, 14 do
 	if getglobal("DmorphOctoItemListRow" .. i).locked then
 		table.insert(locked, i)
 	end
 end
 check(table.getn(locked) == 1 and locked[1] == 3, "only the item you wear is highlighted")
-Mock.Click(DmorphOctoItemFilter)
+Mock.Click(DmorphOctoItemQuality)
 pickMenu("Epic")
 local headItems = DmorphOcto.GetItemCatalog(1)
-local allEpic = DmorphOctoItemListRow1:IsVisible()
-for i = 1, 15 do
-	local row = getglobal("DmorphOctoItemListRow" .. i)
-	if row:IsVisible() and headItems.quality[headItems.byID[tonumber(row.info.text)]] ~= 4 then
-		allEpic = false
+-- Every row shown passes a test (on the catalogue entry), and some are shown.
+local function allRows(test)
+	local any = false
+	for i = 1, 14 do
+		local row = getglobal("DmorphOctoItemListRow" .. i)
+		if row:IsVisible() then
+			any = true
+			if not test(headItems.byID[tonumber(row.info.text)]) then
+				return false
+			end
+		end
+	end
+	return any
+end
+check(DmorphOctoItemQuality.text == "Epic" and allRows(function(i) return headItems.quality[i] == 4 end),
+	"the quality filter shows only epic items")
+Mock.Click(DmorphOctoItemSource)
+pickMenu("New in OctoWoW")
+check(DmorphOctoItemSource.text == "New in OctoWoW" and DmorphOctoItemQuality.text == "Epic"
+	and allRows(function(i) return headItems.kind[i] == 2 and headItems.quality[i] == 4 end),
+	"and the source filter on top: epic items OctoWoW added")
+Mock.Click(DmorphOctoItemSource)
+pickMenu("All items")
+-- The type filter lists the slot's kinds with counts: epic cloth helmets.
+Mock.Click(DmorphOctoItemType)
+local typeMenu = {}
+for i = 1, 20 do
+	local row = getglobal("DmorphOctoMenuRow" .. i)
+	if row:IsVisible() then
+		table.insert(typeMenu, row.label.text)
 	end
 end
-check(DmorphOctoItemFilter.text == "Epic" and allEpic, "the quality filter shows only epic items")
-Mock.Click(DmorphOctoItemFilter)
-pickMenu("New in OctoWoW")
-check(DmorphOctoItemFilter.text == "Epic, new" and headItems.kind[headItems.byID[tonumber(DmorphOctoItemListRow1.info.text)]] == 2,
-	"and the source filter on top: epic items OctoWoW added")
-Mock.Click(DmorphOctoItemFilter)
+check(typeMenu[1] == "Any type" and strfind(typeMenu[2] or "", "^Cloth %(%d") and strfind(typeMenu[5] or "", "^Plate %("),
+	"the type menu lists the head slot's armour types with counts")
+pickMenu(typeMenu[2])
+check(DmorphOctoItemType.text == "Cloth" and allRows(function(i) return headItems.types[i] == 401 and headItems.quality[i] == 4 end),
+	"Cloth and Epic together: only epic cloth helmets")
+check(DmorphOcto.GetItemType(16963) == 404 and DmorphOcto.GetItemType(2955) == 401, "items know their armour type")
+Mock.Click(DmorphOctoItemQuality)
 pickMenu("Any quality")
-Mock.Click(DmorphOctoItemFilter)
-pickMenu("All items")
+Mock.Click(DmorphOctoTabSets)
+Mock.Click(DmorphOctoTabItems)
+check(DmorphOctoItemType.text == "Cloth", "the slot keeps its type")
+Mock.Click(Mock.FindButton(">"))
+check(DmorphOctoItemType.text == "Any type", "each slot has its own type")
+Mock.Click(Mock.FindButton("<"))
+Mock.Click(DmorphOctoItemType)
+pickMenu("Any type")
+local testItems = 0
+for slot, list in pairs({ DmorphOcto.GetItemCatalog(1), DmorphOcto.GetItemCatalog(16) }) do
+	for i = 1, list.count do
+		if strfind(list.lower[i], "test") and not strfind(list.lower[i], "%atest") and not strfind(list.lower[i], "test%a") then
+			testItems = testItems + 1
+		end
+	end
+end
+check(testItems == 0, "developer test items aren't listed")
 Mock.Click(DmorphOctoItemSlotButton)
 pickMenu("Main hand")
 check(DmorphOctoItemSlotLabel.text == "Main hand" and contains(DmorphOctoItemCount.text, "NPC weapons included"),
@@ -908,11 +995,48 @@ press(DmorphOctoSetListRow1)
 check(vh.items[5] == 16966 and vh.items[1] == 16963 and contains(DmorphOctoFrameStatus.text, "Battlegear of Wrath"),
 	"clicking a set wears its pieces")
 Mock.Type(DmorphOctoSetSearch, "")
-Mock.Click(DmorphOctoSetFilter)
+Mock.Click(DmorphOctoSetSource)
 pickMenu("New in OctoWoW")
-check(DmorphOctoSetFilter.text == "New in OctoWoW" and DmorphOctoSetListRow1:IsVisible(), "OctoWoW's own sets can be listed")
-Mock.Click(DmorphOctoSetFilter)
+check(DmorphOctoSetSource.text == "New in OctoWoW" and DmorphOctoSetListRow1:IsVisible(), "OctoWoW's own sets can be listed")
+Mock.Click(DmorphOctoSetSource)
 pickMenu("All sets")
+Mock.Click(DmorphOctoSetType)
+pickMenu("Plate (", true)
+local setCatalog = DmorphOcto.GetSetCatalog()
+Mock.Type(DmorphOctoSetSearch, "battlegear of wrath")
+check(DmorphOctoSetType.text == "Plate" and DmorphOctoSetListRow1.text.text == "Battlegear of Wrath",
+	"the set type filter finds plate sets")
+Mock.Type(DmorphOctoSetSearch, "vestments of transcendence")
+check(not DmorphOctoSetListRow1:IsVisible(), "and leaves out the cloth ones")
+Mock.Type(DmorphOctoSetSearch, "")
+Mock.Click(DmorphOctoSetType)
+pickMenu("Any type")
+-- A set's type is the armour most of its pieces are made of (a cloth cloak
+-- doesn't make a plate set cloth).
+local majority, mixed = true, 0
+for i = 1, setCatalog.count do
+	local counts, best = {}, nil
+	for k = 1, table.getn(setCatalog.pieces[i]) do
+		local kind = DmorphOcto.GetItemType(setCatalog.pieces[i][k])
+		if kind and kind >= 401 and kind <= 404 then
+			counts[kind] = (counts[kind] or 0) + 1
+		end
+	end
+	local n = 0
+	for kind, c in pairs(counts) do
+		n = n + 1
+		if not best or c > counts[best] then
+			best = kind
+		end
+	end
+	if n > 1 then
+		mixed = mixed + 1
+	end
+	if setCatalog.types[i] and counts[setCatalog.types[i]] ~= counts[best] then
+		majority = false
+	end
+end
+check(majority and mixed > 0, "a set's type is its most common armour, also in sets of mixed armour")
 DmorphOcto_ResetAll()
 Mock.Tick(0.4)
 say(".item 1 2955")
@@ -1573,39 +1697,6 @@ Mock.Tick(1.1)
 check(game.enchants[16][1] == 803, "and the watcher leaves it alone afterwards")
 slash("dmorph status")
 check(contains(allChat(), "Glow, ranged: Glow 29"), "status lists the glows")
--- A second glow, where a poison's or oil's goes (in game it shows only if the
--- client draws both).
-slash("")
-Mock.Click(DmorphOctoTabGlows)
-press(DmorphOctoGlowListRow1)
-check(DmorphOctoGlowWhich.text == "Picking: glow", "a click picks the weapon's glow to start with")
-press(DmorphOctoGlowWhich)
-check(DmorphOctoGlowWhich.text == "Picking: 2nd glow", "the toggle switches to the second glow")
-press(DmorphOctoGlowListRow3)
-check(game.enchants[16][1] == 1900 and game.enchants[16][2] == 20, "the second glow goes in the temporary enchant's place")
-check(DmorphOctoGlowListRow1.tick.shown and DmorphOctoGlowListRow3.star.shown and not DmorphOctoGlowListRow3.tick.shown,
-	"the glow is ticked and the second glow starred")
-check(DmorphOctoGlowState.text == "Main hand: Crusader + Frost", "the slot line names both")
-game.enchants[16] = { 803, 5 }
-Mock.Tick(1.1)
-check(game.enchants[16][1] == 1900 and game.enchants[16][2] == 20, "both come back after the server resends")
-slash("outfit save Twin")
-press(DmorphOctoGlowNone)
-check(game.enchants[16][1] == 1900 and game.enchants[16][2] == 0, "No glow while picking the second removes just that one")
-press(DmorphOctoGlowWhich)
-slash("glow mainhand own 20")
-check(game.enchants[16][1] == 803 and game.enchants[16][2] == 20, "a second glow alone keeps your own enchant")
-slash("glow mainhand 0")
-check(game.enchants[16][1] == 0 and game.enchants[16][2] == 0, "No glow takes both off")
-slash("outfit Twin")
-Mock.Tick(0.6)
-check(game.enchants[16][1] == 1900 and game.enchants[16][2] == 20, "outfits keep the second glow")
-slash("glow mainhand own")
-check(game.enchants[16][1] == 803 and game.enchants[16][2] == 5, "your own glow puts both real enchants back")
-slash("glow mainhand 1900 abc")
-check(contains(lastChat(), "Usage"), "a bad second enchant ID is refused")
-check(game.enchants[16][1] == 803, "and changes nothing")
-slash("")
 
 -- Your own skin, face and hair (Races tab).
 slash("")

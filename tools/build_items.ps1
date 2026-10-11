@@ -37,7 +37,7 @@ $SLOTS = @{ 1 = @(1); 3 = @(3); 4 = @(4); 5 = @(5); 20 = @(5); 6 = @(6); 7 = @(7
   10 = @(10); 16 = @(15); 19 = @(19); 13 = @(16, 17); 17 = @(16); 21 = @(16); 14 = @(17); 22 = @(17);
   23 = @(17); 15 = @(18); 25 = @(18); 26 = @(18) }
 $SLOT_ORDER = @(1, 3, 4, 5, 6, 7, 8, 9, 10, 15, 16, 17, 18, 19)
-$SKIP = '^(deprecated|zz|test |qa )|\[ph\]'
+$SKIP = '^(deprecated|zz|qa )|\[ph\]|\btest\b'
 
 # What the base list already has, per slot and overall.
 $baseSlot = @{}; $known = @{}
@@ -74,6 +74,7 @@ if (-not $Caches.Count) {
 }
 $fromCache = 0
 $cacheDisplay = @{}
+$cacheType = @{} # class * 100 + subclass, for the item filters (cloth, plate, dagger, ...)
 foreach ($cache in $Caches) {
   $b = [IO.File]::ReadAllBytes($cache)
   $pos = 20
@@ -81,7 +82,7 @@ foreach ($cache in $Caches) {
     $entry = [int][BitConverter]::ToUInt32($b, $pos); $size = [BitConverter]::ToInt32($b, $pos + 4)
     if ($entry -eq 0 -or $size -le 0) { break }
     $d = $pos + 8
-    $class = [BitConverter]::ToInt32($b, $d); $p = $d + 8
+    $class = [BitConverter]::ToInt32($b, $d); $subclass = [BitConverter]::ToInt32($b, $d + 4); $p = $d + 8
     $name = ""
     for ($k = 0; $k -lt 4; $k++) {
       $e = $p; while ($b[$e] -ne 0) { $e++ }
@@ -91,8 +92,10 @@ foreach ($cache in $Caches) {
     $cacheDisplay[$entry] = [BitConverter]::ToInt32($b, $p)
     $quality = [BitConverter]::ToInt32($b, $p + 4); $inv = [BitConverter]::ToInt32($b, $p + 20)
     if (($class -eq 2 -or $class -eq 4) -and $SLOTS.ContainsKey($inv)) {
-      if (-not $items.ContainsKey($entry)) { $fromCache++ }
+      $before = $items.Count
       Add-Item $entry $inv $quality $name "cache"
+      if ($items.Count -gt $before) { $fromCache++ }
+      $cacheType[$entry] = $class * 100 + $subclass
     } else {
       $nonWearable[$entry] = $true
     }
@@ -199,6 +202,18 @@ foreach ($s in $SLOT_ORDER) {
   foreach ($x in $arr) { [void]$sb.Append("$($x.id)`t$($x.it.quality)`t$($x.it.name)`n"); $extraCount++ }
   [void]$sb.Append("]]`n")
 }
+# The kinds of the items the cache knows (Data/ItemTypes.lua has the rest).
+[void]$sb.Append("-- Their kinds, from the item cache, like Data/ItemTypes.lua: kind<TAB>itemID,itemID,...`n")
+[void]$sb.Append("DmorphOcto_ItemTypeExtra = [[`n")
+$byKind = @{}
+foreach ($id in $cacheType.Keys) {
+  if (-not $items.ContainsKey($id)) { continue }
+  $k = $cacheType[$id]
+  if (-not $byKind.ContainsKey($k)) { $byKind[$k] = New-Object System.Collections.ArrayList }
+  [void]$byKind[$k].Add($id)
+}
+foreach ($k in ($byKind.Keys | Sort-Object)) { [void]$sb.Append("$k`t$((@($byKind[$k]) | Sort-Object) -join ',')`n") }
+[void]$sb.Append("]]`n")
 
 # Item IDs worth looking up in game: Atlas-CFM's loot tables and the set pieces
 # that no source here knows.

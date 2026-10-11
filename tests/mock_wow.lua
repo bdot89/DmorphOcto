@@ -226,7 +226,7 @@ end
 function methods:SetCamera(n) self.camera = n end
 function methods:SetLight() end
 function methods:SetModelScale(s) self.scale = s end
-function methods:SetPosition() end
+function methods:SetPosition(x, y, z) self.position = { x or 0, y or 0, z or 0 } end
 function methods:SetFacing(f) self.facing = f end
 function methods:SetModel(path) self.modelPath = path end
 function methods:ClearModel() self.modelPath = nil end

@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.1.0"
+local VERSION = "2.2.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 local MISSING_API = "VanillaHelpers v1.1.0 or newer is not loaded, so morphing is unavailable. "
 	.. "Enable the 'vanillaHelpers' mod in OctoLauncher (or add VanillaHelpers.dll to dlls.txt) "
@@ -221,6 +221,31 @@ M.SET_FILTERS = {
 	{ text = "New in OctoWoW", kinds = { [2] = true } },
 }
 -- Item and set quality, as GetItemInfo() numbers it.
+-- Item kinds (class * 100 + subclass, Data/ItemTypes.lua), in the order the
+-- filter lists them: armour by material, then weapons.
+M.ITEM_TYPES = {
+	{ 401, "Cloth" }, { 402, "Leather" }, { 403, "Mail" }, { 404, "Plate" }, { 406, "Shield" },
+	{ 400, "Miscellaneous" }, { 407, "Libram" }, { 408, "Idol" }, { 409, "Totem" },
+	{ 215, "Dagger" }, { 213, "Fist weapon" }, { 200, "One-handed axe" }, { 204, "One-handed mace" },
+	{ 207, "One-handed sword" }, { 201, "Two-handed axe" }, { 205, "Two-handed mace" },
+	{ 208, "Two-handed sword" }, { 206, "Polearm" }, { 210, "Staff" }, { 217, "Spear" }, { 202, "Bow" },
+	{ 218, "Crossbow" }, { 203, "Gun" }, { 216, "Thrown" }, { 219, "Wand" }, { 214, "Miscellaneous weapon" },
+	{ 220, "Fishing pole" },
+}
+M.ITEM_TYPE_NAMES = {}
+for i = 1, table.getn(M.ITEM_TYPES) do
+	M.ITEM_TYPE_NAMES[M.ITEM_TYPES[i][1]] = M.ITEM_TYPES[i][2]
+end
+-- GetItemInfo's English sub-types, for items no data file knows.
+local SUBTYPES = {
+	Armor = { Miscellaneous = 400, Cloth = 401, Leather = 402, Mail = 403, Plate = 404, Shields = 406,
+		Librams = 407, Idols = 408, Totems = 409 },
+	Weapon = { ["One-Handed Axes"] = 200, ["Two-Handed Axes"] = 201, Bows = 202, Guns = 203,
+		["One-Handed Maces"] = 204, ["Two-Handed Maces"] = 205, Polearms = 206, ["One-Handed Swords"] = 207,
+		["Two-Handed Swords"] = 208, Staves = 210, ["Fist Weapons"] = 213, Miscellaneous = 214, Daggers = 215,
+		Thrown = 216, Spears = 217, Crossbows = 218, Wands = 219, ["Fishing Pole"] = 220 },
+}
+
 M.QUALITY_FILTERS = {
 	{ text = "Any quality" },
 	{ text = "Poor", quality = 0 },
@@ -322,11 +347,24 @@ local EQUIP_SLOTS = {
 	INVTYPE_RANGED = { 18 }, INVTYPE_THROWN = { 18 }, INVTYPE_RANGEDRIGHT = { 18 },
 }
 
+-- Developers' test items ("Kazgrim Test Helm", "1000 Test dagger 60 blue"):
+-- "test" as a word in the name.
+local function IsTestItem(lower)
+	local at, stop = strfind(lower, "test", 1, true)
+	while at do
+		if not strfind(strsub(lower, at - 1, at - 1), "%a") and not strfind(strsub(lower, stop + 1, stop + 1), "%a") then
+			return true
+		end
+		at, stop = strfind(lower, "test", stop + 1, true)
+	end
+	return false
+end
+
 local function ParseItems(text, kind, list, n, skip)
 	local hidden = HiddenItems()
 	for id, quality, name in string.gfind(text or "", "(%d+)\t(%d)\t([^\r\n]+)") do
 		id = tonumber(id)
-		if not ((skip and skip[id]) or hidden[id]) then
+		if not ((skip and skip[id]) or hidden[id] or IsTestItem(strlower(name))) then
 			n = n + 1
 			list[n] = { id, name, strlower(name), tonumber(quality), kind }
 		end
@@ -341,7 +379,7 @@ local function LearnedItems(slot, skip)
 	for id, info in pairs(account.itemInfo) do
 		if info and not skip[id] and not hidden[id] then
 			local _, _, slots, quality, name = strfind(info, "^([%d,]+)\t(%-?%d+)\t(.+)$")
-			if slots and strfind("," .. slots .. ",", "," .. slot .. ",", 1, true) then
+			if slots and strfind("," .. slots .. ",", "," .. slot .. ",", 1, true) and not IsTestItem(strlower(name)) then
 				n = n + 1
 				list[n] = { id, name, strlower(name), tonumber(quality), M.KIND_NEW }
 			end
@@ -349,6 +387,59 @@ local function LearnedItems(slot, skip)
 	end
 	table.sort(list, Before)
 	return list, n
+end
+
+-- itemID -> kind, from Data/ItemTypes.lua and ItemsExtra.lua's item cache
+-- kinds, read once.
+local itemTypes
+local function ReadItemTypes()
+	itemTypes = {}
+	for _, text in ipairs({ DmorphOcto_ItemTypeData or "", DmorphOcto_ItemTypeExtra or "" }) do
+		for kind, list in string.gfind(text, "(%d+)\t([%d,]+)") do
+			kind = tonumber(kind)
+			for id in string.gfind(list, "%d+") do
+				itemTypes[tonumber(id)] = kind
+			end
+		end
+	end
+	DmorphOcto_ItemTypeData, DmorphOcto_ItemTypeExtra = nil, nil
+end
+
+-- An item's kind (401 cloth, 215 dagger, ...: M.ITEM_TYPES), or nil. Items no
+-- data file knows are asked from the game, which knows the ones it has seen.
+function M.GetItemType(itemID)
+	if not itemTypes then
+		ReadItemTypes()
+	end
+	local kind = itemTypes[itemID]
+	if not kind then
+		local ok, _, _, _, _, class, subclass = pcall(GetItemInfo, itemID)
+		kind = ok and SUBTYPES[class or ""] and SUBTYPES[class][subclass or ""]
+		if kind then
+			itemTypes[itemID] = kind
+		end
+	end
+	return kind
+end
+
+-- The kinds a catalogue's entries have, in M.ITEM_TYPES' order, each with how
+-- many: { { kind, name, count }, ... }.
+function M.GetCatalogTypes(catalog)
+	local counts = {}
+	for i = 1, catalog.count do
+		local kind = catalog.types and catalog.types[i]
+		if kind then
+			counts[kind] = (counts[kind] or 0) + 1
+		end
+	end
+	local list = {}
+	for i = 1, table.getn(M.ITEM_TYPES) do
+		local kind = M.ITEM_TYPES[i][1]
+		if counts[kind] then
+			table.insert(list, { kind, M.ITEM_TYPES[i][2], counts[kind] })
+		end
+	end
+	return list
 end
 
 -- Every item that fits the slot: Items.lua (the 1.12.1 database), then
@@ -367,7 +458,12 @@ function M.GetItemCatalog(slot)
 		end
 		local learned, k = LearnedItems(slot, seen)
 		local both, count = Merge(base, n, extra, m)
-		items[slot] = Fill(NewCatalog(), Merge(both, count, learned, k))
+		local catalog = Fill(NewCatalog(), Merge(both, count, learned, k))
+		catalog.types = {}
+		for i = 1, catalog.count do
+			catalog.types[i] = M.GetItemType(catalog.ids[i])
+		end
+		items[slot] = catalog
 	end
 	return items[slot]
 end
@@ -427,15 +523,24 @@ function M.GetSetCatalog()
 	end
 	if not sets.qualityKnown then
 		sets.qualityKnown = true
+		sets.types = {}
 		for i = 1, sets.count do
-			local best
+			-- Quality: the best piece's. Kind: the armour most pieces are made of.
+			local best, materials, kind = nil, {}, nil
 			for k = 1, table.getn(sets.pieces[i]) do
 				local quality = ItemQuality(sets.pieces[i][k])
 				if quality and (not best or quality > best) then
 					best = quality
 				end
+				local piece = M.GetItemType(sets.pieces[i][k])
+				if piece and piece >= 401 and piece <= 404 then
+					materials[piece] = (materials[piece] or 0) + 1
+					if not kind or materials[piece] > materials[kind] then
+						kind = piece
+					end
+				end
 			end
-			sets.quality[i] = best
+			sets.quality[i], sets.types[i] = best, kind
 		end
 	end
 	return sets
@@ -671,7 +776,10 @@ end
 
 -- Whether entry i passes a filter from the *_FILTERS lists ({ kinds = ..., tag
 -- = ... }) and a quality from QUALITY_FILTERS. Both are optional.
-local function Keep(catalog, i, filter, quality)
+local function Keep(catalog, i, filter, quality, kind)
+	if kind and not (catalog.types and catalog.types[i] == kind) then
+		return false
+	end
 	if filter then
 		if filter.kinds and not filter.kinds[catalog.kind[i]] then
 			return false
@@ -688,14 +796,14 @@ end
 
 -- Positions of the catalogue entries matching the text, plus how many there
 -- are: an exact ID first, then names starting with the text, then names
--- containing it. byID lists them by ID instead.
-function M.FilterCatalog(catalog, text, filter, quality, byID)
+-- containing it. byID lists them by ID instead; kind keeps only one item kind.
+function M.FilterCatalog(catalog, text, filter, quality, byID, kind)
 	local query = strlower(Trim(text))
 	local result, n = {}, 0
 	local number = ParseID(query)
 	local later, m = {}, 0
 	for i = 1, catalog.count do
-		if Keep(catalog, i, filter, quality) then
+		if Keep(catalog, i, filter, quality, kind) then
 			local at = query == "" or strfind(catalog.lower[i], query, 1, true)
 			if query == "" or catalog.ids[i] == number or at == 1 then
 				n = n + 1
@@ -776,7 +884,7 @@ function M.DescribeOutfit(outfit)
 	if outfit.look then
 		extra = extra .. ", own face"
 	end
-	if (outfit.glows and next(outfit.glows)) or (outfit.glows2 and next(outfit.glows2)) then
+	if outfit.glows and next(outfit.glows) then
 		extra = extra .. ", glows"
 	end
 	if outfit.mount then
@@ -831,19 +939,16 @@ local function SanitizeOutfit(outfit)
 		end
 		outfit.items[slot] = itemID
 	end
-	-- Weapon glows (DmorphHelper): slot -> enchant ID, 0 for none; glows2 is
-	-- the second glow, in the temporary enchant's place.
-	for _, key in ipairs({ "glows", "glows2" }) do
-		if type(outfit[key]) ~= "table" then
-			outfit[key] = {}
+	-- Weapon glows (DmorphHelper): slot -> enchant ID, 0 for none.
+	if type(outfit.glows) ~= "table" then
+		outfit.glows = {}
+	end
+	for slot, enchantID in pairs(outfit.glows) do
+		enchantID = ParseID(enchantID)
+		if not GLOW_SLOT[slot] or (enchantID and enchantID > 1000000) then
+			enchantID = nil
 		end
-		for slot, enchantID in pairs(outfit[key]) do
-			enchantID = ParseID(enchantID)
-			if not GLOW_SLOT[slot] or (enchantID and enchantID > 1000000) or (key == "glows2" and enchantID == 0) then
-				enchantID = nil
-			end
-			outfit[key][slot] = enchantID
-		end
+		outfit.glows[slot] = enchantID
 	end
 	-- An outfit's own look: { race, gender, the five values }.
 	local look = outfit.look
@@ -859,15 +964,12 @@ end
 -- The current look as an outfit: db, plus the look picked for your body.
 local function CopyOutfit(outfit)
 	local copy = { display = outfit.display, race = outfit.race, gender = outfit.gender, mount = outfit.mount,
-		items = {}, glows = {}, glows2 = {} }
+		items = {}, glows = {} }
 	for slot, itemID in pairs(outfit.items) do
 		copy.items[slot] = itemID
 	end
 	for slot, enchantID in pairs(outfit.glows) do
 		copy.glows[slot] = enchantID
-	end
-	for slot, enchantID in pairs(outfit.glows2) do
-		copy.glows2[slot] = enchantID
 	end
 	local race, gender = M.GetBodyRace()
 	local look = race and ValidLook(outfit.looks[race .. ":" .. gender])
@@ -1311,25 +1413,11 @@ function M.DescribeGlow(enchantID)
 end
 
 -- The glow picked for a weapon slot (an enchant ID, 0 for none, nil for your
--- own), the slot's real permanent enchant if seen, and the second glow (nil
--- for none).
+-- own) and the slot's real permanent enchant, if seen.
 function M.GetGlow(slot)
 	InitDB()
 	local real = db.glowReal[slot]
-	return db.glows[slot], real and real[1], db.glows2[slot]
-end
-
--- "Crusader", "Crusader + Frost", "your own + Frost".
-function M.DescribeGlows(slot)
-	local first, _, second = M.GetGlow(slot)
-	local text = "your own"
-	if first then
-		text = M.DescribeGlow(first)
-	end
-	if second then
-		text = text .. " + " .. M.DescribeGlow(second)
-	end
-	return text
+	return db.glows[slot], real and real[1]
 end
 
 -- The skin colours, faces and hair a race and gender can wear
@@ -1479,14 +1567,9 @@ local function WatchHelper()
 			if not (written and written[1] == p and written[2] == t) then
 				db.glowReal[slot] = { p, t }
 			end
-			-- The picked glow in the permanent enchant's place; the second
-			-- glow, or nothing (so an oil's glow doesn't cover the picked
-			-- one), in the temporary one's. A slot with only a second glow
-			-- keeps its real permanent enchant.
-			local first, second, want = db.glows[slot], db.glows2[slot], nil
-			if first or second then
-				local real = db.glowReal[slot] or { p, t }
-				want = { first or real[1], second or (first and 0) or real[2] }
+			local want
+			if db.glows[slot] then
+				want = { db.glows[slot], 0 }
 			elseif written then
 				want = db.glowReal[slot]
 			end
@@ -1495,7 +1578,7 @@ local function WatchHelper()
 					db.glowWritten[slot] = { want[1], want[2] }
 				end
 			end
-			if not (first or second) then
+			if not db.glows[slot] then
 				db.glowWritten[slot] = nil
 			end
 		end
@@ -1514,9 +1597,8 @@ local function HelperBegin()
 end
 
 -- enchantID: an enchant whose glow the slot shows, 0 for no glow, nil for
--- your own. With second set it's the second glow instead (0 or nil for none),
--- shown in the temporary enchant's place, if the game draws both.
-function M.SetGlow(slot, enchantID, second)
+-- your own.
+function M.SetGlow(slot, enchantID)
 	local ok, err = HelperBegin()
 	if not ok then
 		return false, err
@@ -1530,26 +1612,13 @@ function M.SetGlow(slot, enchantID, second)
 			return false, "Enchant IDs are whole numbers."
 		end
 	end
-	if second then
-		if enchantID == 0 then
-			enchantID = nil
-		end
-		db.glows2[slot] = enchantID
-	else
-		db.glows[slot] = enchantID
-		if not enchantID or enchantID == 0 then
-			-- No glow or your own: the second one goes too.
-			db.glows2[slot] = nil
-		end
-	end
+	db.glows[slot] = enchantID
 	WatchHelper()
 	Notify()
-	if second and not enchantID then
-		return true, SLOT_NAMES[slot] .. ": no second glow."
-	elseif not enchantID then
+	if not enchantID then
 		return true, SLOT_NAMES[slot] .. ": your own glow."
 	end
-	return true, SLOT_NAMES[slot] .. ": " .. M.DescribeGlows(slot) .. "."
+	return true, SLOT_NAMES[slot] .. ": " .. M.DescribeGlow(enchantID) .. "."
 end
 
 M.LOOK_ROWS = { "Skin colour", "Face", "Hair style", "Hair colour", "Facial hair" }
@@ -1736,7 +1805,7 @@ function M.ResetAll()
 		return false, MISSING_API
 	end
 	db.display, db.race, db.gender = nil, nil, 0
-	db.looks, db.glows, db.glows2 = {}, {}, {}
+	db.looks, db.glows = {}, {}
 	local ok, err = ApplyBody()
 	WatchHelper()
 	db.mount, db.mountSkins = nil, {}
@@ -2039,12 +2108,9 @@ function M.LoadOutfit(name)
 	end
 	db.mount = outfit.mount
 	-- The outfit's glows, and its look for its body (else your own).
-	db.glows, db.glows2 = {}, {}
+	db.glows = {}
 	for slot, enchantID in pairs(outfit.glows) do
 		db.glows[slot] = enchantID
-	end
-	for slot, enchantID in pairs(outfit.glows2) do
-		db.glows2[slot] = enchantID
 	end
 	local race, gender = M.GetBodyRace()
 	if race then
@@ -2079,7 +2145,7 @@ local function ShowHelp()
 	Print(".demorph - reset your model (DMorph's F5); .demorph all - reset model and items (F10)")
 	Print(".outfit [name] - list or put on saved outfits; .outfit save <name>; .outfit delete <name>")
 	Print(".mount <displayID> - morph your mount (.mount 0 resets)")
-	Print(".glow <mainhand/offhand/ranged> <enchantID> [second enchantID] - a weapon's enchant glow (0 none, own your own); needs DmorphHelper.dll")
+	Print(".glow <mainhand/offhand/ranged> <enchantID> - a weapon's enchant glow (0 none, own your own); needs DmorphHelper.dll")
 	Print(".share on/off - whether other DMorph users see your morph; .share others on/off - whether you see theirs")
 	Print(".dmorph status - show what is morphed. Keys: Key Bindings > DMorph.")
 	if not HasMorphAPI() then
@@ -2125,8 +2191,8 @@ local function ShowStatus()
 	end
 	for i = 1, table.getn(M.GLOW_SLOTS) do
 		local slot = M.GLOW_SLOTS[i]
-		if db.glows[slot] or db.glows2[slot] then
-			Print("Glow, " .. strlower(SLOT_NAMES[slot]) .. ": " .. M.DescribeGlows(slot) .. ".")
+		if db.glows[slot] then
+			Print("Glow, " .. strlower(SLOT_NAMES[slot]) .. ": " .. M.DescribeGlow(db.glows[slot]) .. ".")
 		end
 	end
 	local bodies = {}
@@ -2197,21 +2263,16 @@ function commands.mount(args)
 	Report(M.SetMount(displayID))
 end
 
--- .glow mainhand 1900, .glow mainhand 1900 20 (a second glow), .glow
--- offhand 0 (no glow), .glow ranged own.
+-- .glow mainhand 1900, .glow offhand 0 (no glow), .glow ranged own.
 function commands.glow(args)
 	local word = strlower(args[1] or "")
 	local slot = SLOT_ALIASES[word] or ({ mh = 16, oh = 17 })[word] or ParseID(word)
 	local value = strlower(args[2] or "")
-	local enchantID, secondID = ParseID(value), ParseID(args[3] or "")
-	if not (slot and GLOW_SLOT[slot]) or not (enchantID or value == "own") or (args[3] and not secondID) then
-		return Print("Usage: .glow <mainhand/offhand/ranged> <enchantID> [second enchantID]  (0 for no glow, own for your own)")
+	local enchantID = ParseID(value)
+	if not (slot and GLOW_SLOT[slot]) or not (enchantID or value == "own") then
+		return Print("Usage: .glow <mainhand/offhand/ranged> <enchantID>  (0 for no glow, own for your own)")
 	end
-	local ok, message = M.SetGlow(slot, enchantID)
-	if ok and secondID then
-		ok, message = M.SetGlow(slot, secondID, true)
-	end
-	Report(ok, message)
+	Report(M.SetGlow(slot, enchantID))
 end
 commands.enchant = commands.glow
 
