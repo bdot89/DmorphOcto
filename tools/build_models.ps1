@@ -47,6 +47,7 @@ $dataDir = Join-Path $GameDir "Data"
 if (-not (Test-Path $dataDir)) { throw "No Data folder in $GameDir" }
 $mpqs = @()
 foreach ($file in Get-ChildItem $dataDir -Filter *.mpq) {
+  if ($file.Name -ieq "patch-Z.mpq") { continue } # the model porting tool's, only on that PC
   try { $mpqs += New-Object Mpq $file.FullName } catch { Write-Output ("skipped {0}: {1}" -f $file.Name, $_.Exception.Message) }
 }
 $mpqs = @($mpqs | Sort-Object @{ Expression = { Get-Priority $_.Name } }, Name)

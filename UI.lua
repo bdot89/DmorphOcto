@@ -65,12 +65,13 @@ local RACE_ICONS = {
 local ART_TOKENS = { HighElf = "BloodElf" }
 
 -- Creature model entries by kind (DmorphOcto.KIND_*). Items and sets use 0 and 2.
-local KIND_COLORS = { [0] = { 1, 1, 1 }, [1] = { 0.62, 0.76, 0.92 }, [2] = { 0.45, 1, 0.6 }, [3] = { 0.45, 1, 0.6 } }
+local KIND_COLORS = { [0] = { 1, 1, 1 }, [1] = { 0.62, 0.76, 0.92 }, [2] = { 0.45, 1, 0.6 }, [3] = { 0.45, 1, 0.6 }, [4] = { 1, 0.82, 0.3 } }
 local KIND_NOTES = {
 	[0] = "A creature from the world database.",
 	[1] = "No creature has this look, so it's named after its model file.",
 	[2] = "New in OctoWoW: a creature from Turtle WoW's database.",
 	[3] = "New in OctoWoW, named after its model file.",
+	[4] = "Ported from a later expansion: only on this PC (patch-Z.mpq), others see your own look.",
 }
 
 local TABS = {

@@ -508,7 +508,20 @@ function Mock.LoadAddon(toc)
 	for line in io.lines(toc) do
 		line = string.gsub(line, "\r", "")
 		if line ~= "" and not strfind(line, "^##") then
-			dofile((string.gsub(line, "\\", "/")))
+			-- Like the client, a file the .toc lists but that isn't there
+			-- (Data\Ported.lua on most PCs) is skipped.
+			-- Data\Ported.lua is never read: tests give its contents (Mock.portedData).
+			local path = string.gsub(line, "\\", "/")
+			local f = io.open(path, "r")
+			if strfind(path, "Data/Ported%.lua$") then
+				if f then
+					f:close()
+				end
+				DmorphOcto_PortedData = Mock.portedData
+			elseif f then
+				f:close()
+				dofile(path)
+			end
 		end
 	end
 end

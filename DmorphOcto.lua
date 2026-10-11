@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.10.1"
+local VERSION = "2.11.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -239,6 +239,9 @@ end
 -- Creature models by kind: a creature's name, or named after the model file;
 -- 2 and 3 are the same for the models OctoWoW added to the stock 1.12.1 client.
 M.KIND_CREATURE, M.KIND_MODEL, M.KIND_NEW, M.KIND_NEW_MODEL = 0, 1, 2, 3
+-- Models brought over from later expansions by the porting tool, listed in
+-- Data/Ported.lua (only on a PC that has the tool's patch-Z.mpq).
+M.KIND_PORTED = 4
 M.MODEL_FILTERS = {
 	{ text = "All models" },
 	{ text = "Creatures", kinds = { [0] = true, [2] = true } },
@@ -247,6 +250,7 @@ M.MODEL_FILTERS = {
 	{ text = "Mounts", tag = "mount" },
 	{ text = "Other models", kinds = { [1] = true, [3] = true } },
 	{ text = "New in OctoWoW", kinds = { [2] = true, [3] = true } },
+	{ text = "Ported (later expansions)", kinds = { [4] = true } },
 }
 -- Items and sets are kind 0 (stock 1.12.1) or 2 (added by Turtle WoW / OctoWoW).
 M.ITEM_FILTERS = {
@@ -324,6 +328,14 @@ local function HiddenItems()
 	return hiddenItems
 end
 
+-- Display IDs from Data/Ported.lua: only this PC has their models, so they
+-- are never sent to or taken from other DMorph users.
+local portedIDs = {}
+function M.IsPorted(displayID)
+	M.GetCreatureCatalog()
+	return portedIDs[tonumber(displayID or 0)] == true
+end
+
 -- Creatures.lua (named creatures) and Models.lua (every other display ID the
 -- client has) together list every model, less the ones that can't show.
 function M.GetCreatureCatalog()
@@ -347,7 +359,21 @@ function M.GetCreatureCatalog()
 		end
 	end
 	DmorphOcto_CreatureData, DmorphOcto_ModelData = nil, nil -- the parsed tables replace the text
-	creatures = Fill(NewCatalog(), Merge(named, n, other, m))
+	local all, count = Merge(named, n, other, m)
+	-- Data/Ported.lua: displayID<TAB>name<TAB>tags ("mount").
+	local ported, p, portedMounts = {}, 0, {}
+	for id, name, tags in string.gfind(DmorphOcto_PortedData or "", "(%d+)\t([^\t\r\n]+)\t?([^\r\n]*)") do
+		id = tonumber(id)
+		p = p + 1
+		ported[p] = { id, name, strlower(name), 0, M.KIND_PORTED }
+		portedIDs[id] = true
+		if strfind(tags, "mount") then
+			portedMounts[id] = true
+		end
+	end
+	DmorphOcto_PortedData = nil
+	table.sort(ported, Before)
+	creatures = Fill(NewCatalog(), Merge(all, count, ported, p))
 	-- Tags for the filters: bosses and rares by display and name, mounts by
 	-- display. Data/ModelTags.lua (OctoWoW's client and Turtle WoW's ranks) and
 	-- Data/ClassicTags.lua (the 1.12.1 database); a boss stays a boss.
@@ -365,6 +391,9 @@ function M.GetCreatureCatalog()
 		end
 	end
 	DmorphOcto_TagData, DmorphOcto_ClassicTagData = nil, nil
+	for id in pairs(portedMounts) do
+		mounts[id] = true
+	end
 	creatures.tags = {}
 	for i = 1, creatures.count do
 		local tag = byName[creatures.ids[i] .. "\t" .. creatures.lower[i]]
@@ -1548,7 +1577,16 @@ function M.GetSharedLook()
 	if watch.active then
 		mount = watch.skin
 	end
-	return BodyDisplayID(), db.items, mount
+	-- Ported models are only on this PC: others would see nothing, so they
+	-- see your own model or mount instead.
+	local display = BodyDisplayID()
+	if display and M.IsPorted(display) then
+		display = nil
+	end
+	if mount and M.IsPorted(mount) then
+		mount = nil
+	end
+	return display, db.items, mount
 end
 
 -- Glows and your own look (DmorphHelper.dll) ----------------------------------

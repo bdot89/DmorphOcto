@@ -2257,6 +2257,33 @@ press(DmorphOctoRace10Male)
 check(contains(DmorphOctoRacesHint.text, "an NPC has"), "a race with no look list uses NPC looks")
 removeHelper()
 
+------------------------------------------------------------------------------
+-- Ported models (Data/Ported.lua, made by the porting tool on one PC).
+Mock.portedData = "60001\tPandaren Yeti Mount (Brown)\tmount\n60011\tTest Ported Thing\t\n"
+loadUI()
+installMorphAPI()
+local pc = DmorphOcto.GetCreatureCatalog()
+local yeti = pc.byID[60001]
+check(yeti and pc.names[yeti] == "Pandaren Yeti Mount (Brown)" and pc.kind[yeti] == DmorphOcto.KIND_PORTED
+	and contains(pc.tags[yeti] or "", "mount"), "a ported mount is in the catalogue, as a mount")
+local thing = pc.byID[60011]
+check(thing and not contains(pc.tags[thing] or "", "mount"), "a ported model without the mount tag isn't one")
+check(DmorphOcto.IsPorted(60001) and not DmorphOcto.IsPorted(49), "IsPorted knows them")
+local sortedOK = true
+for i = 2, pc.count do
+	if pc.lower[i - 1] > pc.lower[i] then
+		sortedOK = false
+	end
+end
+check(sortedOK, "the catalogue stays sorted by name")
+slash("morph 60001")
+local sharedDisplay, _, sharedMount = DmorphOcto.GetSharedLook()
+check(vh.display == 60001 and sharedDisplay == nil, "you can morph into it, and others aren't sent it")
+slash("demorph all")
+Mock.portedData = nil
+loadUI()
+check(not DmorphOcto.GetCreatureCatalog().byID[60001], "without Data/Ported.lua there are no ported models")
+
 print(format("%d checks, %d failures", checks, failures))
 if failures > 0 then
 	os.exit(1)

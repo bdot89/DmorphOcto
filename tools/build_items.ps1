@@ -114,6 +114,7 @@ function Get-Priority([string]$name) {
 }
 $mpqs = @()
 foreach ($file in Get-ChildItem (Join-Path $GameDir "Data") -Filter *.mpq) {
+  if ($file.Name -ieq "patch-Z.mpq") { continue } # the model porting tool's, only on that PC
   try { $mpqs += New-Object Mpq $file.FullName } catch { }
 }
 $mpqs = @($mpqs | Sort-Object @{ Expression = { Get-Priority $_.Name } }, Name)
