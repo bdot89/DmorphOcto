@@ -13,6 +13,8 @@
 ![Items](https://img.shields.io/badge/items-12%2C000%2B-a335ee?style=flat-square)
 ![Needs VanillaHelpers](https://img.shields.io/badge/needs-VanillaHelpers-2e8b57?style=flat-square)
 
+**[Project page](https://bdot89.github.io/DmorphOcto/)** · **[Download ZIP](https://github.com/bdot89/DmorphOcto/archive/refs/heads/main.zip)**
+
 </div>
 
 A morph window for the OctoWoW client, inspired by [DMorph](https://darksectordds.github.io/html/dmorph/index.html).
