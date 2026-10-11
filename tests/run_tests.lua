@@ -1749,6 +1749,7 @@ installMorphAPI()
 Mock.Click(DmorphOctoSetupRecheck)
 check(DmorphOctoSetupState1.text == "OK" and contains(DmorphOctoSetupButton.text, "Setup OK")
 	and contains(DmorphOctoSetupSummary.text, "Morphing works"), "Check again sees VanillaHelpers once it runs")
+check(contains(DmorphOctoSetupButton.text, "No helper"), "the Setup button says no DmorphHelper is running")
 Mock.Click(DmorphOctoSetupClose)
 check(not DmorphOctoSetup:IsVisible(), "Close hides the check")
 removeMorphAPI()
@@ -1942,8 +1943,26 @@ slash("dmorph status")
 check(contains(allChat(), "DmorphHelper v5 is loaded"), "status shows the helper's version")
 slash("dmorph check")
 check(contains(allChat(), "DmorphHelper: |cff33ff99OK"), "the check says the helper runs")
+check(contains(allChat(), "Running v5 (this DMorph comes with v5)"), "and which version runs")
+local openedForSetup = not (DmorphOctoFrame and DmorphOctoFrame:IsVisible())
+if openedForSetup then
+	slash("")
+end
+Mock.Click(DmorphOctoSetupButton)
+check(contains(DmorphOctoSetupButton.text, "Helper v5") and contains(DmorphOctoSetupText2.text, "Running v5"),
+	"the Setup button and panel show the helper version")
+Mock.Click(DmorphOctoSetupClose)
 local currentVersion = DmorphHelper_Version
 DmorphHelper_Version = function() return 3 end
+slash("dmorph status")
+check(contains(lastChat(), "DmorphHelper v3 is loaded, an older one") or contains(allChat(), "DmorphHelper v3 is loaded, an older one"),
+	"status flags an older helper")
+Mock.Click(DmorphOctoSetupButton)
+check(contains(DmorphOctoSetupButton.text, "Old helper v3"), "the Setup button flags an older helper")
+Mock.Click(DmorphOctoSetupClose)
+if openedForSetup then
+	DmorphOcto_ToggleUI()
+end
 slash("dmorph check")
 check(contains(allChat(), "An older DmorphHelper (v3)") and contains(allChat(), "Install DmorphHelper.bat"),
 	"an older DLL in the game folder is flagged, with how to update it")

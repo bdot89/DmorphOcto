@@ -241,7 +241,7 @@ local function Layer(parent, level)
 	return f
 end
 
-local function Tooltip(owner, title, line1, line2)
+local function Tooltip(owner, title, line1, line2, line3)
 	GameTooltip:SetOwner(owner, "ANCHOR_TOP")
 	GameTooltip:SetText(title)
 	if line1 then
@@ -249,6 +249,9 @@ local function Tooltip(owner, title, line1, line2)
 	end
 	if line2 then
 		GameTooltip:AddLine(line2, 0.8, 0.8, 0.8)
+	end
+	if line3 then
+		GameTooltip:AddLine(line3, 0.2, 1, 0.6)
 	end
 	GameTooltip:Show()
 end
@@ -3014,10 +3017,16 @@ local function UpdateSetupButton()
 	if not ui.setupButton then
 		return
 	end
-	if M.HasMorphAPI() then
-		ui.setupButton:SetText("|cff33ff99Setup OK|r")
-	else
+	-- The helper's version shows on the button: an old one needs the installer.
+	local helper, wanted = M.GetHelperVersion()
+	if not M.HasMorphAPI() then
 		ui.setupButton:SetText("|cffff5555Setup: fix me|r")
+	elseif helper and helper < wanted then
+		ui.setupButton:SetText("|cffffcc00Old helper v" .. helper .. ": fix|r")
+	elseif helper then
+		ui.setupButton:SetText("|cff33ff99Setup OK|r |cffccccccHelper v" .. helper .. "|r")
+	else
+		ui.setupButton:SetText("|cff33ff99Setup OK|r |cff999999No helper|r")
 	end
 end
 
@@ -3181,15 +3190,20 @@ local function Build()
 	ui.status = Label(frame, "", "GameFontHighlightSmall", 22, -462, "DmorphOctoFrameStatus")
 	ui.status:SetWidth(W - 44)
 	ui.status:SetHeight(30)
-	ui.setupButton = Button(frame, "", 120, 22, -495, ShowSetupPanel, "DmorphOctoSetupButton")
+	ui.setupButton = Button(frame, "", 160, 22, -495, ShowSetupPanel, "DmorphOctoSetupButton")
 	ui.setupButton:SetScript("OnEnter", function()
+		local helper, wanted = M.GetHelperVersion()
+		local line = "DmorphHelper: not running (optional)."
+		if helper then
+			line = "DmorphHelper: v" .. helper .. " running, v" .. wanted .. " comes with this DMorph."
+		end
 		Tooltip(this, "Setup check", "Whether VanillaHelpers and the optional client mods are running,",
-			"and how to fix what isn't.")
+			"and how to fix what isn't.", line)
 	end)
 	ui.setupButton:SetScript("OnLeave", HideTooltip)
 	UpdateSetupButton()
-	Label(frame, "DMorph users see each other's morphs (friendly players). /dmorph help: commands.",
-		"GameFontDisableSmall", 152, -500)
+	Label(frame, "DMorph users see each other's morphs. /dmorph help: commands.",
+		"GameFontDisableSmall", 192, -500)
 	BuildSetupPanel()
 	local share = Button(frame, "Sharing", 80, W - 230, -495, ShareMenu, "DmorphOctoShare")
 	share:SetScript("OnEnter", function()

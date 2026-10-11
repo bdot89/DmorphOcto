@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.8.0"
+local VERSION = "2.8.1"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1567,6 +1567,16 @@ local function HasHelper()
 end
 M.HasHelper = HasHelper
 
+-- The DmorphHelper version running (nil: none), and the one this DMorph
+-- comes with.
+function M.GetHelperVersion()
+	if not HasHelper() then
+		return nil, HELPER_VERSION
+	end
+	local ok, version = pcall(DmorphHelper_Version)
+	return ok and tonumber(version) or 0, HELPER_VERSION
+end
+
 -- What DMorph needs and what it can use, for the window's Setup check and
 -- /dmorph check: { name, state = "ok" / "bad" / "off" (optional, missing), text }.
 function M.GetSetupReport()
@@ -1583,13 +1593,13 @@ function M.GetSetupReport()
 	else
 		Add("VanillaHelpers", "bad", MissingAPI())
 	end
-	local ok, helperVersion = pcall(DmorphHelper_Version)
-	helperVersion = ok and tonumber(helperVersion) or 0
-	if HasHelper() and helperVersion < HELPER_VERSION then
+	local helperVersion = M.GetHelperVersion()
+	if helperVersion and helperVersion < HELPER_VERSION then
 		Add("DmorphHelper", "bad", "An older DmorphHelper (v" .. helperVersion .. ") is in the game folder; this DMorph "
 			.. "comes with v" .. HELPER_VERSION .. ". " .. INSTALL_HELPER)
 	elseif HasHelper() then
-		Add("DmorphHelper", "ok", "Running: weapon glows and real skin, face and hair work.")
+		Add("DmorphHelper", "ok", "Running v" .. helperVersion .. " (this DMorph comes with v" .. HELPER_VERSION .. "): weapon "
+			.. "glows, size, real skin, face and hair, and your own faction and languages during race morphs work.")
 	else
 		Add("DmorphHelper", "off", "Optional, not running: weapon glows and real skin, face and hair need it. "
 			.. INSTALL_HELPER)
@@ -2494,9 +2504,12 @@ local function ShowStatus()
 	elseif type(VANILLAHELPERS_VERSION) == "number" then
 		Print("VanillaHelpers v" .. VersionText(VANILLAHELPERS_VERSION) .. " is loaded.")
 	end
-	if HasHelper() then
-		local ok, version = pcall(DmorphHelper_Version)
-		Print("DmorphHelper v" .. tostring(ok and version or "?") .. " is loaded: weapon glows and real skin, face and hair work.")
+	local helperVersion = M.GetHelperVersion()
+	if helperVersion and helperVersion < HELPER_VERSION then
+		Print("DmorphHelper v" .. helperVersion .. " is loaded, an older one: this DMorph comes with v" .. HELPER_VERSION .. ". "
+			.. INSTALL_HELPER)
+	elseif helperVersion then
+		Print("DmorphHelper v" .. helperVersion .. " is loaded: weapon glows, size and real skin, face and hair work.")
 	else
 		Print("DmorphHelper.dll is not loaded: weapon glows and real skin, face and hair changes need it. " .. INSTALL_HELPER)
 	end
