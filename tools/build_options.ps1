@@ -324,10 +324,14 @@ if (-not $cols) {
   Write-Output "warning: CharSections.dbc is missing or doesn't look as expected, so no character options. Please send these lines:"
   if ($sections) { Show-Table $sections "CharSections" $null }
 } else {
-  # Rows whose texture isn't in the MPQs would draw white; leave them out,
-  # unless that's more than a quarter of the rows (then the check is wrong).
+  # A row with none of its textures in the MPQs, or a skin row without its
+  # first (the body), would draw white: leave it out, unless that's more than
+  # a quarter of the rows (then the check is wrong). The game skips a missing
+  # extra layer (many beards list an upper layer that was never made), so a
+  # row with some of its textures is kept.
+  $SECTION_NAMES = @("skin", "face", "facial hair", "hair", "underwear")
   $rows = New-Object System.Collections.ArrayList
-  $dropped = 0; $withTexture = 0; $missingTex = New-Object System.Collections.ArrayList
+  $dropped = 0; $withTexture = 0; $partial = 0; $missingTex = New-Object System.Collections.ArrayList; $droppedBy = @{}
   for ($r = 0; $r -lt $sections.Count; $r++) {
     $tex = @()
     for ($j = 0; $j -lt 3; $j++) { $t = $sections.TryStr($r, $cols.text + $j); if ($t) { $tex += $t } }
@@ -335,10 +339,15 @@ if (-not $cols) {
     if ($tex.Count) {
       $withTexture++
       $absent = @($tex | Where-Object { -not (Test-GameFile $_) })
-      $shows = $absent.Count -eq 0
+      $section = $sections.Int($r, 3)
+      $shows = $absent.Count -lt $tex.Count -and -not ($section -eq 0 -and $absent -contains $tex[0])
       if (-not $shows) {
         $dropped++
+        $what = "other"; if ($section -ge 0 -and $section -le 4) { $what = $SECTION_NAMES[$section] }
+        $droppedBy[$what] = 1 + [int]$droppedBy[$what]
         if ($missingTex.Count -lt 3) { [void]$missingTex.Add($absent[0]) }
+      } elseif ($absent.Count) {
+        $partial++
       }
     }
     [void]$rows.Add([pscustomobject]@{ race = $sections.Int($r, 1); gender = $sections.Int($r, 2); section = $sections.Int($r, 3)
@@ -381,7 +390,11 @@ if (-not $cols) {
     }
   }
   $optionNote = "{0} races and genders" -f $options.Count
-  if ($dropped) { $optionNote += ", {0} of {1} looks left out (texture missing, e.g. {2})" -f $dropped, $withTexture, ($missingTex -join ", ") }
+  if ($dropped) {
+    $by = ($droppedBy.Keys | Sort-Object | ForEach-Object { "$($droppedBy[$_]) $_" }) -join ", "
+    $optionNote += ", {0} of {1} looks left out ({2}; no texture, e.g. {3})" -f $dropped, $withTexture, $by, ($missingTex -join ", ")
+  }
+  if ($partial) { $optionNote += ", {0} kept without an extra layer the game doesn't have" -f $partial }
 }
 
 # A Lua list of numbers, and the NPC-only ones of a value set as a Lua set.

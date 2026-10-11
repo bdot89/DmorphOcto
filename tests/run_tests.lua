@@ -1420,7 +1420,7 @@ local GLOWS = "25\t1900\tCrusader; Holy Power\tHolyGlow\n26\t803\tFiery Weapon\t
 local OPTIONS = {
 	["1:0"] = {
 		skin = { 0, 1, 2, 3 }, npcSkin = { [3] = true },
-		face = { [0] = { 0, 1 }, [1] = { 0 }, [2] = { 0 }, [3] = { 0 } }, npcFace = {},
+		face = { [0] = { 0, 1, 2 }, [1] = { 0 }, [2] = { 0 }, [3] = { 0 } }, npcFace = {},
 		hairStyle = { 0, 1, 2 }, npcHairStyle = {},
 		hairColour = { [0] = { 0, 1 }, [1] = { 0 }, [2] = { 0 } }, anyHairColour = { 0, 1 }, npcHairColour = {},
 		facialHair = { 0, 1, 2 },
@@ -1577,7 +1577,7 @@ check(contains(allChat(), "Glow, ranged: Glow 29"), "status lists the glows")
 -- Your own skin, face and hair (Races tab).
 slash("")
 Mock.Click(DmorphOctoTabRaces)
-check(DmorphOctoCreatorValue1.text == "1 of 4" and DmorphOctoCreatorValue2.text == "2 of 2"
+check(DmorphOctoCreatorValue1.text == "1 of 4" and DmorphOctoCreatorValue2.text == "2 of 3"
 	and DmorphOctoCreatorValue4.text == "2 of 2", "the rows show where your own look is among the race's")
 check(contains(DmorphOctoRacesHint.text, "real skin"), "the hint says the rows change your real look")
 press(DmorphOctoCreatorNext1)

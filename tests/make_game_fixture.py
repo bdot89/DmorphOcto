@@ -14,7 +14,8 @@ like a mount spell, no rider point); with --mostly-empty the model check turns i
 off, with --no-rider-points the rider point rule does (90001-90005 and 90012 are mounts).
 Glows: visuals 25 (enchant 1900, "Crusader; Holy Power"), 26 (803), 28 (20) and 29
 (30, no name), not 27 (its effect model is missing). CharOptions: "1:0" skins 0-3
-(3 NPC-only; 4 is left out, its texture is missing), faces [0]={0,1} [1]..[3]={0},
+(3 NPC-only; 4 is left out, its texture is missing), faces [0]={0,1,2} (2 lacks an
+extra layer, kept) [1]..[3]={0},
 hair styles 0-2, hair colours [0]={0,1} [1]={0}, facial hair 0-2; "1:1", "2:0" and "2:1" (hair
 styles 0-3 with colours 0-9, all sharing one texture) too; "2:0" hair style 1 has colour 0
 (its texture is named with "/").
@@ -270,6 +271,9 @@ def main():
     section(1, 0, 0, 0, 4, texture="missing")
     section(1, 0, 1, 0, 0)
     section(1, 0, 1, 1, 0)
+    # A face whose upper layer was never made: kept, the game draws the rest.
+    section(1, 0, 1, 2, 0)
+    sections[-1][7] = "Character\\R1\\G0\\NeverMade.blp"
     for c in range(1, 4):
         section(1, 0, 1, 0, c)
     section(1, 0, 3, 0, 0)
