@@ -1491,6 +1491,31 @@ Mock.party = 0
 Mock.guild = nil
 
 ------------------------------------------------------------------------------
+-- Chat language: a race morph to the other faction changes the game's
+-- default language to one the character doesn't know.
+
+newClient(1478) -- an Undead (the user's report)
+DmorphOctoDB = nil
+Mock.languages, Mock.faction = { "Orcish", "Gutterspeak" }, "Horde"
+loadUI()
+say(".race human")
+Mock.defaultLanguage = "Common" -- what the game now thinks your race speaks
+SendChatMessage("hello", "SAY")
+check(Mock.lastLanguage == "Orcish" and Mock.sent[table.getn(Mock.sent)] == "hello",
+	"as a Human morph, /say goes out in Orcish instead of Common")
+SendChatMessage("hello", "GUILD", "Common")
+check(Mock.lastLanguage == "Orcish", "a language you don't know is swapped for one you do")
+SendChatMessage("hello", "SAY", "Gutterspeak")
+check(Mock.lastLanguage == "Gutterspeak", "a language you picked and know is kept")
+SendChatMessage("waves", "EMOTE")
+check(Mock.lastLanguage == nil, "emotes aren't spoken, so they're left alone")
+Mock.defaultLanguage = nil
+say(".demorph")
+SendChatMessage("hello", "SAY")
+check(Mock.lastLanguage == "Orcish", "unmorphed, your own default is used")
+Mock.languages, Mock.faction, Mock.defaultLanguage = nil, nil, nil
+
+------------------------------------------------------------------------------
 -- Without VanillaHelpers, everything explains what is missing and stays local.
 
 newClient(49)

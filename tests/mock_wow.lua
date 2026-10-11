@@ -328,12 +328,19 @@ function Mock.ResetUI()
 	-- Channel messages (Share.lua) are kept apart from what you type.
 	Mock.channelSent, Mock.addonSent, Mock.channels = {}, {}, {}
 	function SendChatMessage(msg, chatType, language, channel)
+		Mock.lastLanguage = language
 		if chatType == "CHANNEL" then
 			table.insert(Mock.channelSent, { msg = msg, channel = channel })
 		else
 			table.insert(Mock.sent, msg)
 		end
 	end
+	-- Languages: the ones the character knows (from its skills) and the
+	-- race's default, which a race morph changes (Mock.defaultLanguage).
+	Mock.languages = Mock.languages or { "Common" }
+	function GetLanguageByIndex(i) return Mock.languages[i] end
+	function GetDefaultLanguage() return Mock.defaultLanguage or Mock.languages[1] end
+	function UnitFactionGroup() return Mock.faction or "Alliance", Mock.faction or "Alliance" end
 	function SendAddonMessage(prefix, text, distribution)
 		assert(distribution == "PARTY" or distribution == "RAID" or distribution == "GUILD" or distribution == "BATTLEGROUND",
 			"SendAddonMessage: 1.12 has no " .. tostring(distribution))

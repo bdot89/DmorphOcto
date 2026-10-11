@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.2.0"
+local VERSION = "2.2.1"
 local PREFIX = "|cff33ff99DMorph|r: "
 local MISSING_API = "VanillaHelpers v1.1.0 or newer is not loaded, so morphing is unavailable. "
 	.. "Enable the 'vanillaHelpers' mod in OctoLauncher (or add VanillaHelpers.dll to dlls.txt) "
@@ -2335,8 +2335,49 @@ local function RunCommand(line)
 	return true
 end
 
+-- Chat that is spoken in a language (the rest, like emotes, isn't).
+local SPOKEN = {
+	SAY = true, YELL = true, PARTY = true, RAID = true, RAID_WARNING = true, GUILD = true,
+	OFFICER = true, WHISPER = true, CHANNEL = true, BATTLEGROUND = true,
+}
+
+-- A race morph also changes your race in VanillaHelpers, and the game then
+-- speaks that race's language by default: as an Undead morphed into a Human,
+-- "You don't know that language" (Common). The languages you know come from
+-- your skills, which no morph changes, so chat goes out in a language from
+-- that list: the one asked for if you know it, else your default if you know
+-- it, else your faction's (Orcish / Common), else the first you know.
+local function SpeakableLanguage(language)
+	local known, count = {}, 0
+	for i = 1, 20 do
+		local ok, name = pcall(GetLanguageByIndex, i)
+		if not (ok and name) then
+			break
+		end
+		known[name], count = true, count + 1
+		if count == 1 then
+			known[1] = name
+		end
+	end
+	if count == 0 or (language and known[language]) then
+		return language
+	end
+	local ok, default = pcall(GetDefaultLanguage)
+	if ok and default and known[default] then
+		return default
+	end
+	local faction = UnitFactionGroup("player")
+	if faction == "Horde" and known["Orcish"] then
+		return "Orcish"
+	elseif faction == "Alliance" and known["Common"] then
+		return "Common"
+	end
+	return known[1]
+end
+
 -- DMorph's interface: commands typed into chat with a leading dot. Anything
--- that isn't one of our commands still goes to the server as before.
+-- that isn't one of our commands still goes to the server as before, in a
+-- language you know (see above).
 local orig_SendChatMessage = SendChatMessage
 function SendChatMessage(msg, chatType, language, channel)
 	if type(msg) == "string" then
@@ -2344,6 +2385,9 @@ function SendChatMessage(msg, chatType, language, channel)
 		if line and RunCommand(line) then
 			return
 		end
+	end
+	if SPOKEN[strupper(chatType or "SAY")] then
+		language = SpeakableLanguage(language)
 	end
 	return orig_SendChatMessage(msg, chatType, language, channel)
 end
