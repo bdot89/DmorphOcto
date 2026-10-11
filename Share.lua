@@ -12,8 +12,12 @@
 --    Only players outside those hear us on DMorph's own chat channel, which
 --    no chat window shows.
 --  * Your changes go out once they stand still for a second (one message for
---    a whole outfit), and only to the players who are around you and have
---    DMorph. Anyone else asks when they see you.
+--    a whole outfit), and only while a DMorph user is in range of you (about
+--    28 yards, seen in the last minute). Nothing goes out otherwise: anyone
+--    else asks when they come near you.
+--  * Only players near you (or in your group) that you target or mouse over
+--    are asked whether they have DMorph, and a player without it isn't asked
+--    again for a day (remembered between sessions).
 --  * Mounting and dismounting is a tiny message of its own that goes first.
 --  * Looks are short (base 36) and remembered between sessions. A question
 --    carries a fingerprint of the look we remember, and the answer is a
@@ -43,11 +47,12 @@ local SETTLE, MAX_WAIT = 1, 3 -- send a changed look once it stands still this l
 local CHANNEL_GAP, ADDON_GAP = 0.6, 0.2 -- between our messages
 local JOIN_DELAY, READY_DELAY = 3, 2 -- after login: join the channel, then talk
 local REPLY_GAP = 3 -- answer questions about us at most this often (per way)
-local QUERY_GAP = 3 -- ask about players at most this often
-local ASK_AGAIN = 300 -- ask a player without DMorph again after this long
-local RECHECK = 60 -- ask a DMorph user who comes back into sight whether they changed, at most this often
-local CONFIRM_WAIT = 20 -- a remembered player who doesn't answer in this long has no DMorph now
-local AUDIENCE = 180 -- DMorph users seen this recently, or who asked about us, get our changes
+local QUERY_GAP = 10 -- ask about players at most this often
+local ASK_AGAIN = 3600 -- ask a player again after this long (this session)
+local NO_DMORPH_KEEP = 86400 -- a player who didn't answer isn't asked again for a day (any session)
+local RECHECK = 120 -- ask a DMorph user who comes back into range whether they changed, at most this often
+local CONFIRM_WAIT = 20 -- a player who doesn't answer in this long has no DMorph (now)
+local AUDIENCE = 60 -- DMorph users in range this recently, or who asked about us, get our changes
 local GUILD_GAP = 120 -- refresh the guild list this often
 local KEEP = 14 * 86400 -- forget remembered looks after two weeks
 local MAX_ASK = 12
@@ -57,6 +62,8 @@ local clock, scanID = 0, 0
 local peers, peerCount = {}, 0 -- name -> { display, mount, items, d, m, it, look, print, guid, version, heard, confirmed }
 local applied = {} -- name -> what we put on them: { display, mount, items, version, scan, away }
 local asked, queue, queued = {}, {}, {} -- name -> when we last asked; names to ask about; name -> fingerprint or true
+local pending = {} -- name -> when a player we know nothing about was asked (no answer = no DMorph)
+local noDmorph -- DmorphOctoAccount.noDmorph for this realm: name -> time() they didn't answer
 local audience = {} -- name -> when they last showed they see us
 local inGroup, inGuild = {}, {} -- names
 local replies = {} -- way -> "L" (full look) or "H" (fingerprint)
@@ -331,6 +338,39 @@ local function Cache()
 	return cache
 end
 
+-- Players who didn't answer a question: they have no DMorph, for a day.
+local function NoDmorph()
+	if not noDmorph then
+		local account = M.GetAccount()
+		if type(account.noDmorph) ~= "table" then
+			account.noDmorph = {}
+		end
+		local realm = (GetRealmName and GetRealmName()) or "?"
+		if type(account.noDmorph[realm]) ~= "table" then
+			account.noDmorph[realm] = {}
+		end
+		noDmorph = account.noDmorph[realm]
+		local now = time()
+		for name, at in pairs(noDmorph) do
+			if type(at) ~= "number" or now - at > NO_DMORPH_KEEP then
+				noDmorph[name] = nil
+			end
+		end
+	end
+	return noDmorph
+end
+
+local function KnownWithout(name)
+	local at = NoDmorph()[name]
+	return at and time() - at <= NO_DMORPH_KEEP
+end
+
+-- Someone answered: they have DMorph after all.
+local function Answered(name)
+	pending[name] = nil
+	NoDmorph()[name] = nil
+end
+
 -- Putting looks on other players -------------------------------------------
 
 local NONE = { items = {} }
@@ -371,6 +411,20 @@ end
 -- moment that player dismounts).
 local function Steady(token)
 	return IsGUID(token) or strfind(token, "^party%d$") ~= nil or strfind(token, "^raid%d+$") ~= nil
+end
+
+local function GroupToken(token)
+	return strfind(token, "^party%d$") ~= nil or strfind(token, "^raid%d+$") ~= nil
+end
+
+-- In range: within follow distance (about 28 yards), or a group member
+-- (who hears us through hidden group messages, wherever they are).
+local function Near(token)
+	if GroupToken(token) then
+		return true
+	end
+	local ok, close = pcall(CheckInteractDistance, token, 4)
+	return ok and close and true or false
 end
 
 -- VanillaHelpers errors on players it can't morph (out of sight, hostile).
@@ -517,17 +571,20 @@ local function Visit(token)
 	if not peer and Seeing() and UnitCanAssist("player", token) then
 		peer = Remembered(name)
 	end
+	-- Looks go on whatever the distance; messages only go to players in range.
+	local near = Near(token)
 	if peer or applied[name] then
 		local back = not applied[name] or applied[name].away
 		ApplyTo(name, token)
-		if peer then
+		if peer and near then
 			audience[name] = clock -- they can see us too
 			if (back or not peer.confirmed) and clock - peer.heard > RECHECK
 				and clock - (asked[name] or -1000) > RECHECK then
 				Ask(name, peer.print) -- in case they changed while away
 			end
 		end
-	elseif Seeing() and UnitCanAssist("player", token)
+	elseif near and (token == "target" or token == "mouseover" or GroupToken(token))
+		and Seeing() and UnitCanAssist("player", token) and not KnownWithout(name)
 		and (not asked[name] or clock - asked[name] > ASK_AGAIN) then
 		Ask(name)
 	end
@@ -578,6 +635,9 @@ local function AskQueued()
 		local print = queued[name]
 		queued[name] = nil
 		asked[name] = clock
+		if not peers[name] then
+			pending[name] = clock
+		end
 		local way = Way(name)
 		byWay[way] = byWay[way] or {}
 		if print == true then
@@ -604,6 +664,7 @@ local function ReadLook(sender, rest)
 		guid = nil
 	end
 	Unask(sender)
+	Answered(sender)
 	asked[sender] = clock
 	local peer = peers[sender]
 	if peer and peer.look == look.look then
@@ -635,6 +696,7 @@ end
 -- "Nothing changed": confirms what we remember, else we ask for it all.
 local function ReadPrint(sender, print, guid)
 	Unask(sender)
+	Answered(sender)
 	asked[sender] = clock
 	local peer = peers[sender]
 	if peer and peer.print == print then
@@ -670,9 +732,13 @@ local function ReadQuestion(sender, rest, way)
 				end
 			end
 		elseif way == "CHANNEL" and queued[name] and Way(name) == "CHANNEL" then
-			-- Someone else asked first: the answer comes on the channel anyway.
+			-- Someone else asked first: the answer comes on the channel anyway
+			-- (and if none comes, they have no DMorph).
 			Unask(name)
 			asked[name] = clock
+			if not peers[name] then
+				pending[name] = clock
+			end
 		end
 	end
 end
@@ -764,11 +830,21 @@ local function SendNext()
 	end
 end
 
--- Remembered players who don't answer have stopped using DMorph.
+-- Remembered players who don't answer have stopped using DMorph, and new
+-- faces who don't answer have none: neither is asked again for a day.
 local function ForgetSilent()
 	for name, peer in pairs(peers) do
 		if not peer.confirmed and asked[name] and not queued[name] and clock - asked[name] > CONFIRM_WAIT then
 			DropPeer(name)
+			NoDmorph()[name] = time()
+		end
+	end
+	for name, at in pairs(pending) do
+		if clock - at > CONFIRM_WAIT then
+			pending[name] = nil
+			if not peers[name] then
+				NoDmorph()[name] = time()
+			end
 		end
 	end
 end

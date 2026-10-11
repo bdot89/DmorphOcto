@@ -410,6 +410,13 @@ function Mock.ResetUI()
 		local u = Mock.Unit(unit)
 		return u and not u.far and 1 or nil
 	end
+	-- Distance check 4 is "within follow range" (about 28 yards); u.distant
+	-- is a player you can see but who is further away.
+	function CheckInteractDistance(unit, index)
+		assert(index >= 1 and index <= 4, "CheckInteractDistance: index 1-4")
+		local u = Mock.Unit(unit)
+		return u and not u.far and not u.distant and 1 or nil
+	end
 	function UnitCanAssist(unit, other)
 		local u = Mock.Unit(other)
 		return u and u.friendly and 1 or nil

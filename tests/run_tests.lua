@@ -1369,6 +1369,20 @@ wait(4)
 check(table.getn(Mock.channelSent) == 0, "nor when someone else just asked the same on the channel")
 Mock.units.mouseover = nil
 
+-- Only players near you are asked.
+quiet()
+Mock.units.mouseover = { name = "Faraway", guid = "0x00000000000D0003", friendly = true, display = 52, distant = true }
+Mock.Fire("UPDATE_MOUSEOVER_UNIT")
+wait(12)
+check(table.getn(Mock.channelSent) == 0, "a player you can see but who is out of range isn't asked")
+Mock.units.mouseover = nil
+Mock.units.targettarget = { name = "Bystander", guid = "0x00000000000D0004", friendly = true, display = 52 }
+wait(12)
+check(table.getn(Mock.channelSent) == 0, "nor is whoever your target is targeting")
+Mock.units.targettarget = nil
+check(DmorphOctoAccount.noDmorph.OctoWoW.Stranger and DmorphOctoAccount.noDmorph.OctoWoW.Newbie,
+	"players who didn't answer are remembered as having no DMorph")
+
 -- Questions about you: the whole look, or just its fingerprint if the asker
 -- already has it. One answer covers everyone who asked.
 local look = "3HR 0 a2A3eA"
@@ -1428,6 +1442,24 @@ wait(3)
 check(channelSays("DMO2 L 3HR 0 eA 0x0000000000000042"), "and your messages carry your GUID")
 Mock.superWoW = nil
 
+-- Your changes only reach DMorph users in range.
+Mock.units.nearby = nil
+Mock.units.target = { name = "Ally", guid = ally, friendly = true, display = 50, distant = true }
+Mock.Fire("PLAYER_TARGET_CHANGED")
+wait(61)
+quiet()
+say(".item head 2955")
+wait(3)
+check(not channelSays("DMO2 L") and morphOf(ally).display == 4527,
+	"a DMorph user in sight but out of range still shows their look, but doesn't get your changes")
+Mock.units.target.distant = nil
+wait(0.5)
+quiet()
+say(".item head 0")
+wait(3)
+check(channelSays("DMO2 L 3HR 0 eA"), "once they come into range, your changes reach them")
+Mock.units.target = nil
+
 -- Looks are remembered: after a /reload a known player shows at once, and is
 -- only asked whether they changed.
 loadUI()
@@ -1454,6 +1486,20 @@ quiet()
 hear("Ally", "H ZZZZ " .. ally)
 wait(4)
 check(channelSays("DMO2 Q Ally") and not channelSays("Q Ally:"), "a fingerprint that doesn't match asks for the whole look")
+quiet()
+Mock.units.mouseover = { name = "Stranger", guid = "0x00000000000D0001", friendly = true, display = 52 }
+Mock.Fire("UPDATE_MOUSEOVER_UNIT")
+wait(12)
+check(not channelSays("Stranger"), "a player without DMorph isn't asked again after a /reload")
+Mock.now = Mock.now + 86401
+loadUI()
+wait(15)
+quiet()
+Mock.units.mouseover = { name = "Stranger", guid = "0x00000000000D0001", friendly = true, display = 52 }
+Mock.Fire("UPDATE_MOUSEOVER_UNIT")
+wait(4)
+check(channelSays("DMO2 Q Stranger"), "but is asked again a day later")
+Mock.units.mouseover = nil
 Mock.now = Mock.now + 15 * 86400
 loadUI()
 check(DmorphOctoAccount.peerCache.OctoWoW.Ally == nil, "looks are forgotten after two weeks")
