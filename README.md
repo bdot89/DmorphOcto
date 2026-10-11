@@ -1,6 +1,6 @@
 # DMorph for OctoWoW
 
-Become any creature, ride any mount, wear any item. A morph window for WoW 1.12 (OctoWoW), version 2.6.0.
+Become any creature, ride any mount, wear any item. A morph window for WoW 1.12 (OctoWoW), version 2.6.1.
 
 Morphs only change what you and other DMorph users see. Everyone else, and the server, sees your real character.
 
@@ -117,7 +117,8 @@ Item slots: 1 head, 3 shoulder, 4 shirt, 5 chest, 6 waist, 7 legs, 8 feet, 9 wri
 ## Good to know
 
 - Only friendly players can be morphed on your screen. Other DMorph users' morphs show when you target them, mouse over them or group with them (straight away with SuperWoW).
-- During a race morph the game still treats you as your own race: your languages, flight paths and spells stay normal.
+- During a race morph your languages, flight paths and spells stay those of your own character (with DmorphHelper), while your model, skin and hair stay the other race's.
+- With a race portrait you keep your own face and hair. If the other race doesn't have one of your values (say a Tauren hair style on a Gnome), the closest one that race has is used instead, so nothing shows up green.
 - Mount skins go on when you mount and come off when you dismount. Flight master birds keep their own look.
 - Glows and picked faces are only on your own screen for now.
 - Shapeshifting shows your morph instead of the form. Reset your model first if you want the form.

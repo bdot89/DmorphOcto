@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.6.0"
+local VERSION = "2.6.1"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1265,33 +1265,29 @@ local function DisplayRace(display)
 	end
 end
 
--- With DmorphHelper v3 your own race stays in the game's race byte during a
--- race morph, and the morph's race is only used while the game builds your
--- model (DmorphHelper_SetRaces). Then languages, flight paths and spells all
--- follow your own race, and nothing needs holding. raceKept: the race your
--- model is built as (0: off); raceKeepWorks: whether DmorphHelper took it.
-local raceKept, raceKeepWorks = 0, false
+-- A race morph's race stays in the game's race byte (the game textures your
+-- model from it, so it has to). With DmorphHelper v4 your own race is only
+-- put in while the game reads an incoming chat message (so it understands
+-- your languages) and, below, while the flight map or spellbook is open:
+-- the byte alone, no rebuild, so your model doesn't change. raceKept: your
+-- own race as DmorphHelper reads chat with it (0: off).
+local raceKept = 0
+local raceSwapped = {} -- reasons the byte holds your own race (HoldRace)
+
+local function MorphRace()
+	local morph = DisplayRace(BodyDisplayID() or 0)
+	if sessionReady and morph and nativeRace and morph ~= nativeRace then
+		return morph
+	end
+end
 
 local function KeepRace()
-	if type(DmorphHelper_SetRaces) ~= "function" then
+	if type(DmorphHelper_SetChatRace) ~= "function" then
 		return
 	end
-	local morph = DisplayRace(BodyDisplayID() or 0)
-	local want = 0
-	if sessionReady and morph and nativeRace and morph ~= nativeRace and not next(raceHeld) then
-		want = morph
-	end
-	if want ~= raceKept then
-		local own = want ~= 0 and nativeRace or 0
-		raceKeepWorks = pcall(DmorphHelper_SetRaces, want, own) and true or false
-		raceKept = raceKeepWorks and want or 0
-	elseif want ~= 0 and type(DmorphHelper_GetRace) == "function" then
-		-- VanillaHelpers puts the morph's race back when the server resends
-		-- the field: your own race goes back in.
-		local ok, race = pcall(DmorphHelper_GetRace, "player")
-		if ok and race ~= nativeRace then
-			pcall(DmorphHelper_SetRaces, want, nativeRace)
-		end
+	local want = MorphRace() and nativeRace or 0
+	if want ~= raceKept and pcall(DmorphHelper_SetChatRace, want) then
+		raceKept = want
 	end
 end
 
@@ -1300,19 +1296,39 @@ local function ApplyBody()
 	if next(raceHeld) then
 		return true -- it goes on when the flight map or spellbook closes
 	end
-	KeepRace() -- first, so the new model is built as the morph's race
 	local ok, err = Morph(SetUnitDisplayID, "player", BodyDisplayID())
 	KeepRace()
+	if next(raceSwapped) and MorphRace() then
+		pcall(DmorphHelper_SetRace, "player", nativeRace) -- still open
+	end
 	return ok, err
 end
 
 -- Holds (on) or releases your own race for a reason. Returns whether the
 -- race was changed back just now, so the window can redraw.
 function M.HoldRace(reason, on)
-	if on then
-		if raceKept ~= 0 then
-			return false -- DmorphHelper already keeps your own race (KeepRace)
+	-- With DmorphHelper: only the race byte, for as long as the window is open.
+	if type(DmorphHelper_SetRace) == "function" then
+		if on then
+			local morph = MorphRace()
+			if not morph or not pcall(DmorphHelper_SetRace, "player", nativeRace) then
+				return false
+			end
+			local first = not next(raceSwapped)
+			raceSwapped[reason] = true
+			return first
 		end
+		if raceSwapped[reason] then
+			raceSwapped[reason] = nil
+			local morph = MorphRace()
+			if not next(raceSwapped) and morph then
+				pcall(DmorphHelper_SetRace, "player", morph)
+			end
+		end
+		return false
+	end
+	-- Without it: your own model while the window is open.
+	if on then
 		local held = next(raceHeld) ~= nil
 		if held then
 			raceHeld[reason] = true
@@ -1540,7 +1556,7 @@ local MISSING_HELPER = "DmorphHelper.dll isn't loaded, so weapon glows, your siz
 M.MISSING_HELPER = MISSING_HELPER
 -- The DmorphHelper_Version() the DLL in helper\ reports. An older one in the
 -- game folder (DMorph was updated, the DLL wasn't copied again) is flagged.
-local HELPER_VERSION = 3
+local HELPER_VERSION = 4
 -- Rows 1-5 of the Races tab, in DmorphHelper_GetLook's order.
 local OWN_LOOK_NPC = { "npcSkin", "npcFace", "npcHairStyle", "npcHairColour" }
 
@@ -1766,7 +1782,19 @@ function M.GetLookState()
 	if picked then
 		return race, gender, o, picked, true
 	end
-	return race, gender, o, RealLook(), false
+	return race, gender, o, M.FittedLook(o, RealLook()), false
+end
+
+-- Your own look as the body's race can wear it: a value that race doesn't
+-- have (a Tauren's hair style on a Gnome) has no texture, and the game
+-- draws it green, so it moves to the closest one that race has.
+function M.FittedLook(o, look)
+	if not (o and look) then
+		return look
+	end
+	local fitted = CopyLook(look)
+	ClampLook(o, fitted)
+	return fitted
 end
 
 -- Your size needs DmorphHelper v2.
@@ -1812,6 +1840,14 @@ local function WatchHelper()
 		end
 		local race, gender = M.GetBodyRace()
 		local want = race and db.looks[race .. ":" .. gender]
+		if not want and race then
+			-- Your own look, fitted to the race (see M.FittedLook).
+			local real = db.lookReal or current
+			local fitted = M.FittedLook(M.GetLookOptions(race, gender), real)
+			if fitted and not SameValues(fitted, real) then
+				want = fitted
+			end
+		end
 		local restore = not want and db.lookWritten
 		if restore then
 			want = db.lookReal
@@ -2858,31 +2894,13 @@ mountFrame:SetScript("OnUpdate", function()
 		WatchMount()
 		KeepRace()
 	end
-	-- Gear the server changed is drawn by the game without a full rebuild,
-	-- so a helmet would follow your own race: rebuild as the morph's race.
-	if this.rebuild then
-		this.rebuild = this.rebuild - arg1
-		if this.rebuild <= 0 then
-			this.rebuild = nil
-			if raceKept ~= 0 then
-				pcall(DmorphHelper_Rebuild, "player")
-			end
-		end
-	end
 end)
-mountFrame:RegisterEvent("UNIT_INVENTORY_CHANGED")
 -- Losing and getting back control (a flight path starts and lands, a fear,
 -- a stun) takes the skin off: if you're still on your mount, the watcher
 -- sees its buff and puts the skin on again a tenth of a second later.
 mountFrame:RegisterEvent("PLAYER_CONTROL_LOST")
 mountFrame:RegisterEvent("PLAYER_CONTROL_GAINED")
 mountFrame:SetScript("OnEvent", function()
-	if event == "UNIT_INVENTORY_CHANGED" then
-		if arg1 == "player" and raceKept ~= 0 then
-			this.rebuild = 0.3
-		end
-		return
-	end
 	if watch.active then
 		StopSkin()
 		watch.real = nil

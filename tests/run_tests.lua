@@ -1784,27 +1784,30 @@ local OPTIONS = {
 local game
 local function installHelper(look)
 	game = { look = look, real = look, enchants = { [16] = { 803, 0 }, [17] = { 0, 0 }, [18] = { 0, 0 } }, lookWrites = 0,
-		scale = 1, race = 1, build = 0, own = 0, rebuilds = 0 }
+		scale = 1, race = 1, chatRace = 0, rebuilds = 0 }
 	local function whole(v, max)
 		return type(v) == "number" and v >= 0 and v <= max and v == math.floor(v)
 	end
 	function DmorphHelper_Version()
-		return 3
+		return 4
 	end
 	-- The race byte: VanillaHelpers writes the morph's race there (tests set
-	-- game.race), DmorphHelper_SetRaces keeps your own one in it.
+	-- game.race); DmorphHelper_SetRace writes it without a rebuild, and
+	-- DmorphHelper_SetChatRace is the race chat is read with (0: the byte's).
 	function DmorphHelper_GetRace(unit)
 		return game.race
 	end
-	function DmorphHelper_SetRaces(build, own)
-		if not (whole(build, 20) and whole(own, 20)) then
-			error("Usage: DmorphHelper_SetRaces(buildRace 0-20, ownRace 0-20)")
+	function DmorphHelper_SetRace(unit, race)
+		if unit ~= "player" or not whole(race, 20) or race < 1 then
+			error("Usage: DmorphHelper_SetRace(unit, race 1-20)")
 		end
-		local on = build ~= 0 and own ~= 0
-		game.build, game.own = on and build or 0, on and own or 0
-		if on then
-			game.race = own
+		game.race = race
+	end
+	function DmorphHelper_SetChatRace(race)
+		if not whole(race, 20) then
+			error("Usage: DmorphHelper_SetChatRace(race 0-20)")
 		end
+		game.chatRace = race
 	end
 	function DmorphHelper_Rebuild(unit)
 		game.rebuilds = game.rebuilds + 1
@@ -1850,7 +1853,7 @@ local function removeHelper()
 	DmorphHelper_Version, DmorphHelper_GetItemEnchants, DmorphHelper_SetItemEnchants = nil, nil, nil
 	DmorphHelper_GetLook, DmorphHelper_SetLook = nil, nil
 	DmorphHelper_GetScale, DmorphHelper_SetScale = nil, nil
-	DmorphHelper_GetRace, DmorphHelper_SetRaces, DmorphHelper_Rebuild = nil, nil, nil
+	DmorphHelper_GetRace, DmorphHelper_SetRace, DmorphHelper_SetChatRace, DmorphHelper_Rebuild = nil, nil, nil, nil
 end
 
 local function sameLook(a, b)
@@ -1913,13 +1916,13 @@ DmorphOctoDB, DmorphOctoAccount = nil, nil
 loadWithHelper()
 Mock.Tick(1.1)
 slash("dmorph status")
-check(contains(allChat(), "DmorphHelper v3 is loaded"), "status shows the helper's version")
+check(contains(allChat(), "DmorphHelper v4 is loaded"), "status shows the helper's version")
 slash("dmorph check")
 check(contains(allChat(), "DmorphHelper: |cff33ff99OK"), "the check says the helper runs")
 local currentVersion = DmorphHelper_Version
-DmorphHelper_Version = function() return 2 end
+DmorphHelper_Version = function() return 3 end
 slash("dmorph check")
-check(contains(allChat(), "An older DmorphHelper (v2)") and contains(allChat(), "Install DmorphHelper.bat"),
+check(contains(allChat(), "An older DmorphHelper (v3)") and contains(allChat(), "Install DmorphHelper.bat"),
 	"an older DLL in the game folder is flagged, with how to update it")
 DmorphHelper_Version = currentVersion
 
@@ -2034,7 +2037,11 @@ check(sameLook(game.look, mine) and game.enchants[18][1] == 30, "loading the out
 press(DmorphOctoRace2Male)
 check(sameLook(game.look, mine), "a look isn't written while the game still builds the new model")
 Mock.Tick(0.2)
-check(vh.display == 51 and sameLook(game.look, REAL), "another race shows your real look until you pick one")
+Mock.Tick(1.1)
+check(vh.display == 51 and wearable(game.look, "2:0") and sameLook(game.look, { 0, 0, 0, 0, 0 }),
+	"another race shows your real look, moved to the closest values that race has (no green textures)")
+Mock.Click(DmorphOctoTabRaces)
+check(not contains(DmorphOctoCreatorValue2.text, "?"), "and the rows show those values")
 press(DmorphOctoCreatorNext1)
 check(wearable(game.look, "2:0"), "a look picked on another race fits that race")
 local orc = { game.look[1], game.look[2], game.look[3], game.look[4], game.look[5] }
@@ -2047,27 +2054,19 @@ check(sameLook(game.look, orc), "and gets it back")
 SpellBookFrame = CreateFrame("Frame", "SpellBookFrame")
 SpellBookFrame:Hide()
 Mock.Fire("PLAYER_LOGIN")
--- DmorphHelper v3 keeps your own race in the game's race byte during a race
--- morph (the model is built as the Orc): languages, flight paths and spells
--- follow your own race, so nothing has to be held.
-check(game.build == 2 and game.own == 1 and game.race == 1,
-	"an Orc race morph is built as an Orc while your own race (Human) stays in the race byte")
-game.race = 2 -- VanillaHelpers writes the morph's race again
+-- DmorphHelper v4: the race byte keeps the morph's race (the game textures
+-- your model from it), and your own race is used while the game reads chat
+-- and while the spellbook or flight map is open (the byte only, no rebuild).
+game.race = 2 -- VanillaHelpers wrote the Orc race
 Mock.Tick(0.2)
-check(game.race == 1, "your own race goes straight back in")
+check(game.chatRace == 1, "during an Orc race morph, chat is read with your own race (Human)")
 SpellBookFrame:Show()
 Mock.Tick(1.1)
-check(vh.display == 51 and sameLook(game.look, orc), "the spellbook no longer needs your own model shown")
+check(game.race == 1 and vh.display == 51 and sameLook(game.look, orc),
+	"the spellbook opens with your own race, and your model stays the Orc")
 SpellBookFrame:Hide()
+check(game.race == 2 and vh.display == 51, "the Orc race goes back when it closes")
 SpellBookFrame = nil
-local rebuilds = game.rebuilds
-Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
-Mock.Tick(0.2)
-Mock.Tick(0.2)
-check(game.rebuilds == rebuilds + 1, "gear the server changes is rebuilt as the morph's race")
-Mock.Fire("UNIT_INVENTORY_CHANGED", "target")
-Mock.Tick(0.5)
-check(game.rebuilds == rebuilds + 1, "but not someone else's")
 press(DmorphOctoCreatorRandom)
 check(wearable(game.look, "2:0") and vh.display == 51, "the dice picks a look the race can wear, on your model")
 -- From an NPC look: the rows take you back to your own model with its face.
@@ -2083,6 +2082,7 @@ slash("demorph all")
 Mock.Tick(1.1)
 check(sameLook(game.look, REAL) and game.enchants[16][1] == 803 and game.enchants[18][1] == 0,
 	"resetting everything puts your real look and glows back")
+check(game.chatRace == 0, "without a race morph, chat needs nothing")
 -- A race with no list (High Elf here) keeps the NPC rows.
 press(DmorphOctoRace10Male)
 check(contains(DmorphOctoRacesHint.text, "an NPC has"), "a race with no look list uses NPC looks")

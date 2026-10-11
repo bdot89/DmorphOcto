@@ -6,11 +6,8 @@
 //   - a player's skin colour, face, hair style, hair colour and facial hair
 //     (PLAYER_BYTES and PLAYER_BYTES_2)
 //   - a player's size (OBJECT_FIELD_SCALE_X, a float: what Enlarge spells change)
-//   - a player's race byte (UNIT_FIELD_BYTES_0): a race morph needs the morph's
-//     race while the model is built, but the game also reads it to know which
-//     languages you understand, which flight paths and spells you have; so
-//     the addon builds the model as the morph's race and keeps your own
-//     race there the rest of the time
+//   - a player's race byte (UNIT_FIELD_BYTES_0): your own race while chat is
+//     read during a race morph, so the game understands your languages
 //
 // Lua functions (registered when the game loads its own):
 //   DmorphHelper_Version()                                   -> version
@@ -21,7 +18,8 @@
 //   DmorphHelper_GetScale(unit)                              -> scale (1 = normal size)
 //   DmorphHelper_SetScale(unit, scale)                       (0.1 to 10)
 //   DmorphHelper_GetRace(unit)                               -> race
-//   DmorphHelper_SetRaces(buildRace, ownRace)                (0, 0 = off; see Race morphs)
+//   DmorphHelper_SetRace(unit, race)                         (no rebuild)
+//   DmorphHelper_SetChatRace(race)                           (0 = off; see Race morphs)
 //   DmorphHelper_Rebuild(unit)
 // unit is a unit token for a player you could help ("player", "target", ...);
 // slot is an inventory slot, 1-19. The functions only write the values: the
@@ -43,7 +41,7 @@
 #define GAME_FASTCALL __attribute__((fastcall))
 #define GAME_THISCALL __attribute__((thiscall))
 
-#define HELPER_VERSION 3
+#define HELPER_VERSION 4
 
 // Game functions, build 5875 (from VanillaHelpers' Offsets.h).
 #define FUN_INVALID_FUNCTION_PTR_CHECK 0x42A320
@@ -54,6 +52,8 @@
 #define FUN_CLNT_OBJ_MGR_GET_ACTIVE_PLAYER 0x468550
 #define FUN_CGUNIT_C_CAN_ASSIST 0x6066F0
 #define FUN_CGUNIT_C_UPDATE_DISPLAY_INFO 0x60ABE0
+// The handler the game registers (0x5AB650) for SMSG_MESSAGECHAT (0x96).
+#define FUN_CHAT_MESSAGE_HANDLER 0x49D560
 #define LUA_IS_NUMBER 0x6F34D0
 #define LUA_TO_NUMBER 0x6F3620
 #define LUA_PUSH_NUMBER 0x6F3810
@@ -258,14 +258,17 @@ static int GAME_FASTCALL Script_SetScale(void *L) {
 }
 
 // Race morphs. VanillaHelpers writes the morph's race into your race byte,
-// because the game builds a character model from it (skin, hair, helmets).
-// But the game also reads that byte to know which languages you understand
-// (it garbles your own and your faction's chat otherwise), which flight paths
-// and spells you have. So, once the addon says so (DmorphHelper_SetRaces),
-// your own race stays in the byte and the morph's race is only put in while
-// the game builds your model (the UpdateDisplayInfo hook below).
-static uint32_t g_buildRace = 0, g_ownRace = 0;
-static UpdateDisplayInfo_t UpdateDisplayInfo_o = NULL;
+// and the game needs it there: it builds and textures your model from it
+// (skin, face, hair, helmets), sometimes well after the model was built. But
+// the game also reads it to decide which languages you understand, and
+// garbles your own and your faction's chat when it thinks you're another
+// race. So the byte keeps the morph's race, and only while the game handles
+// an incoming chat message (SMSG_MESSAGECHAT) does it hold your own race
+// (DmorphHelper_SetChatRace). The addon swaps it the same way, without a
+// rebuild, while the flight map or spellbook is open (DmorphHelper_SetRace).
+typedef int(GAME_FASTCALL *MessageHandler_t)(void *param, uint32_t msgId, uint32_t time, void *msg);
+static MessageHandler_t ChatHandler_o = NULL;
+static uint32_t g_chatRace = 0;
 
 static void *Me(void) {
     uint64_t guid = GetActivePlayer();
@@ -277,19 +280,25 @@ static void WriteRace(void *unit, uint32_t race) {
     f[UNIT_FIELD_BYTES_0] = (f[UNIT_FIELD_BYTES_0] & 0xFFFFFF00u) | race;
 }
 
-static void GAME_FASTCALL UpdateDisplayInfo_h(void *unit, void *edx) {
-    (void)edx;
-    if (g_buildRace && g_ownRace && unit && unit == Me()) {
-        WriteRace(unit, g_buildRace);
-        UpdateDisplayInfo_o(unit);
-        WriteRace(unit, g_ownRace);
-        return;
+static int GAME_FASTCALL ChatHandler_h(void *param, uint32_t msgId, uint32_t time, void *msg) {
+    void *me = g_chatRace ? Me() : NULL;
+    if (!me) {
+        return ChatHandler_o(param, msgId, time, msg);
     }
-    UpdateDisplayInfo_o(unit);
+    uint32_t race = Fields(me)[UNIT_FIELD_BYTES_0] & 0xFF;
+    WriteRace(me, g_chatRace);
+    int result = ChatHandler_o(param, msgId, time, msg);
+    // The handler may have run addons' Lua that changed things: look again.
+    me = Me();
+    if (me) {
+        WriteRace(me, race);
+    }
+    return result;
 }
 
 static const char *RACE_USAGE = "Usage: DmorphHelper_GetRace(unit)";
-static const char *SET_RACES_USAGE = "Usage: DmorphHelper_SetRaces(buildRace 0-20, ownRace 0-20)";
+static const char *SET_RACE_USAGE = "Usage: DmorphHelper_SetRace(unit, race 1-20)";
+static const char *CHAT_RACE_USAGE = "Usage: DmorphHelper_SetChatRace(race 0-20)";
 static const char *REBUILD_USAGE = "Usage: DmorphHelper_Rebuild(unit)";
 
 static int GAME_FASTCALL Script_GetRace(void *L) {
@@ -298,21 +307,21 @@ static int GAME_FASTCALL Script_GetRace(void *L) {
     return 1;
 }
 
-// DmorphHelper_SetRaces(buildRace, ownRace): build your model as buildRace
-// and keep ownRace in your race byte (written at once). 0, 0 turns it off.
-static int GAME_FASTCALL Script_SetRaces(void *L) {
-    uint32_t build = NumberArg(L, 1, 0, 20, SET_RACES_USAGE);
-    uint32_t own = NumberArg(L, 2, 0, 20, SET_RACES_USAGE);
-    if (!UpdateDisplayInfo_o) {
-        LuaError(L, "DmorphHelper couldn't hook the model builder.");
+// Writes a race byte without rebuilding the model.
+static int GAME_FASTCALL Script_SetRace(void *L) {
+    void *unit = PlayerArg(L, 1, SET_RACE_USAGE);
+    WriteRace(unit, NumberArg(L, 2, 1, 20, SET_RACE_USAGE));
+    return 0;
+}
+
+// Your own race, for reading chat during a race morph; 0 turns it off.
+static int GAME_FASTCALL Script_SetChatRace(void *L) {
+    uint32_t race = NumberArg(L, 1, 0, 20, CHAT_RACE_USAGE);
+    if (!ChatHandler_o) {
+        LuaError(L, "DmorphHelper couldn't hook the chat handler.");
         return 0;
     }
-    g_buildRace = build && own ? build : 0;
-    g_ownRace = build && own ? own : 0;
-    void *me = Me();
-    if (me && g_ownRace) {
-        WriteRace(me, g_ownRace);
-    }
+    g_chatRace = race;
     return 0;
 }
 
@@ -332,7 +341,8 @@ static void GAME_FASTCALL LoadScriptFunctions_h(void) {
     RegisterFunction("DmorphHelper_GetScale", (uintptr_t)&Script_GetScale);
     RegisterFunction("DmorphHelper_SetScale", (uintptr_t)&Script_SetScale);
     RegisterFunction("DmorphHelper_GetRace", (uintptr_t)&Script_GetRace);
-    RegisterFunction("DmorphHelper_SetRaces", (uintptr_t)&Script_SetRaces);
+    RegisterFunction("DmorphHelper_SetRace", (uintptr_t)&Script_SetRace);
+    RegisterFunction("DmorphHelper_SetChatRace", (uintptr_t)&Script_SetChatRace);
     RegisterFunction("DmorphHelper_Rebuild", (uintptr_t)&Script_Rebuild);
 }
 
@@ -366,11 +376,11 @@ static void InstallHook(void) {
                       (LPVOID *)&LoadScriptFunctions_o) == MH_OK) {
         MH_EnableHook((LPVOID)FUN_LOAD_SCRIPT_FUNCTIONS);
     }
-    // Without it the race functions say so; everything else still works.
-    if (MH_CreateHook((LPVOID)FUN_CGUNIT_C_UPDATE_DISPLAY_INFO, (LPVOID)&UpdateDisplayInfo_h,
-                      (LPVOID *)&UpdateDisplayInfo_o) != MH_OK ||
-        MH_EnableHook((LPVOID)FUN_CGUNIT_C_UPDATE_DISPLAY_INFO) != MH_OK) {
-        UpdateDisplayInfo_o = NULL;
+    // Without it DmorphHelper_SetChatRace says so; everything else still works.
+    if (MH_CreateHook((LPVOID)FUN_CHAT_MESSAGE_HANDLER, (LPVOID)&ChatHandler_h,
+                      (LPVOID *)&ChatHandler_o) != MH_OK ||
+        MH_EnableHook((LPVOID)FUN_CHAT_MESSAGE_HANDLER) != MH_OK) {
+        ChatHandler_o = NULL;
     }
 }
 
