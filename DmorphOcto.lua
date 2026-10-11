@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.0.3"
+local VERSION = "2.1.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 local MISSING_API = "VanillaHelpers v1.1.0 or newer is not loaded, so morphing is unavailable. "
 	.. "Enable the 'vanillaHelpers' mod in OctoLauncher (or add VanillaHelpers.dll to dlls.txt) "
@@ -776,7 +776,7 @@ function M.DescribeOutfit(outfit)
 	if outfit.look then
 		extra = extra .. ", own face"
 	end
-	if outfit.glows and next(outfit.glows) then
+	if (outfit.glows and next(outfit.glows)) or (outfit.glows2 and next(outfit.glows2)) then
 		extra = extra .. ", glows"
 	end
 	if outfit.mount then
@@ -831,16 +831,19 @@ local function SanitizeOutfit(outfit)
 		end
 		outfit.items[slot] = itemID
 	end
-	-- Weapon glows (DmorphHelper): slot -> enchant ID, 0 for none.
-	if type(outfit.glows) ~= "table" then
-		outfit.glows = {}
-	end
-	for slot, enchantID in pairs(outfit.glows) do
-		enchantID = ParseID(enchantID)
-		if not GLOW_SLOT[slot] or (enchantID and enchantID > 1000000) then
-			enchantID = nil
+	-- Weapon glows (DmorphHelper): slot -> enchant ID, 0 for none; glows2 is
+	-- the second glow, in the temporary enchant's place.
+	for _, key in ipairs({ "glows", "glows2" }) do
+		if type(outfit[key]) ~= "table" then
+			outfit[key] = {}
 		end
-		outfit.glows[slot] = enchantID
+		for slot, enchantID in pairs(outfit[key]) do
+			enchantID = ParseID(enchantID)
+			if not GLOW_SLOT[slot] or (enchantID and enchantID > 1000000) or (key == "glows2" and enchantID == 0) then
+				enchantID = nil
+			end
+			outfit[key][slot] = enchantID
+		end
 	end
 	-- An outfit's own look: { race, gender, the five values }.
 	local look = outfit.look
@@ -856,12 +859,15 @@ end
 -- The current look as an outfit: db, plus the look picked for your body.
 local function CopyOutfit(outfit)
 	local copy = { display = outfit.display, race = outfit.race, gender = outfit.gender, mount = outfit.mount,
-		items = {}, glows = {} }
+		items = {}, glows = {}, glows2 = {} }
 	for slot, itemID in pairs(outfit.items) do
 		copy.items[slot] = itemID
 	end
 	for slot, enchantID in pairs(outfit.glows) do
 		copy.glows[slot] = enchantID
+	end
+	for slot, enchantID in pairs(outfit.glows2) do
+		copy.glows2[slot] = enchantID
 	end
 	local race, gender = M.GetBodyRace()
 	local look = race and ValidLook(outfit.looks[race .. ":" .. gender])
@@ -1305,11 +1311,25 @@ function M.DescribeGlow(enchantID)
 end
 
 -- The glow picked for a weapon slot (an enchant ID, 0 for none, nil for your
--- own) and the slot's real permanent enchant, if seen.
+-- own), the slot's real permanent enchant if seen, and the second glow (nil
+-- for none).
 function M.GetGlow(slot)
 	InitDB()
 	local real = db.glowReal[slot]
-	return db.glows[slot], real and real[1]
+	return db.glows[slot], real and real[1], db.glows2[slot]
+end
+
+-- "Crusader", "Crusader + Frost", "your own + Frost".
+function M.DescribeGlows(slot)
+	local first, _, second = M.GetGlow(slot)
+	local text = "your own"
+	if first then
+		text = M.DescribeGlow(first)
+	end
+	if second then
+		text = text .. " + " .. M.DescribeGlow(second)
+	end
+	return text
 end
 
 -- The skin colours, faces and hair a race and gender can wear
@@ -1459,9 +1479,14 @@ local function WatchHelper()
 			if not (written and written[1] == p and written[2] == t) then
 				db.glowReal[slot] = { p, t }
 			end
-			local want
-			if db.glows[slot] then
-				want = { db.glows[slot], 0 }
+			-- The picked glow in the permanent enchant's place; the second
+			-- glow, or nothing (so an oil's glow doesn't cover the picked
+			-- one), in the temporary one's. A slot with only a second glow
+			-- keeps its real permanent enchant.
+			local first, second, want = db.glows[slot], db.glows2[slot], nil
+			if first or second then
+				local real = db.glowReal[slot] or { p, t }
+				want = { first or real[1], second or (first and 0) or real[2] }
 			elseif written then
 				want = db.glowReal[slot]
 			end
@@ -1470,7 +1495,7 @@ local function WatchHelper()
 					db.glowWritten[slot] = { want[1], want[2] }
 				end
 			end
-			if not db.glows[slot] then
+			if not (first or second) then
 				db.glowWritten[slot] = nil
 			end
 		end
@@ -1489,8 +1514,9 @@ local function HelperBegin()
 end
 
 -- enchantID: an enchant whose glow the slot shows, 0 for no glow, nil for
--- your own.
-function M.SetGlow(slot, enchantID)
+-- your own. With second set it's the second glow instead (0 or nil for none),
+-- shown in the temporary enchant's place, if the game draws both.
+function M.SetGlow(slot, enchantID, second)
 	local ok, err = HelperBegin()
 	if not ok then
 		return false, err
@@ -1504,13 +1530,26 @@ function M.SetGlow(slot, enchantID)
 			return false, "Enchant IDs are whole numbers."
 		end
 	end
-	db.glows[slot] = enchantID
+	if second then
+		if enchantID == 0 then
+			enchantID = nil
+		end
+		db.glows2[slot] = enchantID
+	else
+		db.glows[slot] = enchantID
+		if not enchantID or enchantID == 0 then
+			-- No glow or your own: the second one goes too.
+			db.glows2[slot] = nil
+		end
+	end
 	WatchHelper()
 	Notify()
-	if not enchantID then
+	if second and not enchantID then
+		return true, SLOT_NAMES[slot] .. ": no second glow."
+	elseif not enchantID then
 		return true, SLOT_NAMES[slot] .. ": your own glow."
 	end
-	return true, SLOT_NAMES[slot] .. ": " .. M.DescribeGlow(enchantID) .. "."
+	return true, SLOT_NAMES[slot] .. ": " .. M.DescribeGlows(slot) .. "."
 end
 
 M.LOOK_ROWS = { "Skin colour", "Face", "Hair style", "Hair colour", "Facial hair" }
@@ -1697,7 +1736,7 @@ function M.ResetAll()
 		return false, MISSING_API
 	end
 	db.display, db.race, db.gender = nil, nil, 0
-	db.looks, db.glows = {}, {}
+	db.looks, db.glows, db.glows2 = {}, {}, {}
 	local ok, err = ApplyBody()
 	WatchHelper()
 	db.mount, db.mountSkins = nil, {}
@@ -2000,9 +2039,12 @@ function M.LoadOutfit(name)
 	end
 	db.mount = outfit.mount
 	-- The outfit's glows, and its look for its body (else your own).
-	db.glows = {}
+	db.glows, db.glows2 = {}, {}
 	for slot, enchantID in pairs(outfit.glows) do
 		db.glows[slot] = enchantID
+	end
+	for slot, enchantID in pairs(outfit.glows2) do
+		db.glows2[slot] = enchantID
 	end
 	local race, gender = M.GetBodyRace()
 	if race then
@@ -2037,7 +2079,7 @@ local function ShowHelp()
 	Print(".demorph - reset your model (DMorph's F5); .demorph all - reset model and items (F10)")
 	Print(".outfit [name] - list or put on saved outfits; .outfit save <name>; .outfit delete <name>")
 	Print(".mount <displayID> - morph your mount (.mount 0 resets)")
-	Print(".glow <mainhand/offhand/ranged> <enchantID> - a weapon's enchant glow (0 none, own your own); needs DmorphHelper.dll")
+	Print(".glow <mainhand/offhand/ranged> <enchantID> [second enchantID] - a weapon's enchant glow (0 none, own your own); needs DmorphHelper.dll")
 	Print(".share on/off - whether other DMorph users see your morph; .share others on/off - whether you see theirs")
 	Print(".dmorph status - show what is morphed. Keys: Key Bindings > DMorph.")
 	if not HasMorphAPI() then
@@ -2083,8 +2125,8 @@ local function ShowStatus()
 	end
 	for i = 1, table.getn(M.GLOW_SLOTS) do
 		local slot = M.GLOW_SLOTS[i]
-		if db.glows[slot] then
-			Print("Glow, " .. strlower(SLOT_NAMES[slot]) .. ": " .. M.DescribeGlow(db.glows[slot]) .. ".")
+		if db.glows[slot] or db.glows2[slot] then
+			Print("Glow, " .. strlower(SLOT_NAMES[slot]) .. ": " .. M.DescribeGlows(slot) .. ".")
 		end
 	end
 	local bodies = {}
@@ -2155,16 +2197,21 @@ function commands.mount(args)
 	Report(M.SetMount(displayID))
 end
 
--- .glow mainhand 1900, .glow offhand 0 (no glow), .glow ranged own.
+-- .glow mainhand 1900, .glow mainhand 1900 20 (a second glow), .glow
+-- offhand 0 (no glow), .glow ranged own.
 function commands.glow(args)
 	local word = strlower(args[1] or "")
 	local slot = SLOT_ALIASES[word] or ({ mh = 16, oh = 17 })[word] or ParseID(word)
 	local value = strlower(args[2] or "")
-	local enchantID = ParseID(value)
-	if not (slot and GLOW_SLOT[slot]) or not (enchantID or value == "own") then
-		return Print("Usage: .glow <mainhand/offhand/ranged> <enchantID>  (0 for no glow, own for your own)")
+	local enchantID, secondID = ParseID(value), ParseID(args[3] or "")
+	if not (slot and GLOW_SLOT[slot]) or not (enchantID or value == "own") or (args[3] and not secondID) then
+		return Print("Usage: .glow <mainhand/offhand/ranged> <enchantID> [second enchantID]  (0 for no glow, own for your own)")
 	end
-	Report(M.SetGlow(slot, enchantID))
+	local ok, message = M.SetGlow(slot, enchantID)
+	if ok and secondID then
+		ok, message = M.SetGlow(slot, secondID, true)
+	end
+	Report(ok, message)
 end
 commands.enchant = commands.glow
 

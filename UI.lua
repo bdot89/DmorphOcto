@@ -1930,6 +1930,7 @@ end
 -- the main hand, off hand or ranged slot. Needs DmorphHelper.dll.
 
 local glowSlot = 16
+local glowSecond -- clicks pick the second glow (the temporary enchant's place)
 
 local function FilterGlows(keep)
 	local count
@@ -1946,14 +1947,20 @@ local function RefreshGlows()
 			button:UnlockHighlight()
 		end
 	end
-	local picked, real = M.GetGlow(glowSlot)
-	local text = "your own"
-	if picked then
-		text = M.DescribeGlow(picked)
-	elseif real and real > 0 then
+	local picked, real, second = M.GetGlow(glowSlot)
+	local text = M.DescribeGlows(glowSlot)
+	if not picked and real and real > 0 then
 		text = "your own (" .. M.DescribeGlow(real) .. ")"
+		if second then
+			text = text .. " + " .. M.DescribeGlow(second)
+		end
 	end
 	ui.glowState:SetText(M.SLOT_NAMES[glowSlot] .. ": " .. text)
+	if glowSecond then
+		ui.glowWhich:SetText("Picking: 2nd glow")
+	else
+		ui.glowWhich:SetText("Picking: glow")
+	end
 	if M.HasHelper() then
 		ui.glowState:SetTextColor(1, 1, 1)
 	else
@@ -1990,7 +1997,11 @@ local function GlowTooltip(index, row)
 		GameTooltip:AddLine("Effect: " .. all.models[i], 0.8, 0.8, 0.8)
 	end
 	GameTooltip:AddLine("Glow " .. all.visual[i] .. ", shown with enchant " .. all.enchant[i] .. ".", 0.6, 0.6, 0.6)
-	GameTooltip:AddLine("Click: on your " .. strlower(M.SLOT_NAMES[glowSlot]) .. ".", 0.6, 1, 0.6)
+	if glowSecond then
+		GameTooltip:AddLine("Click: second glow on your " .. strlower(M.SLOT_NAMES[glowSlot]) .. ".", 0.6, 1, 0.6)
+	else
+		GameTooltip:AddLine("Click: on your " .. strlower(M.SLOT_NAMES[glowSlot]) .. ".", 0.6, 1, 0.6)
+	end
 	GameTooltip:Show()
 end
 
@@ -2015,18 +2026,34 @@ local function BuildGlowsPage(page)
 		FilterGlows()
 	end)
 	ui.glowCount = Label(page, "", "GameFontDisableSmall", 214, -40, "DmorphOctoGlowCount")
+	ui.glowWhich = Button(page, "Picking: glow", 128, 336, -35, function()
+		glowSecond = not glowSecond
+		RefreshGlows()
+	end, "DmorphOctoGlowWhich")
+	ui.glowWhich:SetScript("OnEnter", function()
+		Tooltip(this, "Glow or second glow", "Switches what a click picks: the weapon's glow, or a second one.",
+			"An experiment: the second goes where a poison's or oil's glow goes, and shows only if the game draws both.")
+	end)
+	ui.glowWhich:SetScript("OnLeave", HideTooltip)
 
 	ui.glowList = List(page, "DmorphOctoGlowList", 8, -62, 80, function(row, index)
 		local all = M.GetGlows()
 		local i = ui.glowResult[index]
 		row.text:SetText(all.name[i])
 		row.info:SetText("glow " .. all.visual[i])
-		if M.GetGlow(glowSlot) == all.enchant[i] then
+		local first, _, second = M.GetGlow(glowSlot)
+		if first == all.enchant[i] then
 			row.tick:Show()
 		end
+		if second == all.enchant[i] then
+			row.star:Show() -- the second glow
+		end
 	end, function(index)
-		local all = M.GetGlows()
-		Morph(M.SetGlow, glowSlot, all.enchant[ui.glowResult[index]])
+		local enchant = M.GetGlows().enchant[ui.glowResult[index]]
+		local slot, second = glowSlot, glowSecond
+		Morph(function()
+			return M.SetGlow(slot, enchant, second)
+		end)
 	end, GlowTooltip)
 	ui.glowEmpty = Label(page, "No glow list yet. Close the game, run tools\\update_from_game.ps1 from the "
 		.. "DmorphOcto folder (it reads every glow from the game files), and start the game again.",
@@ -2035,6 +2062,11 @@ local function BuildGlowsPage(page)
 
 	ui.glowState = Label(page, "", "GameFontHighlightSmall", 10, -336, "DmorphOctoGlowState")
 	Button(page, "No glow", 90, 8, -352, function()
+		if glowSecond then
+			return Morph(function()
+				return M.SetGlow(glowSlot, nil, true)
+			end)
+		end
 		Morph(M.SetGlow, glowSlot, 0)
 	end, "DmorphOctoGlowNone")
 	Button(page, "My own glow", 110, 102, -352, function()
