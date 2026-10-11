@@ -56,6 +56,8 @@
 #define FUN_CHAT_MESSAGE_HANDLER 0x49D560
 // Builds every faction's base reputation from your race (no arguments).
 #define FUN_BUILD_BASE_REPUTATION 0x4D5430
+// SkillRaceClassInfo for (race, class, skill), fastcall + 1 stack arg; NULL if none.
+#define FUN_SKILL_RACE_CLASS_INFO 0x6DDF90
 #define LUA_IS_NUMBER 0x6F34D0
 #define LUA_TO_NUMBER 0x6F3620
 #define LUA_PUSH_NUMBER 0x6F3810
@@ -276,6 +278,8 @@ static uint32_t g_ownRace = 0;
 static uint64_t g_ownGuid = 0; // the character g_ownRace is for
 typedef void (*BuildReputation_t)(void);
 static BuildReputation_t BuildReputation_o = NULL;
+typedef void *(GAME_FASTCALL *SkillRaceClass_t)(uint32_t race, uint32_t cls, uint32_t skill);
+static SkillRaceClass_t SkillRaceClass_o = NULL;
 static uint32_t g_builtRace = 0; // the race the base reputations were built with
 
 static void *Me(void) {
@@ -337,6 +341,23 @@ static void BuildReputation_h(void) {
         WriteRace(me, race);
     }
     g_builtRace = own;
+}
+
+// Your skills (weapon skills, professions, languages) and how the spellbook
+// sorts your spells come from a table per race and class, which the game
+// looks up with your race byte. With a race morph's race there it finds no
+// row for some of your skills, and the skill list (GetSkillLineInfo) reads
+// the missing row and crashes. So a lookup with the morph's race in your
+// byte is made with your own race.
+static void *GAME_FASTCALL SkillRaceClass_h(uint32_t race, uint32_t cls, uint32_t skill) {
+    uint32_t own = OwnRace();
+    if (own && race != own) {
+        void *me = Me();
+        if (me && race == (Fields(me)[UNIT_FIELD_BYTES_0] & 0xFF)) {
+            race = own;
+        }
+    }
+    return SkillRaceClass_o(race, cls, skill);
 }
 
 static const char *RACE_USAGE = "Usage: DmorphHelper_GetRace(unit)";
@@ -433,6 +454,11 @@ static void InstallHook(void) {
                       (LPVOID *)&BuildReputation_o) != MH_OK ||
         MH_EnableHook((LPVOID)FUN_BUILD_BASE_REPUTATION) != MH_OK) {
         BuildReputation_o = NULL;
+    }
+    if (MH_CreateHook((LPVOID)FUN_SKILL_RACE_CLASS_INFO, (LPVOID)&SkillRaceClass_h,
+                      (LPVOID *)&SkillRaceClass_o) != MH_OK ||
+        MH_EnableHook((LPVOID)FUN_SKILL_RACE_CLASS_INFO) != MH_OK) {
+        SkillRaceClass_o = NULL;
     }
 }
 
