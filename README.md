@@ -6,7 +6,7 @@
 
 **Become any creature, ride any mount, wear any item** · WoW 1.12 · OctoWoW
 
-![Version](https://img.shields.io/badge/version-2.5.1-33ff99?style=flat-square)
+![Version](https://img.shields.io/badge/version-2.6.0-33ff99?style=flat-square)
 ![WoW 1.12.1](https://img.shields.io/badge/WoW-1.12.1-c79c6e?style=flat-square)
 ![Models](https://img.shields.io/badge/models-16%2C000%2B-b46bff?style=flat-square)
 ![Items](https://img.shields.io/badge/items-12%2C000%2B-a335ee?style=flat-square)
@@ -175,10 +175,10 @@ Slots: `1` head, `3` shoulder, `4` shirt, `5` chest, `6` waist, `7` legs, `8` fe
 
 ## 💡 Good to know
 
-- **Who sees what:** you and other DMorph users see your model, items and mount skin (friendly players only). Glows, looks and size are only on your own screen for now.
+- **Who sees what:** you and other DMorph users see your model, items, mount skin and size (friendly players only; seeing someone's size needs DmorphHelper). Glows and picked faces are only on your own screen for now.
 - **Seeing other DMorph users:** their morph shows when you target or mouse over them, when you're grouped, or straight away with SuperWoW. DMorph only talks to players near you, through hidden messages that no chat window shows.
 - **Mount skins** go on when you mount and come off when you dismount. Flight master birds keep their own look.
-- **Race morphs:** while the flight map or spellbook is open, your own race comes back for a moment, so you see all your flight paths and your spells stay in order. Your chat is always sent in a language your character knows.
+- **Race morphs keep your own character's rules:** with DmorphHelper, the game still knows you as your own race, so you understand your own languages (no garbled chat), speak them, and see all your flight paths and spells as usual; only the model is the other race. Without DmorphHelper, your own race comes back for a moment while the flight map or spellbook is open, and chat is sent in a language you know, but other players' chat may look garbled.
 - **Fast clicking is safe:** a click right after another waits its turn, so two looks never mix.
 - **Shapeshifting** shows your morph instead of the form; reset your model first if you want the form.
 - **Later expansions aren't in this game:** models, glows and races from The Burning Crusade onwards (Draenei, Mongoose glow, Outland mounts...) aren't in the 1.12 files, so no addon can show them. Everything OctoWoW and Turtle WoW added is included.

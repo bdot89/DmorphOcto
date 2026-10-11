@@ -68,7 +68,7 @@ local audience = {} -- name -> when they last showed they see us
 local inGroup, inGuild = {}, {} -- names
 local replies = {} -- way -> "L" (full look) or "H" (fingerprint)
 local timers = {} -- clock times: join, ready, send, first, mount, reply, replied, query, scan, guild, next
-local sent = { d = "0", m = "0", it = "-" } -- what the others were last told
+local sent = { d = "0", m = "0", it = "-", s = "" } -- what the others were last told
 local cache -- DmorphOctoAccount.peerCache for this realm
 local guidWorks -- whether VanillaHelpers took a GUID as a unit token (nil: not tried)
 local counts = { channel = 0, hidden = 0 }
@@ -481,8 +481,20 @@ local function ApplyTo(name, token)
 			done.mount = mount
 		end
 	end
+	-- Their size, through DmorphHelper (which every DMorph user may not have):
+	-- their own size is read first, to put back when they go back to it.
+	local scale = want.scale
+	if (scale ~= done.scale or (force and scale)) and type(DmorphHelper_SetScale) == "function" then
+		if scale and not done.scale then
+			local ok, real = pcall(DmorphHelper_GetScale, token)
+			done.scaleReal = ok and type(real) == "number" and real or 1
+		end
+		if Call(DmorphHelper_SetScale, token, scale or done.scaleReal or 1) then
+			done.scale = scale
+		end
+	end
 	done.version, done.scan, done.away = want.version, scanID, nil
-	if want == NONE and not done.display and not done.mount and not next(done.items) then
+	if want == NONE and not done.display and not done.mount and not next(done.items) and not done.scale then
 		applied[name] = nil
 	else
 		applied[name] = done
@@ -520,6 +532,7 @@ local function SetPeer(name, look, guid, confirmed)
 		peerCount = peerCount + 1
 	end
 	look.guid = guid or (peer and peer.guid)
+	look.scale = peer and peer.scale -- a full look message sets it again after
 	look.version = (peer and peer.version or 0) + 1
 	look.heard = confirmed and clock or -1000
 	look.confirmed = confirmed
@@ -654,12 +667,32 @@ end
 
 -- Messages from other clients ---------------------------------------------------
 
+-- A player's size from a message's "s<percent>" token (none: normal size).
+-- Clients before 2.6 send no token and ignore it.
+local function SizeOf(token)
+	local _, _, pct = strfind(token or "", "^s(%d+)$")
+	pct = tonumber(pct)
+	if pct and pct >= 10 and pct <= 1000 and pct ~= 100 then
+		return pct / 100
+	end
+end
+
+local function SetPeerSize(name, scale)
+	local peer = peers[name]
+	if peer and peer.scale ~= scale then
+		peer.scale = scale
+		peer.version = peer.version + 1
+		Scan()
+	end
+end
+
 local function ReadLook(sender, rest)
-	local _, _, d, m, it, guid = strfind(rest, "^(%S+) (%S+) (%S+) ?(%S*)")
+	local _, _, d, m, it, guid, size = strfind(rest, "^(%S+) (%S+) (%S+) ?(%S*) ?(%S*)")
 	local look = MakeLook(d, m, it)
 	if not look then
 		return
 	end
+	local scale = SizeOf(size)
 	if not strfind(guid or "", "^0x%x+$") then
 		guid = nil
 	end
@@ -673,9 +706,11 @@ local function ReadLook(sender, rest)
 			peer.confirmed = true
 			Cache()[sender] = { look = peer.look, guid = peer.guid, seen = time() }
 		end
+		SetPeerSize(sender, scale)
 		return
 	end
 	if SetPeer(sender, look, guid, true) then
+		look.scale = scale
 		Scan()
 	end
 end
@@ -694,13 +729,14 @@ local function ReadMount(sender, m)
 end
 
 -- "Nothing changed": confirms what we remember, else we ask for it all.
-local function ReadPrint(sender, print, guid)
+local function ReadPrint(sender, print, guid, size)
 	Unask(sender)
 	Answered(sender)
 	asked[sender] = clock
 	local peer = peers[sender]
 	if peer and peer.print == print then
 		peer.heard = clock
+		SetPeerSize(sender, SizeOf(size))
 		if strfind(guid or "", "^0x%x+$") then
 			peer.guid = guid
 		end
@@ -753,9 +789,15 @@ local function Receive(sender, text, way)
 	elseif kind == "M" then
 		ReadMount(sender, rest)
 	elseif kind == "H" then
-		local _, _, print, guid = strfind(rest, "^(%S+) ?(%S*)")
+		local _, _, print, guid, size = strfind(rest, "^(%S+) ?(%S*) ?(%S*)")
 		if print then
-			ReadPrint(sender, print, guid)
+			ReadPrint(sender, print, guid, size)
+		end
+	elseif kind == "S" then
+		-- Only the size changed.
+		local peer = peers[sender]
+		if peer and peer.confirmed then
+			SetPeerSize(sender, SizeOf("s" .. rest))
 		end
 	elseif kind == "Q" then
 		ReadQuestion(sender, rest, way)
@@ -764,12 +806,25 @@ end
 
 -- Your own changes ------------------------------------------------------------
 
+-- Your size as a message token: "s150", or "" at normal size.
+local function OwnSize()
+	local scale = Sharing() and M.GetScale and M.GetScale()
+	local pct = scale and math.floor(scale * 100 + 0.5) or 100
+	if pct == 100 then
+		return ""
+	end
+	return "s" .. pct
+end
+
 local function OnChange()
 	local d, m, it = OwnParts()
 	-- Mounting and dismounting go out at once; other changes wait until
 	-- they stand still a moment.
 	if m ~= sent.m then
 		timers.mount = timers.mount or clock
+	end
+	if OwnSize() ~= sent.s then
+		timers.size = timers.size or clock + SETTLE
 	end
 	if d ~= sent.d or it ~= sent.it then
 		timers.first = timers.first or clock
@@ -779,14 +834,23 @@ local function OnChange()
 	end
 end
 
+local function WithSize(text)
+	local size = OwnSize()
+	if size ~= "" then
+		return text .. " " .. size
+	end
+	return text
+end
+
 local function LookText()
-	return "L " .. OwnLook() .. " " .. (GUIDOf("player") or "-")
+	return WithSize("L " .. OwnLook() .. " " .. (GUIDOf("player") or "-"))
 end
 
 -- Tells everyone who needs it; that answers any waiting question too.
 local function SendLook(ways)
 	sent.d, sent.m, sent.it = OwnParts()
-	timers.send, timers.first, timers.mount = nil, nil, nil
+	sent.s = OwnSize()
+	timers.send, timers.first, timers.mount, timers.size = nil, nil, nil, nil
 	local text = LookText()
 	for way in pairs(ways) do
 		Send(text, way)
@@ -813,6 +877,15 @@ local function SendNext()
 		end
 	elseif timers.send and clock >= timers.send then
 		SendLook(ChangeWays())
+	elseif timers.size and clock >= timers.size then
+		timers.size = nil
+		local size = OwnSize()
+		if size ~= sent.s then
+			sent.s = size
+			for way in pairs(ChangeWays()) do
+				Send("S " .. (size == "" and "100" or strsub(size, 2)), way)
+			end
+		end
 	elseif timers.reply and clock >= timers.reply then
 		timers.reply, timers.replied = nil, clock
 		local look = OwnLook()
@@ -821,7 +894,7 @@ local function SendNext()
 			if kind == "L" then
 				Send(LookText(), way)
 			else
-				Send("H " .. Fingerprint(look) .. " " .. (GUIDOf("player") or "-"), way)
+				Send(WithSize("H " .. Fingerprint(look) .. " " .. (GUIDOf("player") or "-")), way)
 			end
 		end
 	elseif table.getn(queue) > 0 and clock >= (timers.query or 0) then
@@ -873,7 +946,8 @@ local function Tick()
 		-- What we look like now is what everyone will learn by asking.
 		timers.introduced = true
 		sent.d, sent.m, sent.it = OwnParts()
-		timers.send, timers.first, timers.mount = nil, nil, nil
+		sent.s = OwnSize()
+		timers.send, timers.first, timers.mount, timers.size = nil, nil, nil, nil
 		timers.group = clock
 	end
 	if timers.group and clock >= timers.group and not (timers.next and clock < timers.next) then

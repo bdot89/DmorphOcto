@@ -6,6 +6,11 @@
 //   - a player's skin colour, face, hair style, hair colour and facial hair
 //     (PLAYER_BYTES and PLAYER_BYTES_2)
 //   - a player's size (OBJECT_FIELD_SCALE_X, a float: what Enlarge spells change)
+//   - a player's race byte (UNIT_FIELD_BYTES_0): a race morph needs the morph's
+//     race while the model is built, but the game also reads it to know which
+//     languages you understand, which flight paths and spells you have; so
+//     the addon builds the model as the morph's race and keeps your own
+//     race there the rest of the time
 //
 // Lua functions (registered when the game loads its own):
 //   DmorphHelper_Version()                                   -> version
@@ -15,6 +20,9 @@
 //   DmorphHelper_SetLook(unit, skin, face, hairStyle, hairColour, facialHair)
 //   DmorphHelper_GetScale(unit)                              -> scale (1 = normal size)
 //   DmorphHelper_SetScale(unit, scale)                       (0.1 to 10)
+//   DmorphHelper_GetRace(unit)                               -> race
+//   DmorphHelper_SetRaces(buildRace, ownRace)                (0, 0 = off; see Race morphs)
+//   DmorphHelper_Rebuild(unit)
 // unit is a unit token for a player you could help ("player", "target", ...);
 // slot is an inventory slot, 1-19. The functions only write the values: the
 // addon keeps what it wants and puts it back after the server resends them.
@@ -35,7 +43,7 @@
 #define GAME_FASTCALL __attribute__((fastcall))
 #define GAME_THISCALL __attribute__((thiscall))
 
-#define HELPER_VERSION 2
+#define HELPER_VERSION 3
 
 // Game functions, build 5875 (from VanillaHelpers' Offsets.h).
 #define FUN_INVALID_FUNCTION_PTR_CHECK 0x42A320
@@ -56,6 +64,13 @@
 
 // Descriptor fields, as indexes into a unit's uint32 field array.
 #define OBJECT_FIELD_SCALE_X 0x4 // a float
+#define UNIT_FIELD_BYTES_0 0x24 // race, class, gender, power type (one byte each)
+
+// In the unit object itself (build 5875, from 0x614640 and the per-frame
+// size animation at 0x614a90): the size the model is drawn at, and when a
+// size animation started (0 = none; it eases from +0xA4 to the field over 2 s).
+#define UNIT_SHOWN_SCALE 0x90
+#define UNIT_SCALE_ANIM_START 0xA0
 #define UNIT_FIELD_DISPLAYID 0x83
 #define PLAYER_BYTES 0xC1
 #define PLAYER_BYTES_2 0xC2
@@ -230,13 +245,80 @@ static int GAME_FASTCALL Script_SetScale(void *L) {
         LuaError(L, SET_SCALE_USAGE);
         return 0;
     }
-    float scale = (float)v, current;
+    float scale = (float)v;
     uint32_t *f = Fields(unit);
-    memcpy(&current, f + OBJECT_FIELD_SCALE_X, sizeof current);
-    if (current != scale) {
-        memcpy(f + OBJECT_FIELD_SCALE_X, &scale, sizeof scale);
-        Reload(unit);
+    memcpy(f + OBJECT_FIELD_SCALE_X, &scale, sizeof scale);
+    // The field is what the camera reads; the model is drawn at the unit's
+    // own copy, which the game only animates towards the field when the
+    // server changes it. So set that copy too, and stop any such animation,
+    // as the game's own "size at once" code at 0x614640 does.
+    memcpy((char *)unit + UNIT_SHOWN_SCALE, &scale, sizeof scale);
+    *(uint32_t *)((char *)unit + UNIT_SCALE_ANIM_START) = 0;
+    return 0;
+}
+
+// Race morphs. VanillaHelpers writes the morph's race into your race byte,
+// because the game builds a character model from it (skin, hair, helmets).
+// But the game also reads that byte to know which languages you understand
+// (it garbles your own and your faction's chat otherwise), which flight paths
+// and spells you have. So, once the addon says so (DmorphHelper_SetRaces),
+// your own race stays in the byte and the morph's race is only put in while
+// the game builds your model (the UpdateDisplayInfo hook below).
+static uint32_t g_buildRace = 0, g_ownRace = 0;
+static UpdateDisplayInfo_t UpdateDisplayInfo_o = NULL;
+
+static void *Me(void) {
+    uint64_t guid = GetActivePlayer();
+    return guid ? ObjectPtr(TYPEMASK_PLAYER, NULL, guid, 0) : NULL;
+}
+
+static void WriteRace(void *unit, uint32_t race) {
+    uint32_t *f = Fields(unit);
+    f[UNIT_FIELD_BYTES_0] = (f[UNIT_FIELD_BYTES_0] & 0xFFFFFF00u) | race;
+}
+
+static void GAME_FASTCALL UpdateDisplayInfo_h(void *unit, void *edx) {
+    (void)edx;
+    if (g_buildRace && g_ownRace && unit && unit == Me()) {
+        WriteRace(unit, g_buildRace);
+        UpdateDisplayInfo_o(unit);
+        WriteRace(unit, g_ownRace);
+        return;
     }
+    UpdateDisplayInfo_o(unit);
+}
+
+static const char *RACE_USAGE = "Usage: DmorphHelper_GetRace(unit)";
+static const char *SET_RACES_USAGE = "Usage: DmorphHelper_SetRaces(buildRace 0-20, ownRace 0-20)";
+static const char *REBUILD_USAGE = "Usage: DmorphHelper_Rebuild(unit)";
+
+static int GAME_FASTCALL Script_GetRace(void *L) {
+    void *unit = PlayerArg(L, 1, RACE_USAGE);
+    LuaPushNumber(L, Fields(unit)[UNIT_FIELD_BYTES_0] & 0xFF);
+    return 1;
+}
+
+// DmorphHelper_SetRaces(buildRace, ownRace): build your model as buildRace
+// and keep ownRace in your race byte (written at once). 0, 0 turns it off.
+static int GAME_FASTCALL Script_SetRaces(void *L) {
+    uint32_t build = NumberArg(L, 1, 0, 20, SET_RACES_USAGE);
+    uint32_t own = NumberArg(L, 2, 0, 20, SET_RACES_USAGE);
+    if (!UpdateDisplayInfo_o) {
+        LuaError(L, "DmorphHelper couldn't hook the model builder.");
+        return 0;
+    }
+    g_buildRace = build && own ? build : 0;
+    g_ownRace = build && own ? own : 0;
+    void *me = Me();
+    if (me && g_ownRace) {
+        WriteRace(me, g_ownRace);
+    }
+    return 0;
+}
+
+// Rebuilds a model (for a change the game made without rebuilding it).
+static int GAME_FASTCALL Script_Rebuild(void *L) {
+    Reload(PlayerArg(L, 1, REBUILD_USAGE));
     return 0;
 }
 
@@ -249,6 +331,9 @@ static void GAME_FASTCALL LoadScriptFunctions_h(void) {
     RegisterFunction("DmorphHelper_SetLook", (uintptr_t)&Script_SetLook);
     RegisterFunction("DmorphHelper_GetScale", (uintptr_t)&Script_GetScale);
     RegisterFunction("DmorphHelper_SetScale", (uintptr_t)&Script_SetScale);
+    RegisterFunction("DmorphHelper_GetRace", (uintptr_t)&Script_GetRace);
+    RegisterFunction("DmorphHelper_SetRaces", (uintptr_t)&Script_SetRaces);
+    RegisterFunction("DmorphHelper_Rebuild", (uintptr_t)&Script_Rebuild);
 }
 
 // The game's own image must reach every address used here (a 1.12.1 exe).
@@ -280,6 +365,12 @@ static void InstallHook(void) {
     if (MH_CreateHook((LPVOID)FUN_LOAD_SCRIPT_FUNCTIONS, (LPVOID)&LoadScriptFunctions_h,
                       (LPVOID *)&LoadScriptFunctions_o) == MH_OK) {
         MH_EnableHook((LPVOID)FUN_LOAD_SCRIPT_FUNCTIONS);
+    }
+    // Without it the race functions say so; everything else still works.
+    if (MH_CreateHook((LPVOID)FUN_CGUNIT_C_UPDATE_DISPLAY_INFO, (LPVOID)&UpdateDisplayInfo_h,
+                      (LPVOID *)&UpdateDisplayInfo_o) != MH_OK ||
+        MH_EnableHook((LPVOID)FUN_CGUNIT_C_UPDATE_DISPLAY_INFO) != MH_OK) {
+        UpdateDisplayInfo_o = NULL;
     }
 }
 

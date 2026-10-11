@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.5.1"
+local VERSION = "2.6.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1265,18 +1265,54 @@ local function DisplayRace(display)
 	end
 end
 
+-- With DmorphHelper v3 your own race stays in the game's race byte during a
+-- race morph, and the morph's race is only used while the game builds your
+-- model (DmorphHelper_SetRaces). Then languages, flight paths and spells all
+-- follow your own race, and nothing needs holding. raceKept: the race your
+-- model is built as (0: off); raceKeepWorks: whether DmorphHelper took it.
+local raceKept, raceKeepWorks = 0, false
+
+local function KeepRace()
+	if type(DmorphHelper_SetRaces) ~= "function" then
+		return
+	end
+	local morph = DisplayRace(BodyDisplayID() or 0)
+	local want = 0
+	if sessionReady and morph and nativeRace and morph ~= nativeRace and not next(raceHeld) then
+		want = morph
+	end
+	if want ~= raceKept then
+		local own = want ~= 0 and nativeRace or 0
+		raceKeepWorks = pcall(DmorphHelper_SetRaces, want, own) and true or false
+		raceKept = raceKeepWorks and want or 0
+	elseif want ~= 0 and type(DmorphHelper_GetRace) == "function" then
+		-- VanillaHelpers puts the morph's race back when the server resends
+		-- the field: your own race goes back in.
+		local ok, race = pcall(DmorphHelper_GetRace, "player")
+		if ok and race ~= nativeRace then
+			pcall(DmorphHelper_SetRaces, want, nativeRace)
+		end
+	end
+end
+
 local function ApplyBody()
 	helperHold, helperWait = 0.5, 0.5
 	if next(raceHeld) then
 		return true -- it goes on when the flight map or spellbook closes
 	end
-	return Morph(SetUnitDisplayID, "player", BodyDisplayID())
+	KeepRace() -- first, so the new model is built as the morph's race
+	local ok, err = Morph(SetUnitDisplayID, "player", BodyDisplayID())
+	KeepRace()
+	return ok, err
 end
 
 -- Holds (on) or releases your own race for a reason. Returns whether the
 -- race was changed back just now, so the window can redraw.
 function M.HoldRace(reason, on)
 	if on then
+		if raceKept ~= 0 then
+			return false -- DmorphHelper already keeps your own race (KeepRace)
+		end
 		local held = next(raceHeld) ~= nil
 		if held then
 			raceHeld[reason] = true
@@ -1504,7 +1540,7 @@ local MISSING_HELPER = "DmorphHelper.dll isn't loaded, so weapon glows, your siz
 M.MISSING_HELPER = MISSING_HELPER
 -- The DmorphHelper_Version() the DLL in helper\ reports. An older one in the
 -- game folder (DMorph was updated, the DLL wasn't copied again) is flagged.
-local HELPER_VERSION = 2
+local HELPER_VERSION = 3
 -- Rows 1-5 of the Races tab, in DmorphHelper_GetLook's order.
 local OWN_LOOK_NPC = { "npcSkin", "npcFace", "npcHairStyle", "npcHairColour" }
 
@@ -2820,14 +2856,33 @@ mountFrame:SetScript("OnUpdate", function()
 	if this.wait <= 0 then
 		this.wait = 0.1
 		WatchMount()
+		KeepRace()
+	end
+	-- Gear the server changed is drawn by the game without a full rebuild,
+	-- so a helmet would follow your own race: rebuild as the morph's race.
+	if this.rebuild then
+		this.rebuild = this.rebuild - arg1
+		if this.rebuild <= 0 then
+			this.rebuild = nil
+			if raceKept ~= 0 then
+				pcall(DmorphHelper_Rebuild, "player")
+			end
+		end
 	end
 end)
+mountFrame:RegisterEvent("UNIT_INVENTORY_CHANGED")
 -- Losing and getting back control (a flight path starts and lands, a fear,
 -- a stun) takes the skin off: if you're still on your mount, the watcher
 -- sees its buff and puts the skin on again a tenth of a second later.
 mountFrame:RegisterEvent("PLAYER_CONTROL_LOST")
 mountFrame:RegisterEvent("PLAYER_CONTROL_GAINED")
 mountFrame:SetScript("OnEvent", function()
+	if event == "UNIT_INVENTORY_CHANGED" then
+		if arg1 == "player" and raceKept ~= 0 then
+			this.rebuild = 0.3
+		end
+		return
+	end
 	if watch.active then
 		StopSkin()
 		watch.real = nil

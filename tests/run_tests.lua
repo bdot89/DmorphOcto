@@ -1483,6 +1483,41 @@ quiet()
 say(".item head 0")
 wait(3)
 check(channelSays("DMO2 L 3HR 0 eA"), "once they come into range, your changes reach them")
+
+-- Sizes are shared too (put on with DmorphHelper).
+local sized = {}
+function DmorphHelper_SetScale(unit, scale)
+	local u = Mock.Unit(unit)
+	if not u then
+		error("Unit not found.")
+	end
+	sized[u.guid] = scale
+end
+function DmorphHelper_GetScale(unit)
+	return 1
+end
+hear("Ally", "L 3HR 0 - " .. ally .. " s150")
+check(sized[ally] == 1.5 and morphOf(ally).display == 4527, "a DMorph user's size shows on them")
+hear("Ally", "S 50")
+check(sized[ally] == 0.5, "a size message changes only the size")
+hear("Ally", "S 100")
+check(sized[ally] == 1, "and their own size goes back when they reset it")
+hear("Ally", "L 3HR 0 - " .. ally)
+check(sized[ally] == 1, "a look without a size (or from DMorph before 2.6) means normal size")
+quiet()
+DmorphOctoDB.scale = 2
+say(".item head 0") -- any change tells the sharing code
+wait(3)
+check(channelSays("DMO2 S 200"), "your size goes out to DMorph users around you")
+quiet()
+hear("Someone", "Q Tester")
+wait(4)
+check(channelSays(" s200"), "and with your look when someone asks")
+DmorphOctoDB.scale = nil
+say(".item head 0")
+wait(3)
+hear("Ally", "L 3HR 3HR - " .. ally) -- Ally's look as the tests below remember it
+DmorphHelper_SetScale, DmorphHelper_GetScale = nil, nil
 Mock.units.target = nil
 
 -- Looks are remembered: after a /reload a known player shows at once, and is
@@ -1749,12 +1784,30 @@ local OPTIONS = {
 local game
 local function installHelper(look)
 	game = { look = look, real = look, enchants = { [16] = { 803, 0 }, [17] = { 0, 0 }, [18] = { 0, 0 } }, lookWrites = 0,
-		scale = 1 }
+		scale = 1, race = 1, build = 0, own = 0, rebuilds = 0 }
 	local function whole(v, max)
 		return type(v) == "number" and v >= 0 and v <= max and v == math.floor(v)
 	end
 	function DmorphHelper_Version()
-		return 2
+		return 3
+	end
+	-- The race byte: VanillaHelpers writes the morph's race there (tests set
+	-- game.race), DmorphHelper_SetRaces keeps your own one in it.
+	function DmorphHelper_GetRace(unit)
+		return game.race
+	end
+	function DmorphHelper_SetRaces(build, own)
+		if not (whole(build, 20) and whole(own, 20)) then
+			error("Usage: DmorphHelper_SetRaces(buildRace 0-20, ownRace 0-20)")
+		end
+		local on = build ~= 0 and own ~= 0
+		game.build, game.own = on and build or 0, on and own or 0
+		if on then
+			game.race = own
+		end
+	end
+	function DmorphHelper_Rebuild(unit)
+		game.rebuilds = game.rebuilds + 1
 	end
 	function DmorphHelper_GetScale(unit)
 		return game.scale
@@ -1797,6 +1850,7 @@ local function removeHelper()
 	DmorphHelper_Version, DmorphHelper_GetItemEnchants, DmorphHelper_SetItemEnchants = nil, nil, nil
 	DmorphHelper_GetLook, DmorphHelper_SetLook = nil, nil
 	DmorphHelper_GetScale, DmorphHelper_SetScale = nil, nil
+	DmorphHelper_GetRace, DmorphHelper_SetRaces, DmorphHelper_Rebuild = nil, nil, nil
 end
 
 local function sameLook(a, b)
@@ -1859,13 +1913,13 @@ DmorphOctoDB, DmorphOctoAccount = nil, nil
 loadWithHelper()
 Mock.Tick(1.1)
 slash("dmorph status")
-check(contains(allChat(), "DmorphHelper v2 is loaded"), "status shows the helper's version")
+check(contains(allChat(), "DmorphHelper v3 is loaded"), "status shows the helper's version")
 slash("dmorph check")
 check(contains(allChat(), "DmorphHelper: |cff33ff99OK"), "the check says the helper runs")
 local currentVersion = DmorphHelper_Version
-DmorphHelper_Version = function() return 1 end
+DmorphHelper_Version = function() return 2 end
 slash("dmorph check")
-check(contains(allChat(), "An older DmorphHelper (v1)") and contains(allChat(), "Install DmorphHelper.bat"),
+check(contains(allChat(), "An older DmorphHelper (v2)") and contains(allChat(), "Install DmorphHelper.bat"),
 	"an older DLL in the game folder is flagged, with how to update it")
 DmorphHelper_Version = currentVersion
 
@@ -1993,14 +2047,27 @@ check(sameLook(game.look, orc), "and gets it back")
 SpellBookFrame = CreateFrame("Frame", "SpellBookFrame")
 SpellBookFrame:Hide()
 Mock.Fire("PLAYER_LOGIN")
+-- DmorphHelper v3 keeps your own race in the game's race byte during a race
+-- morph (the model is built as the Orc): languages, flight paths and spells
+-- follow your own race, so nothing has to be held.
+check(game.build == 2 and game.own == 1 and game.race == 1,
+	"an Orc race morph is built as an Orc while your own race (Human) stays in the race byte")
+game.race = 2 -- VanillaHelpers writes the morph's race again
+Mock.Tick(0.2)
+check(game.race == 1, "your own race goes straight back in")
 SpellBookFrame:Show()
 Mock.Tick(1.1)
-check(vh.display == 49 and sameLook(game.look, REAL),
-	"while the spellbook holds your own race, your real look shows (not the Orc one)")
+check(vh.display == 51 and sameLook(game.look, orc), "the spellbook no longer needs your own model shown")
 SpellBookFrame:Hide()
-Mock.Tick(1.1)
-check(vh.display == 51 and sameLook(game.look, orc), "and the Orc morph and look come back when it closes")
 SpellBookFrame = nil
+local rebuilds = game.rebuilds
+Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
+Mock.Tick(0.2)
+Mock.Tick(0.2)
+check(game.rebuilds == rebuilds + 1, "gear the server changes is rebuilt as the morph's race")
+Mock.Fire("UNIT_INVENTORY_CHANGED", "target")
+Mock.Tick(0.5)
+check(game.rebuilds == rebuilds + 1, "but not someone else's")
 press(DmorphOctoCreatorRandom)
 check(wearable(game.look, "2:0") and vh.display == 51, "the dice picks a look the race can wear, on your model")
 -- From an NPC look: the rows take you back to your own model with its face.
