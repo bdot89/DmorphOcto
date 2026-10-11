@@ -2276,6 +2276,16 @@ for i = 2, pc.count do
 	end
 end
 check(sortedOK, "the catalogue stays sorted by name")
+slash("")
+Mock.Click(DmorphOctoTabMounts)
+Mock.Click(DmorphOctoMountFilter)
+pickMenu("Ported", true)
+check(DmorphOctoMountFilter.text == "Ported (later expansions)" and tonumber(DmorphOctoMountListRow1.info.text) == 60001
+	and tonumber(DmorphOctoMountListRow2.info.text) == 60011 and not DmorphOctoMountListRow3:IsVisible(),
+	"the Mounts tab's Ported filter lists the ported models")
+Mock.Click(DmorphOctoMountFilter)
+pickMenu("Mount models")
+DmorphOcto_ToggleUI()
 slash("morph 60001")
 local sharedDisplay, _, sharedMount = DmorphOcto.GetSharedLook()
 check(vh.display == 60001 and sharedDisplay == nil, "you can morph into it, and others aren't sent it")

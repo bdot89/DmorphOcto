@@ -1811,6 +1811,8 @@ local MOUNT_FILTERS = {
 	{ text = "Mount models", tag = "mount" },
 	{ text = "All models" },
 	{ text = "New in OctoWoW", kinds = { [2] = true, [3] = true } },
+	-- Models from later expansions (Data/Ported.lua), only on the PC that has them.
+	{ text = "Ported (later expansions)", kinds = { [4] = true } },
 }
 
 local function MountName(displayID)
