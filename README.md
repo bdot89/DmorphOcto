@@ -8,137 +8,152 @@
 
 ![Version](https://img.shields.io/badge/version-2.5.1-33ff99?style=flat-square)
 ![WoW 1.12.1](https://img.shields.io/badge/WoW-1.12.1-c79c6e?style=flat-square)
-![Lua 5.0](https://img.shields.io/badge/Lua-5.0-2c2d72?style=flat-square)
 ![Models](https://img.shields.io/badge/models-16%2C000%2B-b46bff?style=flat-square)
 ![Items](https://img.shields.io/badge/items-12%2C000%2B-a335ee?style=flat-square)
 ![Needs VanillaHelpers](https://img.shields.io/badge/needs-VanillaHelpers-2e8b57?style=flat-square)
 
-**[Project page](https://bdot89.github.io/DmorphOcto/)** · **[Download ZIP](https://github.com/bdot89/DmorphOcto/archive/refs/heads/main.zip)**
+**[⬇️ Download ZIP](https://github.com/bdot89/DmorphOcto/archive/refs/heads/main.zip)** · **[Project page](https://bdot89.github.io/DmorphOcto/)**
 
 </div>
 
-A morph window for the OctoWoW client, inspired by [DMorph](https://darksectordds.github.io/html/dmorph/index.html).
-Pick any creature, race, mount skin, glow or item, see it on your character straight away, and save the looks you like.
-**Morphs change only what DMorph users see:** you, and other players with DMorph. Everyone else sees your real character.
+A morph window for the OctoWoW client, inspired by [DMorph](https://darksectordds.github.io/html/dmorph/index.html). Pick any creature, race, mount skin, weapon glow or item, see it on your character straight away, and save the looks you like.
 
-**What it does**
+Morphs only change what **you and other DMorph users** see. Everyone else, and the server, sees your real character.
 
-- 🐉 **Every creature model in the client:** 16,000+ entries covering all 13,423 usable display IDs, including the **2,894 models OctoWoW added** (named after their Turtle WoW creatures where there is one).
-- 🖼️ **3D previews**, eight to a page, or a list that previews the row under your mouse. Filter **Bosses** (560+, every dungeon and raid boss), **Rare creatures, Mounts** (every mount spell's model and every model built to be ridden) or OctoWoW's new models, search by name or ID, sort **A-Z or by ID**.
-- 🐎 **Mount skins:** give your mount any model's look, for all your mounts or one of them. It only shows while you ride, so you mount and dismount with your keys as usual. A **Your skin** box shows the one you have on, turning, and the ▲ ▼ arrows go to the previous or next model.
-- ⭐ **Favourites:** right-click any model (Models tab) or mount skin (Mounts tab) to star it, then pick it from the Favourites tab every time you log in.
-- 🎭 **Races and looks:** pick a race portrait to keep your own face, then change its **real skin colour, face, hair style, hair colour and facial hair** one at a time, with your gear still showing (needs DmorphHelper, below). Or step through the game's NPC looks (8,068 of them). Or roll the dice.
-- ✨ **Weapon glows:** put any enchant glow the game can draw on your main hand, off hand or ranged weapon: Crusader, Fiery, Icy, Lifestealing, poisons, shaman weapons and every other one in the client, searchable by name (needs DmorphHelper).
-- ⚔️ **12,000+ weapons and armour pieces:** everything in 1.12 plus Turtle WoW's and OctoWoW's, from the Tower of Karazhan sets and the tier variants to the Warglaives of Azzinoth. Filter by **type** (cloth, leather, mail, plate; dagger, two-handed sword, bow, ...) and **quality** together: every epic cloth helmet, every rare plate pair of legs. Developers' test items are left out.
-- 🛡️ **352 item sets:** wear a whole set in one click.
-- 👗 **Wardrobe:** save outfits and put them back on with one click. Shared by all your characters.
-- 👥 **See each other's morphs:** players with DMorph see each other's model, item morphs and mount skins (friendly players). Switch either side off under **Sharing**.
-- 💬 **DMorph's chat commands:** `.morph`, `.race`, `.gender`, `.item`, `.mount`, `.glow`, `.demorph`, `.outfit`.
-- 🔁 **Your look stays** after `/reload`, loading screens and logging in. The window resizes and remembers how you left it.
-- ✅ **Only what works:** one command on your PC checks every model and item against your game's own files and hides the ones that can't show (see below).
+---
 
-## Screenshots
+## 📥 Install (5 minutes)
+
+### Step 1: Turn on VanillaHelpers
+
+1. Open **OctoLauncher**.
+2. In its list of mods, tick **`vanillaHelpers`**.
+
+DMorph uses it to change your model. Without it, nothing can morph.
+
+### Step 2: Put DMorph in your AddOns folder
+
+1. Click **[Download ZIP](https://github.com/bdot89/DmorphOcto/archive/refs/heads/main.zip)**.
+2. Right-click the downloaded `DmorphOcto-main.zip` and choose **Extract All...**, then **Extract**.
+3. In the extracted files, open folders until you see the **`DmorphOcto-main`** folder that has `DmorphOcto.toc` inside it, and **rename that folder to `DmorphOcto`** (exactly that, or the game won't load it).
+4. Move it into your game's AddOns folder, so it ends up here:
+
+```
+...\OctoWoW\Interface\AddOns\DmorphOcto\DmorphOcto.toc
+```
+
+> ⚠️ The `.toc` file must be directly inside `DmorphOcto`. If you have `DmorphOcto\DmorphOcto-main\DmorphOcto.toc`, move the inner folder up one level.
+
+### Step 3: Install DmorphHelper (weapon glows, real skin/face/hair, size)
+
+DMorph comes with a small extra file, **DmorphHelper.dll**, for weapon glows, your real skin, face and hair, and the size slider. An addon can't copy files into the game folder by itself, so this is one double-click:
+
+1. **Close the game completely.**
+2. Open the folder `Interface\AddOns\DmorphOcto`.
+3. Double-click **`Install DmorphHelper.bat`**.
+4. If Windows shows a warning, let it run:
+   - *"Windows protected your PC"*: click **More info**, then **Run anyway**.
+   - *"Do you want to run this file?"*: click **Run**.
+5. A black window opens and ends with **"DmorphHelper is installed."** Press any key to close it.
+
+That's it. It found your game folder, copied the DLL next to `WoW.exe` and added it to `dlls.txt` after `VanillaHelpers.dll`.
+
+> Skip this step and everything else still works; you just won't have glows, real looks or the size slider.
+
+### Step 4: Play
+
+1. Start the game **from OctoLauncher** (client mods only load that way, not from `WoW.exe`).
+2. Click the **polymorph button** by the minimap, or type **`/dmorph`**.
+3. Look at the **Setup** button at the bottom left of the window:
+   - 🟢 **Setup OK**: you're ready.
+   - 🔴 **Setup: fix me**: click it. It says what isn't running and how to fix it. (`/dmorph check` shows the same in chat.)
+
+### Updating
+
+1. Download the ZIP again and replace your `DmorphOcto` folder with the new one (Steps 2.1 to 2.4).
+2. Close the game and double-click **`Install DmorphHelper.bat`** again. It only copies the DLL if it changed.
+3. Start the game from OctoLauncher.
+
+### Something wrong?
+
+| Problem | Fix |
+|---|---|
+| **"VanillaHelpers isn't running"** | Close the game completely (check Task Manager), then press **Play in OctoLauncher**. Don't start `WoW.exe` directly. Make sure `vanillaHelpers` is ticked. |
+| **Setup says DmorphHelper is "not running" or "older"** | Close the game and double-click `Install DmorphHelper.bat` (Step 3). |
+| **The .bat says "The game is running"** | Close the game, wait a few seconds, try again. |
+| **The .bat says it can't find the game folder** | DMorph isn't in `OctoWoW\Interface\AddOns`. Move it there (Step 2). |
+| **The game won't start after Step 3** | Double-click **`Remove DmorphHelper.bat`** in the DmorphOcto folder. |
+| **DMorph doesn't show in game** | Check the folder name and place (Step 2.3 and 2.4), then enable *DMorph* in the AddOns list on the character screen. |
+| **Invisible after a morph** | That model can't show in your game. Press **Reset model**. |
+
+Optional extras: [ClassicAPI](https://github.com/brues-code/ClassicAPI) gives the 3D previews (without it the Models tab is a list), and SuperWoW lets you see nearby DMorph users' morphs without targeting them.
+
+---
+
+## ✨ What it does
+
+- 🐉 **Every creature model in the client:** 16,000+, including the 2,894 OctoWoW added. 3D previews, search, A-Z or ID, and filters for **Bosses** (560+), **Rare creatures**, **Mounts** and OctoWoW's new models.
+- 🐎 **Mount skins:** give your mount any model's look (Ashes of Al'ar included). It shows only while you ride, so you mount and dismount with your keys as usual.
+- 🎭 **Races and looks:** any race and gender, then change its real skin colour, face, hair style, hair colour and facial hair one at a time, with your gear still on.
+- 📏 **Size:** make your character smaller or bigger, 25% to 300%: a tiny Ragnaros, a giant Tauren.
+- ✨ **Weapon glows:** Crusader, Fiery, Icy, poisons and every other glow in the game, on main hand, off hand or ranged.
+- ⚔️ **12,000+ weapons and armour:** everything in 1.12 plus Turtle WoW's and OctoWoW's, filtered by type and quality.
+- 🛡️ **352 item sets** in one click, and a **Wardrobe** of saved outfits for all your characters.
+- ⭐ **Favourites:** right-click any model or mount skin to keep it handy.
+- 👥 **See each other's morphs:** DMorph users see each other's model, items and mount skins.
+- 💬 **DMorph's chat commands:** `.morph`, `.race`, `.item`, `.mount`, `.glow`, `.scale` and more.
+- 🔁 **Your look stays** after `/reload`, loading screens and logging in.
+
+## 🖼️ Screenshots
 
 <table>
 <tr>
-<td width="50%"><img src="docs/models.jpg" alt="Models tab"><br><b>Models</b>: every model, here filtered to the 549 bosses. Click one to become it, or type any display ID and step through with &lt; &gt;.</td>
-<td width="50%"><img src="docs/mounts.jpg" alt="Mounts tab"><br><b>Mounts</b>: pick a skin for all your mounts or one of them. The one you have on is ticked and turns in the <b>Your skin</b> box.</td>
+<td width="50%"><img src="docs/models.jpg" alt="Models tab"><br><b>Models</b>: every model, here the 549 bosses. Click one to become it.</td>
+<td width="50%"><img src="docs/mounts.jpg" alt="Mounts tab"><br><b>Mounts</b>: pick a skin; the one you have on turns in the <b>Your skin</b> box.</td>
 </tr>
 <tr>
-<td><img src="docs/races.jpg" alt="Races tab"><br><b>Races</b>: any race and gender, then step through its real skin colour, face, hair style, hair colour and features.</td>
-<td><img src="docs/glows.jpg" alt="Glows tab"><br><b>Glows</b>: every weapon enchant glow in the game, for main hand, off hand or ranged.</td>
+<td><img src="docs/races.jpg" alt="Races tab"><br><b>Races</b>: any race, then its real skin colour, face, hair and features.</td>
+<td><img src="docs/glows.jpg" alt="Glows tab"><br><b>Glows</b>: every weapon enchant glow in the game.</td>
 </tr>
 <tr>
-<td><img src="docs/items.jpg" alt="Items tab"><br><b>Items</b>: pick a slot, then filter by type, quality and source. Click an item to wear it.</td>
-<td><img src="docs/sets.jpg" alt="Sets tab"><br><b>Sets</b>: every item set. One click puts on all its pieces (here Armor of Might).</td>
+<td><img src="docs/items.jpg" alt="Items tab"><br><b>Items</b>: pick a slot, filter by type, quality and source.</td>
+<td><img src="docs/sets.jpg" alt="Sets tab"><br><b>Sets</b>: one click puts on a whole set (here Armor of Might).</td>
 </tr>
 <tr>
-<td><img src="docs/wardrobe.jpg" alt="Wardrobe tab"><br><b>Wardrobe</b>: name your look and save it. Outfits are shared by all your characters.</td>
-<td><img src="docs/favourites.jpg" alt="Favourites tab"><br><b>Favourites</b>: the models and mount skins you starred, ready every time you log in.</td>
+<td><img src="docs/wardrobe.jpg" alt="Wardrobe tab"><br><b>Wardrobe</b>: save a look by name, for all your characters.</td>
+<td><img src="docs/favourites.jpg" alt="Favourites tab"><br><b>Favourites</b>: your starred models and mount skins.</td>
 </tr>
 </table>
 
-**In the world.** A Black Spectral Tiger mount skin in Orgrimmar, and a Black Drake morph:
-
-<img src="docs/world.jpg" alt="Mount skin and creature morph in Orgrimmar" width="100%">
-
-More creature morphs:
+<img src="docs/world.jpg" alt="A Black Spectral Tiger mount skin and a Black Drake morph in Orgrimmar" width="100%">
 
 <img src="docs/morphs.jpg" alt="Four creature morphs in Orgrimmar" width="100%">
 
 ---
 
-## Install
+## 🎮 Using DMorph
 
-1. In **OctoLauncher**, enable the **`vanillaHelpers`** mod. DMorph needs it to change your model.
-2. Put the addon folder in `Interface\AddOns\` so that you have `Interface\AddOns\DmorphOcto\DmorphOcto.toc`.
-   - Used **Code > Download ZIP**? The folder is called `DmorphOcto-main`. Rename it to **`DmorphOcto`** or the game won't load it.
-3. Start the game **from OctoLauncher** (client mods only load that way). Click the polymorph button by the minimap, or type **`/dmorph`**.
-4. The **Setup** button at the bottom of the window is green when morphing works. If it's red ("Setup: fix me"), click it: it shows what isn't running and how to fix it. `/dmorph check` prints the same in chat.
-
-**"VanillaHelpers isn't running"?** The mod is ticked in OctoLauncher but the game didn't load it. Close the game completely (check it isn't still running), then press Play in OctoLauncher again; don't start `WoW.exe` directly. If your other client mods (SuperWoW, ClassicAPI, ...) run but VanillaHelpers doesn't, check that the game folder's `dlls.txt` has a `VanillaHelpers.dll` line.
-
-### DmorphHelper: weapon glows and real skin, face and hair
-
-VanillaHelpers can't change weapon glows or your own skin, face and hair, so DMorph comes with a small extra DLL for that, **DmorphHelper** (`helper\DmorphHelper.dll`). An addon can't put files into the game folder itself, so it takes one double-click:
-
-1. Close the game.
-2. In `Interface\AddOns\DmorphOcto`, double-click **`Install DmorphHelper.bat`**. It finds your game folder, copies the DLL next to `WoW.exe` and adds it to `dlls.txt` after `VanillaHelpers.dll` (OctoLauncher keeps that line). If Windows asks whether to run it, choose *Run*.
-3. Start the game from OctoLauncher. The window's **Setup** button (or `/dmorph check`) shows *DmorphHelper: OK*.
-
-**After updating DMorph, double-click it again.** It only copies the DLL when it changed, and the Setup check tells you when the one in your game folder is older than the one DMorph came with.
-
-DmorphHelper only switches itself on when it finds VanillaHelpers' hooks at the exact game addresses it uses, and does nothing otherwise. If the game won't start, or something looks wrong, double-click **`Remove DmorphHelper.bat`** (or delete the `DmorphHelper.dll` line from `dlls.txt`). Everything else in DMorph works without it.
-
-Optional: [ClassicAPI](https://github.com/brues-code/ClassicAPI) (`ClassicAPI.dll` in `dlls.txt`) for the 3D previews.
-Without it the Models tab is a plain list and everything else works the same.
-Not using OctoLauncher? Put `VanillaHelpers.dll` (v1.1.0+, [releases](https://github.com/isfir/VanillaHelpers/releases)) in the game folder and add it to `dlls.txt`.
-
-### Check the lists against your game
-
-Run this once after installing, and again after OctoWoW updates. Close the game first, then in the `DmorphOcto` folder run:
-
-```
-powershell -ExecutionPolicy Bypass -File tools\update_from_game.ps1
-```
-
-It reads your game's own files, lists every model and item set in them, and hides every model and item that can't show in your client:
-
-- **Models:** not in the game at all, 3D file missing, empty or in a format 1.12 can't load, or skin texture missing (it would show white).
-- **Items:** nothing to draw (no model or texture files).
-- **Glows and looks** (for DmorphHelper): every enchant glow whose effect files are in the game, and per race and gender every skin colour, face, hair style, hair colour and facial hair whose textures are.
-
-It prints what it found. If a check would hide a suspicious share of everything, it switches that check off and says so, rather than empty your lists. Then `/reload` in game.
-
----
-
-## The window at a glance
+Open the window with the minimap button, `/dmorph`, or a key under *Key Bindings > DMorph*. Escape closes it.
 
 | Part | What it does |
 |---|---|
-| **Dressing room** (left) | Your character in your race's dress-up room. Drag to turn it. **Zoom** with the mouse wheel or the **+** / **-** buttons to see the details, right-drag to move it, **Reset view** to see all of it again. The plate underneath names your look, and its **Size** slider makes your character smaller or bigger in the world (25% to 300%; right-click: your own size; needs DmorphHelper). |
-| **Slots** around the model | Left-click: browse items for that slot. Right-click: back to your own gear. Morphed slots glow green. |
-| **Reset model** / **Reset everything** | Your own body back (items stay) / clear every morph, mount skins too. |
-| **Setup** (bottom left) | Green **Setup OK** when VanillaHelpers runs and morphing works, red **Setup: fix me** when it doesn't. Click it for every part DMorph uses (VanillaHelpers, and the optional DmorphHelper, ClassicAPI, SuperWoW), whether it's running and how to fix it. It opens by itself when morphing can't work. |
-| **Sharing** (bottom) | **Others see my morph** / **I see their morphs**: both on to start with. Hover it to see how many DMorph users you've met. |
-| **Corner grip** (bottom right) | Drag to make the window bigger or smaller. It remembers the size. |
-| **Models** tab | Grid of previews (mouse wheel turns pages) or list view. Gold frame = the model you wear. **Right-click** stars a model. |
-| Models: **filter** | All models · Creatures · Bosses · Rare creatures · Mounts · Other models (named after their model file, blue) · New in OctoWoW (green). |
-| Models: **Sort** | List A-Z or by ID. |
-| **Mounts** tab | **Skin for:** all your mounts, or one you've ridden. Click a mount model to use it as the skin, right-click to star it, **Remove skin** takes it off. The skin you have on is ticked in the list and shown in the **Your skin** box; ▲ ▼ put on the previous / next model. The line at the top says which mount you're riding and what it shows as. The skin shows only while you ride. |
-| Models: **Display ID** | Type any ID and press Morph, or step through every ID with < and >. |
-| **Favourites** tab | Your starred models and mounts, shared by all your characters. Click to wear, right-click to unstar, hover for a 3D preview. Filter models / mounts, sort A-Z or ID. |
-| **Races** tab | A portrait = that race with your own face, skin and hair (your item morphs show). **With DmorphHelper**, the first five < > rows change that model's real skin colour, face, hair style, hair colour and facial hair ("2 of 5" = the second of five skin colours; "(NPC)" = one character creation doesn't offer). A face belongs to a skin colour and a hair colour to a hair style, so when the new one doesn't have yours, the closest is used and the status line says so. Each race remembers its own picked look. **NPC look** wears the game's dressed NPCs instead. **Without DmorphHelper** every row steps through the NPC looks of that race, moving its row to the next value an NPC has; if no NPC has it with your other choices, the closest look is used and the status line says which rows changed with it. Dice = random look, **My own look** goes back, **Favourite** stars an NPC look. |
-| **Glows** tab | Every weapon glow in the game. Pick **Main hand**, **Off hand** or **Ranged**, search by enchant name (or effect name, or number), and click a glow. **No glow** hides the slot's glow, **My own glow** puts your real one back. Hover a glow for every enchant that has it. Needs DmorphHelper. |
-| **Items** tab | Click the slot name for any slot (or < >). Three filters work together: **Type** (the slot's armour types or weapon kinds, with how many of each), **Quality** and **Source** (all / 1.12 / new in OctoWoW). Items are coloured by quality. **Item ID** + **Apply** takes any item. |
-| **Sets** tab | Every item set. Hover to see the pieces, click to wear them all. Same filters as Items; a set's type is what most of its armour is made of. |
-| **Wardrobe** tab | Save, load and delete outfits (your mount skin, glows and picked face, skin and hair included). Loading puts on the whole outfit. |
+| **Dressing room** (left) | Your character. Drag to turn, mouse wheel or **+ / -** to zoom, right-drag to move, **Reset view** to see it all. The **Size** slider under it changes your size (right-click: normal size). |
+| **Slots** round the model | Left-click: items for that slot. Right-click: back to your own gear. Morphed slots glow green. |
+| **Reset model** / **Reset everything** | Your own body back (items stay) / clear every morph. |
+| **Models** tab | Grid or list of every model. Filter, search, sort; type a display ID and press **Morph**, or step through IDs with < >. Right-click stars a model. |
+| **Mounts** tab | Choose **Skin for** (all your mounts, or one you've ridden) and click a model. ▲ ▼ step through the list, **Remove skin** takes it off. |
+| **Favourites** tab | Your starred models and mount skins. Click to wear, right-click to unstar. |
+| **Races** tab | Click a portrait to become that race with your own face. The < > rows change skin colour, face, hair style, hair colour and facial hair; **NPC look** wears the game's dressed NPCs; the dice picks a random look. |
+| **Glows** tab | Pick **Main hand**, **Off hand** or **Ranged**, then a glow. **No glow** hides it, **My own glow** puts yours back. |
+| **Items** / **Sets** tabs | Filter by type, quality and source, then click to wear. Any item works by its ID too. |
+| **Wardrobe** tab | Save, load and delete outfits (mount skin, glows and looks included). |
+| **Setup** (bottom left) | Green when everything works; click it to see what's running and how to fix what isn't. |
+| **Sharing** (bottom) | Whether others see your morph, and whether you see theirs. |
+| **Corner grip** (bottom right) | Drag to resize the window. |
 
-Open it with the minimap button, `/dmorph` or a key under *Key Bindings > DMorph*. Escape closes it.
+### Chat commands
 
-## Chat commands
-
-Type them in the chat box like in DMorph. They never reach the server. Each also works after `/dmorph`, e.g. `/dmorph morph 4527` in a macro.
+Type them in the chat box, like in DMorph. They never reach the server, and each also works after `/dmorph` (e.g. `/dmorph morph 4527` in a macro).
 
 | Command | What it does |
 |---|---|
@@ -146,57 +161,69 @@ Type them in the chat box like in DMorph. They never reach the server. Each also
 | `.race <1-10>` or `.race nightelf` | `1` Human, `2` Orc, `3` Dwarf, `4` Night Elf, `5` Undead, `6` Tauren, `7` Gnome, `8` Troll, `9` Goblin, `10` High Elf. |
 | `.gender` | Swap the gender of your race or race morph. |
 | `.item <slot> <itemID>` | Morph one slot, e.g. `.item 1 2955` or `.item head` + a shift-clicked item link. `0` resets the slot. |
-| `.scale <size>` | Your size: `.scale 0.5` (half), `.scale 2` or `.scale 200%` (double), `.scale 0` resets. Works on any morph, from a tiny Ragnaros to a giant Tauren. Needs DmorphHelper. |
-| `.mount <displayID>` | Skin for all your mounts: any creature, shown while you ride. `.mount 0` removes it. |
-| `.glow <slot> <enchantID>` | A weapon's glow, e.g. `.glow mainhand 1900` (Crusader). Slots `mainhand`, `offhand`, `ranged`; `0` = no glow, `own` = your own. `.enchant` works too. Needs DmorphHelper. |
-| `.demorph` / `.demorph all` | Reset your model and picked looks / your model, looks, items, glows and mount skins. |
-| `.outfit`, `.outfit <name>`, `.outfit save <name>`, `.outfit delete <name>` | List, put on, save or delete outfits. |
-| `.share on/off` / `.share others on/off` | Whether other DMorph users see your morph / whether you see theirs. `.share` shows both, how many DMorph users you've met and how many messages went out. |
-| `.dmorph check` | Is everything DMorph uses running, and how to fix what isn't (the same as the window's Setup button). |
-| `.dmorph status` / `/dmorph help` | What's morphed and which VanillaHelpers and DmorphHelper are loaded / all commands. |
+| `.mount <displayID>` | Skin for all your mounts. `.mount 0` removes it. |
+| `.scale <size>` | Your size: `.scale 0.5`, `.scale 2` or `.scale 200%`. `.scale 0` resets. |
+| `.glow <slot> <enchantID>` | A weapon glow, e.g. `.glow mainhand 1900` (Crusader). `0` = none, `own` = yours. |
+| `.demorph` / `.demorph all` | Reset your model / reset everything. |
+| `.outfit`, `.outfit <name>`, `.outfit save <name>`, `.outfit delete <name>` | List, wear, save or delete outfits. |
+| `.share on/off` / `.share others on/off` | Whether others see your morph / whether you see theirs. |
+| `.dmorph check` / `.dmorph status` / `/dmorph help` | Setup check / what's morphed / all commands. |
 
 Slots: `1` head, `3` shoulder, `4` shirt, `5` chest, `6` waist, `7` legs, `8` feet, `9` wrist, `10` hands, `15` back, `16` main hand, `17` off hand, `18` ranged, `19` tabard.
 
-## Good to know
+---
 
-- **Who sees your morph:** you, and other players running DMorph with VanillaHelpers. Everyone else, and the server, sees your real character.
-- **Sharing works on friendly players.** VanillaHelpers can't morph the other faction. A DMorph user's morph shows once your game has a handle on them: when you target or mouse over them (or they're your target's target), when you're grouped, or straight away if you run SuperWoW. When a player leaves your sight and comes back, the game rebuilds them, and DMorph puts their look straight back on (within a fifth of a second). `.share` tells you whether SuperWoW GUIDs work on your client. Mount skins show on group members (and with SuperWoW), because DMorph has to take them off the moment that player dismounts. DMorph keeps its talk quiet: group, raid, battleground and guild mates get hidden addon messages, and only players outside those hear it on its own chat channel, *DmorphShare*, which no chat window ever shows. Nothing is sent unless something changes or a DMorph user comes into range. A changed look goes out once it has stood still for a second (a whole outfit in one message), and only while a DMorph user is within about 28 yards of you (or in your group); mounting and dismounting go out at once. Only players near you that you target or mouse over (and group members) are asked whether they have DMorph; one who doesn't answer isn't asked again for a day, even after a relog. Looks are remembered between sessions, so players you've met show straight away, and DMorph only checks with them whether anything changed. `.share` shows how many messages went out. DMorph 1.8 can't see 1.7 users' morphs (and the other way round): everyone needs 1.8.
-- **Invisible after a morph?** That display ID can't show in your game. Press **Reset model**, and run `tools\update_from_game.ps1` (above) so the lists leave out everything that can't.
-- **Without DmorphHelper, NPC looks are fixed combinations.** VanillaHelpers can't change your own character's skin, face or hair, so the < > rows morph you into the game's dressed NPCs of that race. Every NPC is its own mix of skin, face, hair and clothes: only about 1 click in 25 can change one row and keep all the others, so most clicks bring a different face or hair along (the status line names them) and nearly always other clothes. Item morphs don't show on an NPC look: for your own face with gear, use a portrait. DmorphHelper changes your real skin, face and hair instead, one row at a time.
-- **Glows and looks stay on.** The server sends your real enchants and looks again now and then (a new enchant, a loading screen); DMorph puts yours back within a second. Like every morph, only you see them: other DMorph users don't see your glows or picked face yet.
-- **Glows are the 1.12 client's.** Every glow in the game files is in the list, Turtle WoW's and OctoWoW's included. Glows from The Burning Crusade onwards (Mongoose, Berserking, Executioner, ...) aren't in these files, so no addon can show them.
-- **Later expansions aren't in the game.** Models, mounts, races, items, sets and glows from The Burning Crusade onwards (Draenei, Blood Elf hair, Outland mounts, ...) aren't in the 1.12 client's files, and the server doesn't know their items, so no addon can show them. Everything OctoWoW and Turtle WoW added to the client is in the lists.
-- **Mount skins wait for you to mount.** VanillaHelpers would otherwise keep you on a mount after you dismount, so the skin goes on when you mount (the addon sees your mount's buff) and comes off when that buff goes. Flight master birds keep their own look: no skin goes on during a flight path, so nothing is left on when you land.
-- **OctoWoW-only items** that no list knows yet are looked up in the background after you log in (with ClassicAPI, a few a second, once per account). The Items and Sets tabs say how many are left. Any item also works by its ID.
-- **Fast clicking is safe:** the game rebuilds your character after each change, so a click within a third of a second of the last one waits its turn instead of mixing two looks' textures.
-- **"?" icon on a slot:** the game hasn't loaded that item yet. It turns into the icon after a moment.
-- **Flight paths and spellbook after a race morph:** the game shows flight paths and sorts your spellbook by the race it thinks you are, so as a Human morph a Horde character would see no flight paths and spells would move. While the flight map or the spellbook is open, DMorph puts your own race back (you'll see your own model for that moment); the morph returns when you close it.
-- **Chat after a race morph:** a race morph also changes the race the game thinks you are, and with it the language it speaks by default and the languages it lists (an Undead morphed into a Human or Gnome would try Common: "You don't know that language"). DMorph reads the languages your own character speaks while your own race is showing, and sends your chat in one of them: the one you picked, else your own default, else Orcish or Common for your faction. So a Horde character morphed into a Goblin speaks Orcish, the Horde language you know.
-- **Shapeshifting** (druid forms and the like) shows your morph instead of the form. Reset your model first if you want the form.
-- No Draenei (race 11 isn't in 1.12), and F5/F10 aren't taken over: set the reset keys under *Key Bindings > DMorph*.
+## 💡 Good to know
+
+- **Who sees what:** you and other DMorph users see your model, items and mount skin (friendly players only). Glows, looks and size are only on your own screen for now.
+- **Seeing other DMorph users:** their morph shows when you target or mouse over them, when you're grouped, or straight away with SuperWoW. DMorph only talks to players near you, through hidden messages that no chat window shows.
+- **Mount skins** go on when you mount and come off when you dismount. Flight master birds keep their own look.
+- **Race morphs:** while the flight map or spellbook is open, your own race comes back for a moment, so you see all your flight paths and your spells stay in order. Your chat is always sent in a language your character knows.
+- **Fast clicking is safe:** a click right after another waits its turn, so two looks never mix.
+- **Shapeshifting** shows your morph instead of the form; reset your model first if you want the form.
+- **Later expansions aren't in this game:** models, glows and races from The Burning Crusade onwards (Draenei, Mongoose glow, Outland mounts...) aren't in the 1.12 files, so no addon can show them. Everything OctoWoW and Turtle WoW added is included.
 
 ---
 
-## How it works
+## 🛠️ For the curious and for developers
 
-DMorph itself is a DLL for WotLK 3.3.5a and can't run on the 1.12 client. This addon uses **VanillaHelpers**, a 1.12 client mod that OctoLauncher ships, through its `SetUnitDisplayID`, `SetUnitVisibleItemID`, `SetUnitMountDisplayID` and `UnitDisplayInfo` functions. The previews use ClassicAPI's `Model:SetDisplayInfo`. Each new model loads out of sight and only shows once it's ready, so nothing flashes white.
+<details>
+<summary><b>Check the lists against your own game</b> (optional)</summary>
 
-**DmorphHelper** (`helper/DmorphHelper.c`, built with MinGW-w64 by `helper/build.sh`) adds six Lua functions next to VanillaHelpers': `DmorphHelper_GetItemEnchants` / `SetItemEnchants` (a visible weapon's enchant IDs, which the game draws the glow from) and `DmorphHelper_GetLook` / `SetLook` (your skin colour, face, hair style, hair colour and facial hair) and `DmorphHelper_GetScale` / `SetScale` (your size). It writes those values on your client only and makes the game rebuild your model, the way VanillaHelpers does. It uses VanillaHelpers' own game addresses and starts only once it sees VanillaHelpers' hooks at two of them.
+DMorph ships lists made from OctoWoW's files (11 October 2026). After an OctoWoW client update, you can rebuild them from your own game files: close the game, open PowerShell in the `DmorphOcto` folder and run:
 
-- `DmorphOcto.lua`: morph state, wardrobe, search, item lookup and chat commands. `Share.lua`: sharing morphs with other DMorph users. `UI.lua`: the window and minimap button.
-- `Data/Glows.lua` and `Data/CharOptions.lua`: the glows and the skin, face and hair choices from your game files (`tools\update_from_game.ps1` writes them; the copies here come from OctoWoW's files as of 11 October 2026, so run it again after a client patch).
-- `Data/Creatures.lua` and `Data/Items.lua`: the [cmangos classic-db](https://github.com/cmangos/classic-db) 1.12.1 database. `Data/Models.lua`, `ModelTags.lua` and `Looks.lua`: every other display ID in the client's own data, its boss / rare / mount tags, and the NPC looks per race. `Data/ItemsExtra.lua` and `ItemSets.lua`: Turtle WoW's and OctoWoW's items and the client's item sets. `Data/ItemTypes.lua`: each item's type (cloth, plate, dagger, ...) from both databases.
-- Saved data: `WTF\Account\<account>\SavedVariables\DmorphOcto.lua` (outfits, favourites, window settings, looked-up items, minimap button) and each character's `SavedVariables\DmorphOcto.lua` (current look, glows, picked faces, and your real ones to put back).
+```
+powershell -ExecutionPolicy Bypass -File tools\update_from_game.ps1
+```
 
-## Development
+It lists every model, item set, glow and look in your game and hides any model or item that can't show (missing model or texture files). Then `/reload` in game.
+
+</details>
+
+<details>
+<summary><b>How it works</b></summary>
+
+DMorph itself is a DLL for WotLK 3.3.5a and can't run on the 1.12 client. This addon uses **VanillaHelpers** (OctoLauncher's mod) through its `SetUnitDisplayID`, `SetUnitVisibleItemID`, `SetUnitMountDisplayID` and `UnitDisplayInfo` functions. The previews use ClassicAPI's `Model:SetDisplayInfo`, and each new model loads out of sight so nothing flashes white.
+
+**DmorphHelper** (`helper/DmorphHelper.c`) adds `DmorphHelper_GetItemEnchants` / `SetItemEnchants` (weapon glows), `DmorphHelper_GetLook` / `SetLook` (skin, face, hair) and `DmorphHelper_GetScale` / `SetScale` (size). It writes those values on your client only and makes the game rebuild your model, the way VanillaHelpers does. It uses VanillaHelpers' own game addresses and only switches on once it sees VanillaHelpers' hooks there.
+
+- `DmorphOcto.lua`: morph state, wardrobe, search, item lookup and chat commands. `Share.lua`: sharing with other DMorph users. `UI.lua`: the window and minimap button.
+- `Data/`: creatures and items from the [cmangos classic-db](https://github.com/cmangos/classic-db) 1.12.1 database, Turtle WoW data from [ShellLab](https://github.com/oplancelot/ShellLab), and everything else read from the client's own files.
+- Saved data: `WTF\Account\<account>\SavedVariables\DmorphOcto.lua` (outfits, favourites, window settings) and each character's `SavedVariables\DmorphOcto.lua` (current look).
+
+</details>
+
+<details>
+<summary><b>Development</b></summary>
 
 Written for the client's Lua 5.0: no `#`, no `%`, no `string.match`.
 
-- **Tests:** `tests/run_tests.lua` drives the addon (chat, window, previews, filters, races and looks, glows, mount skins, favourites, sets, item lookup, wardrobe, sharing with other users, `/reload`, logins) inside `tests/mock_wow.lua`, a strict mock of the 1.12 UI, of VanillaHelpers and of DmorphHelper. Run `lua tests/run_tests.lua` with Lua 5.0, or on Windows `powershell -ExecutionPolicy Bypass -File tools\run_tests.ps1` (builds `tools/LuaHost`, .NET 8, and uses the Lua runtime OBS Studio installs; `LUA51_DLL` picks another).
-- **Catalogue:** `python3 tools/build_data.py <ClassicDB_1_12_1_*.sql.gz> --shelllab <ShellLab's data/shelllab.db>` rebuilds `Creatures.lua`, `Items.lua`, `ClassicTags.lua` (bosses, rares, mounts), `ItemTypes.lua` and `tools/data/classic_item_displays.tsv`. Then, on Windows with the game installed, `tools\update_from_game.ps1` runs `tools\build_models.ps1` (model files, NPC looks, tags, `HiddenModels.lua`), `tools\build_items.ps1` (extra items, sets, `HiddenItems.lua`) and `tools\build_options.ps1` (`Glows.lua`, `CharOptions.lua`), from the client's MPQs, its item cache, Atlas-CFM's loot tables and `tools/data` (Turtle WoW data exported from [ShellLab](https://github.com/oplancelot/ShellLab)). Run it after a client patch.
-- **Game-file tools:** `python3 tests/make_game_fixture.py <dir>` builds a fake game folder (MPQs with DBCs, models, textures) to run the PowerShell tools against; its header says what they should find. PowerShell 7 runs them on Linux too.
-- **DmorphHelper:** `sh helper/build.sh` with `gcc-mingw-w64-i686` rebuilds `helper/DmorphHelper.dll` (MinHook is in `helper/minhook`). On Windows, unzip [winlibs](https://winlibs.com)' 32-bit (i686) MSVCRT build and run it from Git Bash: `PATH=/c/path/to/mingw32/bin:$PATH sh helper/build.sh`. After changing what it can do, raise `HELPER_VERSION` in both `DmorphHelper.c` and `DmorphOcto.lua`, so the Setup check asks players to run the installer again.
-- **Pictures:** `docs/src` has the banner and the two in-world galleries as HTML (rendered with headless Edge) and the in-game crops they use. The character name is blanked out of the window screenshots.
+- **Tests:** `tests/run_tests.lua` drives the addon inside `tests/mock_wow.lua`, a strict mock of the 1.12 UI, VanillaHelpers and DmorphHelper. Run `lua tests/run_tests.lua` with Lua 5.0, or on Windows `powershell -ExecutionPolicy Bypass -File tools\run_tests.ps1` (builds `tools/LuaHost`, .NET 8, with OBS Studio's Lua runtime; `LUA51_DLL` picks another).
+- **Data:** `python3 tools/build_data.py <ClassicDB_1_12_1_*.sql.gz> --shelllab <shelllab.db>` rebuilds `Creatures.lua`, `Items.lua`, `ClassicTags.lua` and `ItemTypes.lua`; then `tools\update_from_game.ps1` (on Windows, with the game) runs `build_models.ps1`, `build_items.ps1` and `build_options.ps1` against the client's MPQs. `python3 tests/make_game_fixture.py <dir>` builds a fake game folder to test those tools.
+- **DmorphHelper:** `sh helper/build.sh` with `gcc-mingw-w64-i686` (on Windows: [winlibs](https://winlibs.com)' 32-bit MSVCRT build, `PATH=/c/path/to/mingw32/bin:$PATH sh helper/build.sh` in Git Bash). When it gains functions, raise `HELPER_VERSION` in `DmorphHelper.c` and `DmorphOcto.lua` so the Setup check asks players to run the installer again.
+- **Pictures:** `docs/src` has the banner and galleries as HTML (rendered with headless Edge) and the in-game crops they use.
+
+</details>
 
 ## Credits
 
@@ -204,5 +231,4 @@ Written for the client's Lua 5.0: no `#`, no `%`, no `string.match`.
 - [VanillaHelpers](https://github.com/isfir/VanillaHelpers) by isfir, which does the morphing on the 1.12.1 client.
 - [ClassicAPI](https://github.com/brues-code/ClassicAPI) by brues-code, whose `Model:SetDisplayInfo` draws the previews.
 - [MinHook](https://github.com/TsudaKageyu/minhook) by Tsuda Kageyu (BSD 2-clause), which DmorphHelper hooks the game with.
-- Creature and item names from the [cmangos classic-db](https://github.com/cmangos/classic-db) 1.12.1 world database.
-- Turtle WoW creature, item and rank data from [ShellLab](https://github.com/oplancelot/ShellLab) by oplancelot; loot-table item IDs from Atlas-CFM.
+- Creature and item names from the [cmangos classic-db](https://github.com/cmangos/classic-db); Turtle WoW data from [ShellLab](https://github.com/oplancelot/ShellLab) by oplancelot; loot-table item IDs from Atlas-CFM.
