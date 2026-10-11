@@ -1809,12 +1809,12 @@ local game
 local function installHelper(look)
 	game = { look = look, real = look, enchants = { [16] = { 803, 0 }, [17] = { 0, 0 }, [18] = { 0, 0 } }, lookWrites = 0,
 		scale = 1, race = 1, ownRace = 0, rebuilds = 0,
-		weather = { 0, 0 }, serverWeather = { 1, 0.3 }, weatherOn = false, inWorld = true }
+		weather = { 0, 0 }, serverWeather = { 1, 0.3 }, weatherOn = false, inWorld = true, time = -1, realTime = 600 }
 	local function whole(v, max)
 		return type(v) == "number" and v >= 0 and v <= max and v == math.floor(v)
 	end
 	function DmorphHelper_Version()
-		return 8
+		return 9
 	end
 	-- The race byte: VanillaHelpers writes the morph's race there (tests set
 	-- game.race); DmorphHelper_SetRace writes it without a rebuild, and
@@ -1852,6 +1852,19 @@ local function installHelper(look)
 	end
 	function DmorphHelper_GetWeather()
 		return game.weather[1], game.weather[2], game.weatherOn and 1 or 0, game.serverWeather[1], game.serverWeather[2]
+	end
+	-- Time of day: -1 is the real time (10:00 here).
+	function DmorphHelper_SetTime(minutes)
+		if type(minutes) ~= "number" or not (minutes == -1 or (minutes >= 0 and minutes < 1440)) then
+			error("Usage: DmorphHelper_SetTime(minutes 0-1439, or -1 for the real time)")
+		end
+		game.time = minutes
+	end
+	function DmorphHelper_GetTime()
+		if game.time >= 0 then
+			return game.time, 1, game.realTime
+		end
+		return game.realTime, 0, game.realTime
 	end
 	function DmorphHelper_GetScale(unit)
 		return game.scale
@@ -1896,6 +1909,7 @@ local function removeHelper()
 	DmorphHelper_GetScale, DmorphHelper_SetScale = nil, nil
 	DmorphHelper_GetRace, DmorphHelper_SetRace, DmorphHelper_SetOwnRace, DmorphHelper_Rebuild = nil, nil, nil, nil
 	DmorphHelper_SetWeather, DmorphHelper_ClearWeather, DmorphHelper_GetWeather = nil, nil, nil
+	DmorphHelper_SetTime, DmorphHelper_GetTime = nil, nil
 end
 
 local function sameLook(a, b)
@@ -1958,16 +1972,16 @@ DmorphOctoDB, DmorphOctoAccount = nil, nil
 loadWithHelper()
 Mock.Tick(1.1)
 slash("dmorph status")
-check(contains(allChat(), "DmorphHelper v8 is loaded"), "status shows the helper's version")
+check(contains(allChat(), "DmorphHelper v9 is loaded"), "status shows the helper's version")
 slash("dmorph check")
 check(contains(allChat(), "DmorphHelper: |cff33ff99OK"), "the check says the helper runs")
-check(contains(allChat(), "Running v8 (this DMorph comes with v8)"), "and which version runs")
+check(contains(allChat(), "Running v9 (this DMorph comes with v9)"), "and which version runs")
 local openedForSetup = not (DmorphOctoFrame and DmorphOctoFrame:IsVisible())
 if openedForSetup then
 	slash("")
 end
 Mock.Click(DmorphOctoSetupButton)
-check(contains(DmorphOctoSetupButton.text, "Helper v8") and contains(DmorphOctoSetupText2.text, "Running v8"),
+check(contains(DmorphOctoSetupButton.text, "Helper v9") and contains(DmorphOctoSetupText2.text, "Running v9"),
 	"the Setup button and panel show the helper version")
 Mock.Click(DmorphOctoSetupClose)
 local currentVersion = DmorphHelper_Version
@@ -2034,15 +2048,43 @@ check(game.weather[1] == 2 and game.weather[2] == 0.5 and DmorphOctoWeatherStren
 Mock.Tick(1.1)
 press(DmorphOctoWeatherServer)
 check(not game.weatherOn and game.weather[1] == 1 and DmorphOcto.GetWeather() == nil
-	and contains(DmorphOctoWeatherState.text, "the server's weather"), "Server's weather gives it back")
+	and contains(DmorphOctoWeatherState.text, "Weather: the server's"), "Server's weather gives it back")
 Mock.Tick(1.1)
 DmorphOctoWeatherStrength:SetValue(0.9)
 Mock.Tick(0.4)
 check(not game.weatherOn and contains(DmorphOctoFrameStatus.text, "Pick rain, snow"),
 	"the slider needs a weather first")
+-- Time of day (DmorphHelper v9).
+Mock.Tick(1.1)
+press(DmorphOctoTimeNight)
+check(game.time == 0 and DmorphOctoTimeNight.locked and contains(DmorphOctoWeatherState.text, "0:00")
+	and contains(DmorphOctoWeatherState.text, "the real time is 10:00"), "Midnight makes it night")
+Mock.Tick(1.1)
+DmorphOctoTimeSlider:SetValue(1350)
+Mock.Tick(0.4)
+check(game.time == 1350 and DmorphOctoTimeLabel.text == "Time 22:30" and not DmorphOctoTimeNight.locked,
+	"the time slider picks any time")
+Mock.Tick(1.1)
+press(DmorphOctoTimeReal)
+check(game.time == -1 and DmorphOcto.GetTime() == nil and contains(DmorphOctoWeatherState.text, "Time: the real time"),
+	"Real time gives it back")
 if openedForWeather then
 	DmorphOcto_ToggleUI()
 end
+
+slash("time 21:15")
+check(game.time == 1275 and contains(lastChat(), "21:15"), ".time 21:15")
+slash("time dusk")
+check(game.time == 1170, ".time dusk")
+slash("time 25")
+check(game.time == 1170 and contains(lastChat(), "Usage: .time"), "a time that isn't one explains the command")
+slash("dmorph status")
+check(contains(allChat(), "Time of day: 19:30"), "status shows the picked time")
+game.time = -1 -- the helper forgot (a new game session)
+Mock.Fire("ZONE_CHANGED_NEW_AREA")
+check(game.time == 1170, "the picked time is put back")
+slash("time off")
+check(game.time == -1 and contains(lastChat(), "real time"), ".time off")
 
 -- Your size.
 slash("scale 2")

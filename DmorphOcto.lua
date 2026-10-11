@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.9.0"
+local VERSION = "2.10.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1077,6 +1077,8 @@ function InitDB()
 	if type(db.defaultLanguage) ~= "string" then
 		db.defaultLanguage = nil
 	end
+	local time = tonumber(db.time)
+	db.time = time and time >= 0 and time < 1440 and math.floor(time) or nil
 	local weatherKind = type(db.weather) == "table" and tonumber(db.weather[1])
 	local weatherStrength = type(db.weather) == "table" and tonumber(db.weather[2])
 	if weatherKind and weatherStrength and weatherKind >= 0 and weatherKind <= 3 and weatherStrength >= 0
@@ -1568,7 +1570,7 @@ local MISSING_HELPER = "DmorphHelper.dll isn't loaded, so weapon glows, your siz
 M.MISSING_HELPER = MISSING_HELPER
 -- The DmorphHelper_Version() the DLL in helper\ reports. An older one in the
 -- game folder (DMorph was updated, the DLL wasn't copied again) is flagged.
-local HELPER_VERSION = 8
+local HELPER_VERSION = 9
 -- Rows 1-5 of the Races tab, in DmorphHelper_GetLook's order.
 local OWN_LOOK_NPC = { "npcSkin", "npcFace", "npcHairStyle", "npcHairColour" }
 
@@ -1988,12 +1990,81 @@ function M.DescribeWeather(kind, intensity)
 	return format("%s (%d%%)", name, math.floor((intensity or 0) * 100 + 0.5))
 end
 
--- Puts the picked weather on (after a loading screen or zone change, the
--- helper has usually done it already; this is the backup).
+-- Time of day (DmorphHelper v9): the world's light, sky, sun and moon at a
+-- picked time; the clock and the server keep the real one.
+M.TIMES = {
+	{ key = "Dawn", minutes = 360, text = "Dawn" },
+	{ key = "Noon", minutes = 720, text = "Noon" },
+	{ key = "Dusk", minutes = 1170, text = "Dusk" },
+	{ key = "Night", minutes = 0, text = "Midnight" },
+}
+local TIME_WORDS = { dawn = 360, sunrise = 360, morning = 540, day = 720, noon = 720, midday = 720,
+	afternoon = 900, dusk = 1170, sunset = 1170, evening = 1260, night = 0, midnight = 0 }
+
+local function HasTime()
+	return type(DmorphHelper_SetTime) == "function" and type(DmorphHelper_GetTime) == "function"
+end
+M.HasTime = HasTime
+
+-- "22:30".
+function M.DescribeTime(minutes)
+	minutes = math.floor(minutes or 0)
+	return format("%d:%02d", math.floor(minutes / 60), math.mod(minutes, 60))
+end
+
+-- Puts the picked weather and time on (after a loading screen or zone
+-- change, the helper has usually kept them; this is the backup).
 local function ApplyWeather()
 	if db and db.weather and HasWeather() then
 		pcall(DmorphHelper_SetWeather, db.weather[1], db.weather[2])
 	end
+	if db and db.time and HasTime() then
+		pcall(DmorphHelper_SetTime, db.time)
+	end
+end
+
+-- minutes after midnight (0-1439), or nil for the real time.
+function M.SetTime(minutes)
+	local ok, err = HelperBegin()
+	if not ok then
+		return false, err
+	end
+	if not HasTime() then
+		return false, "Changing the time of day needs DmorphHelper v9 (this DMorph comes with it). " .. INSTALL_HELPER
+	end
+	if minutes ~= nil then
+		minutes = tonumber(minutes)
+		if not minutes then
+			return false, "The time is hours and minutes, e.g. 22:30."
+		end
+		minutes = math.mod(math.floor(minutes + 0.5), 1440)
+		if minutes < 0 then
+			minutes = minutes + 1440
+		end
+	end
+	if not pcall(DmorphHelper_SetTime, minutes or -1) then
+		return false, "DmorphHelper couldn't change the time of day."
+	end
+	db.time = minutes
+	Notify()
+	if minutes then
+		return true, "Time of day: " .. M.DescribeTime(minutes) .. ". Only you see it."
+	end
+	return true, "The real time of day again."
+end
+
+-- The time you picked (minutes; nil: the real time) and the real time
+-- (nil without DmorphHelper v9).
+function M.GetTime()
+	InitDB()
+	local real
+	if HasTime() then
+		local ok, _, _, r = pcall(DmorphHelper_GetTime)
+		if ok then
+			real = r
+		end
+	end
+	return db.time, real
 end
 
 -- kind: 0 clear, 1 rain, 2 snow, 3 sandstorm, or nil for the server's
@@ -2602,6 +2673,7 @@ local function ShowHelp()
 	Print(".mount <displayID> - morph your mount (.mount 0 resets)")
 	Print(".scale <size> - your size, e.g. .scale 0.5 or .scale 2 (.scale 0 resets; needs DmorphHelper)")
 	Print(".weather <clear/rain/snow/sandstorm> [light/heavy/5-100%] - the weather on your screen (.weather off: the server's; needs DmorphHelper)")
+	Print(".time <hh:mm or dawn/noon/dusk/night> - the time of day on your screen (.time off: the real one; needs DmorphHelper)")
 	Print(".glow <mainhand/offhand/ranged> <enchantID> - a weapon's enchant glow (0 none, own your own); needs DmorphHelper.dll")
 	Print(".share on/off - whether other DMorph users see your morph; .share others on/off - whether you see theirs")
 	Print(".dmorph status - show what is morphed; .dmorph check - is everything DMorph needs running, and how to fix it. Keys: Key Bindings > DMorph.")
@@ -2670,6 +2742,9 @@ local function ShowStatus()
 	end
 	if db.weather then
 		Print("Weather: " .. M.DescribeWeather(db.weather[1], db.weather[2]) .. ".")
+	end
+	if db.time then
+		Print("Time of day: " .. M.DescribeTime(db.time) .. ".")
 	end
 	for real, skin in pairs(db.mountSkins) do
 		Print("Skin for " .. M.DescribeDisplay(real) .. ": " .. M.DescribeDisplay(skin) .. ".")
@@ -2755,6 +2830,26 @@ function commands.scale(args)
 		return Print("Usage: .scale <size>, e.g. .scale 0.5 (half), .scale 2 or .scale 200% (double); .scale 0 resets.")
 	end
 	Report(M.SetScale(scale))
+end
+
+-- .time 22:30, .time 9, .time night, .time off
+function commands.time(args)
+	local word = strlower(args[1] or "")
+	if word == "off" or word == "real" or word == "server" or word == "reset" then
+		return Report(M.SetTime(nil))
+	end
+	local minutes = TIME_WORDS[word]
+	if not minutes then
+		local _, _, hours, mins = strfind(word, "^(%d%d?)[:%.]?(%d?%d?)$")
+		hours, mins = tonumber(hours or ""), tonumber(mins ~= "" and mins or "0")
+		if hours and mins and hours < 24 and mins < 60 then
+			minutes = hours * 60 + mins
+		end
+	end
+	if not minutes then
+		return Print("Usage: .time <hh:mm or dawn/noon/dusk/night>, e.g. .time 22:30; .time off for the real time.")
+	end
+	Report(M.SetTime(minutes))
 end
 
 -- .weather rain heavy, .weather snow 40, .weather 3 0.8, .weather off

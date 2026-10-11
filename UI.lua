@@ -2595,119 +2595,163 @@ StaticPopupDialogs["DMORPHOCTO_DELETE_OUTFIT"] = {
 -- Weather tab ---------------------------------------------------------------------
 
 -- A button per weather (M.WEATHERS): Clear skies on its own row, then light,
--- normal and heavy rain, snow and sandstorm. The slider sets the strength
--- of the rain, snow or sandstorm you picked.
+-- normal and heavy rain, snow and sandstorm, with a slider for the strength
+-- of the one picked. Below, the time of day (M.TIMES and a slider).
 local WEATHER_ROW_NAMES = { "Rain", "Snow", "Sandstorm" }
+
+local function Highlight(button, on)
+	if on then
+		button:LockHighlight()
+	else
+		button:UnlockHighlight()
+	end
+end
 
 local function RefreshWeather()
 	local kind, intensity, serverKind, serverIntensity = M.GetWeather()
 	for i = 1, table.getn(M.WEATHERS) do
 		local w = M.WEATHERS[i]
-		local button = ui.weatherButtons[w.key]
-		local picked = kind == w.kind and (w.kind == 0 or math.abs(intensity - w.intensity) < 0.001)
-		if picked then
-			button:LockHighlight()
-		else
-			button:UnlockHighlight()
-		end
+		Highlight(ui.weatherButtons[w.key], kind == w.kind and (w.kind == 0 or math.abs(intensity - w.intensity) < 0.001))
+	end
+	local minutes, realMinutes = M.GetTime()
+	for i = 1, table.getn(M.TIMES) do
+		local t = M.TIMES[i]
+		Highlight(ui.timeButtons[t.key], minutes == t.minutes)
 	end
 	ui.weatherSync = true
 	ui.weatherSlider:SetValue(kind and kind > 0 and intensity or 0.55)
+	ui.timeSlider:SetValue(minutes or realMinutes or 720)
 	ui.weatherSync = nil
-	local now
+	local weather = "Weather: the server's"
 	if kind then
-		now = "Now: |cff33ff99" .. M.DescribeWeather(kind, intensity) .. "|r, picked by you."
-	else
-		now = "Now: the server's weather."
+		weather = "Weather: |cff33ff99" .. M.DescribeWeather(kind, intensity) .. "|r (yours)"
 	end
 	if serverKind then
-		now = now .. " The server's: " .. M.DescribeWeather(serverKind, serverIntensity) .. "."
+		weather = weather .. "; the server's is " .. M.DescribeWeather(serverKind, serverIntensity)
 	end
-	ui.weatherState:SetText(now)
-	if M.HasWeather() then
+	local time = "Time: the real time"
+	if minutes then
+		time = "Time: |cff33ff99" .. M.DescribeTime(minutes) .. "|r (yours)"
+	end
+	if realMinutes then
+		time = time .. "; the real time is " .. M.DescribeTime(realMinutes)
+	end
+	ui.weatherState:SetText(weather .. ".\n" .. time .. ".")
+	if M.HasWeather() and M.HasTime() then
 		ui.weatherMissing:Hide()
 	else
 		ui.weatherMissing:Show()
 	end
 end
 
+-- A slider like the size slider; onStill runs once it stands still.
+local function WeatherSlider(page, name, y, min, max, step, onChange, onStill)
+	local slider = CreateFrame("Slider", name, page)
+	slider:SetOrientation("HORIZONTAL")
+	slider:SetWidth(348)
+	slider:SetHeight(16)
+	slider:SetPoint("TOPLEFT", page, "TOPLEFT", 110, y)
+	slider:SetThumbTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
+	slider:SetBackdrop({
+		bgFile = "Interface\\Buttons\\UI-SliderBar-Background", edgeFile = "Interface\\Buttons\\UI-SliderBar-Border",
+		tile = true, tileSize = 8, edgeSize = 8, insets = { left = 3, right = 3, top = 6, bottom = 6 },
+	})
+	slider:SetMinMaxValues(min, max)
+	slider:SetValueStep(step)
+	slider.timer = NewTimer()
+	slider:SetScript("OnValueChanged", function()
+		local value = math.floor(this:GetValue() / step + 0.5) * step
+		onChange(value)
+		if ui.weatherSync then
+			return
+		end
+		Debounce(this.timer, 0.3, function()
+			onStill(value)
+		end)
+	end)
+	slider:SetScript("OnLeave", HideTooltip)
+	return slider
+end
+
 local function BuildWeatherPage(page)
-	Label(page, "Weather", "GameFontNormal", 10, -12)
-	Label(page, "Only on your screen; it stays on in every zone.",
-		"GameFontDisableSmall", 76, -15)
+	Label(page, "Weather and time", "GameFontNormal", 10, -12)
+	Label(page, "Only on your screen; it stays on in every zone.", "GameFontDisableSmall", 136, -15)
 	ui.weatherButtons = {}
 	local function Pick()
 		Morph(M.SetWeather, this.kind, this.intensity)
 	end
 	for i = 1, table.getn(M.WEATHERS) do
 		local w = M.WEATHERS[i]
-		local x, y = 110, -44
+		local x, y = 110, -36
 		if w.kind > 0 then
 			-- Light, normal, heavy in columns; one row per kind.
 			x = 110 + math.mod(i - 2, 3) * 118
-			y = -84 - (w.kind - 1) * 36
+			y = -64 - (w.kind - 1) * 28
 		end
 		local button = Button(page, w.text, 112, x, y, Pick, "DmorphOctoWeather" .. w.key)
 		button.kind, button.intensity = w.kind, w.intensity
 		ui.weatherButtons[w.key] = button
 	end
+	Label(page, "Sky", "GameFontHighlight", 14, -40)
 	for i = 1, 3 do
-		Label(page, WEATHER_ROW_NAMES[i], "GameFontHighlight", 14, -88 - (i - 1) * 36)
+		Label(page, WEATHER_ROW_NAMES[i], "GameFontHighlight", 14, -68 - (i - 1) * 28)
 	end
-	Label(page, "Sky", "GameFontHighlight", 14, -48)
 
-	-- Strength of the picked rain, snow or sandstorm, applied once the slider
-	-- stands still.
-	ui.weatherTimer = NewTimer()
-	local slider = CreateFrame("Slider", "DmorphOctoWeatherStrength", page)
-	slider:SetOrientation("HORIZONTAL")
-	slider:SetWidth(348)
-	slider:SetHeight(16)
-	slider:SetPoint("TOPLEFT", page, "TOPLEFT", 110, -206)
-	slider:SetThumbTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
-	slider:SetBackdrop({
-		bgFile = "Interface\\Buttons\\UI-SliderBar-Background", edgeFile = "Interface\\Buttons\\UI-SliderBar-Border",
-		tile = true, tileSize = 8, edgeSize = 8, insets = { left = 3, right = 3, top = 6, bottom = 6 },
-	})
-	slider:SetMinMaxValues(0.05, 1)
-	slider:SetValueStep(0.05)
-	ui.weatherStrength = Label(page, "Strength", "GameFontHighlight", 14, -207, "DmorphOctoWeatherStrengthLabel")
-	slider:SetScript("OnValueChanged", function()
-		local value = math.floor(this:GetValue() * 20 + 0.5) / 20
+	ui.weatherStrength = Label(page, "Strength", "GameFontHighlight", 14, -155, "DmorphOctoWeatherStrengthLabel")
+	ui.weatherSlider = WeatherSlider(page, "DmorphOctoWeatherStrength", -154, 0.05, 1, 0.05, function(value)
 		ui.weatherStrength:SetText("Strength " .. math.floor(value * 100 + 0.5) .. "%")
-		if ui.weatherSync then
-			return
+	end, function(value)
+		local kind = M.GetWeather()
+		if kind and kind > 0 then
+			SetStatus(M.SetWeather(kind, value))
+		else
+			SetStatus(false, "Pick rain, snow or a sandstorm first; the slider sets how strong it is.")
+			RefreshWeather()
 		end
-		Debounce(ui.weatherTimer, 0.3, function()
-			local kind = M.GetWeather()
-			if kind and kind > 0 then
-				SetStatus(M.SetWeather(kind, value))
-			else
-				SetStatus(false, "Pick rain, snow or a sandstorm first; the slider sets how strong it is.")
-				RefreshWeather()
-			end
-		end)
 	end)
-	slider:SetScript("OnEnter", function()
+	ui.weatherSlider:SetScript("OnEnter", function()
 		Tooltip(this, "Strength", "How strong the rain, snow or sandstorm you picked is.",
 			"Its sound changes with it: light below 40%, heavy from 70%.")
 	end)
-	slider:SetScript("OnLeave", HideTooltip)
-	ui.weatherSlider = slider
 
-	ui.weatherState = Label(page, "", "GameFontHighlightSmall", 10, -246, "DmorphOctoWeatherState")
+	-- Time of day: the world's light, sky, sun and moon.
+	Label(page, "Time of day", "GameFontHighlight", 14, -196)
+	ui.timeButtons = {}
+	for i = 1, table.getn(M.TIMES) do
+		local t = M.TIMES[i]
+		local button = Button(page, t.text, 84, 110 + (i - 1) * 88, -192, function()
+			Morph(M.SetTime, this.minutes)
+		end, "DmorphOctoTime" .. t.key)
+		button.minutes = t.minutes
+		ui.timeButtons[t.key] = button
+	end
+	ui.timeLabel = Label(page, "Time", "GameFontHighlight", 14, -227, "DmorphOctoTimeLabel")
+	ui.timeSlider = WeatherSlider(page, "DmorphOctoTimeSlider", -226, 0, 1425, 15, function(value)
+		ui.timeLabel:SetText("Time " .. M.DescribeTime(value))
+	end, function(value)
+		SetStatus(M.SetTime(value))
+	end)
+	ui.timeSlider:SetScript("OnEnter", function()
+		Tooltip(this, "Time of day", "Drag to light the world as at that time: day, dusk, night.",
+			"Your clock and everyone else keep the real time.")
+	end)
+
+	ui.weatherState = Label(page, "", "GameFontHighlightSmall", 10, -258, "DmorphOctoWeatherState")
 	ui.weatherState:SetWidth(PAGE_W - 20)
-	ui.weatherMissing = Label(page, "Changing the weather needs DmorphHelper v8 or newer: close the game and "
-		.. "double-click \"Install DmorphHelper.bat\" in the DmorphOcto folder.", "GameFontRedSmall", 10, -272,
+	ui.weatherMissing = Label(page, "Weather and time need DmorphHelper v9 or newer: close the game and "
+		.. "double-click \"Install DmorphHelper.bat\" in the DmorphOcto folder.", "GameFontRedSmall", 10, -290,
 		"DmorphOctoWeatherMissing")
 	ui.weatherMissing:SetWidth(PAGE_W - 20)
-	Label(page, "Weather shows outdoors. Indoors and in some dungeons the game draws none.",
-		"GameFontDisableSmall", 10, -310)
+	Label(page, "Weather shows outdoors only. Stormy skies come with rain or snow where the zone has them.",
+		"GameFontDisableSmall", 10, -322)
 
 	Button(page, "Server's weather", 140, 8, -352, function()
 		Morph(M.SetWeather, nil)
 	end, "DmorphOctoWeatherServer")
-	Label(page, ".weather rain heavy also works in chat.", "GameFontDisableSmall", 158, -357)
+	Button(page, "Real time", 100, 152, -352, function()
+		Morph(M.SetTime, nil)
+	end, "DmorphOctoTimeReal")
+	Label(page, ".weather rain heavy and .time 22:00 in chat.", "GameFontDisableSmall", 258, -357)
 end
 
 local REFRESH = {

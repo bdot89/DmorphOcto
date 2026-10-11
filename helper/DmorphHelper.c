@@ -24,6 +24,8 @@
 //   DmorphHelper_SetWeather(type, intensity)                 (0 clear, 1 rain, 2 snow, 3 sandstorm; 0-1)
 //   DmorphHelper_ClearWeather()                              (the server's weather again)
 //   DmorphHelper_GetWeather()                                -> type, intensity, yours (1/0), server type, intensity
+//   DmorphHelper_SetTime(minutes)                            (0-1439 after midnight; -1: the real time)
+//   DmorphHelper_GetTime()                                   -> minutes shown, yours (1/0), real minutes
 // unit is a unit token for a player you could help ("player", "target", ...);
 // slot is an inventory slot, 1-19. The functions only write the values: the
 // addon keeps what it wants and puts it back after the server resends them.
@@ -44,7 +46,7 @@
 #define GAME_FASTCALL __attribute__((fastcall))
 #define GAME_THISCALL __attribute__((thiscall))
 
-#define HELPER_VERSION 8
+#define HELPER_VERSION 9
 
 // Game functions, build 5875 (from VanillaHelpers' Offsets.h).
 #define FUN_INVALID_FUNCTION_PTR_CHECK 0x42A320
@@ -80,6 +82,15 @@
 #define FUN_PLAY_WEATHER_SOUND 0x4586B0
 #define RET_WEATHER_PACKET_SET 0x48FAAA
 #define RET_WEATHER_PACKET_SOUND 0x48FAB2
+// The game clock (CGameTime at 0xCE8538): minutes of the day (thiscall, ret
+// int) and the day so far, 0-1 (thiscall, ret float). The world's lighting,
+// sky and sun read them for each frame from the calls returning to RET_*.
+#define GAME_CLOCK 0xCE8538
+#define FUN_GAME_TIME_MINUTES 0x6424C0
+#define FUN_GAME_TIME_DAY_PROGRESS 0x643A70
+#define RET_WORLD_LIGHT_MINUTES 0x482BD6
+#define RET_WORLD_LIGHT_PROGRESS 0x482BE2
+#define RET_WORLD_SKY_MINUTES 0x483DE1
 #define HIGHEST_ADDRESS 0xC962D0
 
 // Descriptor fields, as indexes into a unit's uint32 field array.
@@ -524,6 +535,64 @@ static int GAME_FASTCALL Script_GetWeather(void *L) {
     return 5;
 }
 
+// Time of day. The world is lit, and the sky, sun and moon drawn, by the
+// game clock. A picked time replaces the clock for those only: the clock
+// itself (GetGameTime, the minimap) and the server keep the real time.
+typedef uint32_t(GAME_THISCALL *GameTimeMinutes_t)(void *clock);
+typedef float(GAME_THISCALL *GameTimeProgress_t)(void *clock);
+static GameTimeMinutes_t GameTimeMinutes_o = NULL;
+static GameTimeProgress_t GameTimeProgress_o = NULL;
+static BOOL g_timeOn = FALSE;
+static uint32_t g_timeMinutes = 0;
+
+static uint32_t GAME_THISCALL GameTimeMinutes_h(void *clock) {
+    void *from = __builtin_return_address(0);
+    if (g_timeOn && (from == (void *)RET_WORLD_LIGHT_MINUTES || from == (void *)RET_WORLD_SKY_MINUTES)) {
+        return g_timeMinutes;
+    }
+    return GameTimeMinutes_o(clock);
+}
+
+static float GAME_THISCALL GameTimeProgress_h(void *clock) {
+    if (g_timeOn && __builtin_return_address(0) == (void *)RET_WORLD_LIGHT_PROGRESS) {
+        return g_timeMinutes / 1440.0f;
+    }
+    return GameTimeProgress_o(clock);
+}
+
+static const char *SET_TIME_USAGE = "Usage: DmorphHelper_SetTime(minutes 0-1439, or -1 for the real time)";
+
+// The time of day the world is drawn at, in minutes after midnight; -1 for
+// the real time.
+static int GAME_FASTCALL Script_SetTime(void *L) {
+    if (!LuaIsNumber(L, 1)) {
+        LuaError(L, SET_TIME_USAGE);
+        return 0;
+    }
+    double v = LuaToNumber(L, 1);
+    if (!(v == -1 || (v >= 0 && v < 1440))) {
+        LuaError(L, SET_TIME_USAGE);
+        return 0;
+    }
+    if (!GameTimeMinutes_o || !GameTimeProgress_o) {
+        LuaError(L, "DmorphHelper couldn't hook the game's clock.");
+        return 0;
+    }
+    g_timeOn = v >= 0;
+    g_timeMinutes = g_timeOn ? (uint32_t)v : 0;
+    return 0;
+}
+
+// minutes the world is drawn at, whether that's yours (1) or the real
+// time (0), and the real minutes.
+static int GAME_FASTCALL Script_GetTime(void *L) {
+    uint32_t real = GameTimeMinutes_o ? GameTimeMinutes_o((void *)GAME_CLOCK) : 0;
+    LuaPushNumber(L, g_timeOn ? g_timeMinutes : real);
+    LuaPushNumber(L, g_timeOn ? 1 : 0);
+    LuaPushNumber(L, real);
+    return 3;
+}
+
 // The game lists the map cells a line crosses (the mouse pointer's line into
 // the world, line of sight) in a buffer it sizes once for 2048 cells and
 // never checks. The pointer's line reaches as far as your view distance, so
@@ -558,6 +627,8 @@ static void GAME_FASTCALL LoadScriptFunctions_h(void) {
     RegisterFunction("DmorphHelper_SetWeather", (uintptr_t)&Script_SetWeather);
     RegisterFunction("DmorphHelper_ClearWeather", (uintptr_t)&Script_ClearWeather);
     RegisterFunction("DmorphHelper_GetWeather", (uintptr_t)&Script_GetWeather);
+    RegisterFunction("DmorphHelper_SetTime", (uintptr_t)&Script_SetTime);
+    RegisterFunction("DmorphHelper_GetTime", (uintptr_t)&Script_GetTime);
 }
 
 // The game's own image must reach every address used here (a 1.12.1 exe).
@@ -613,6 +684,14 @@ static void InstallHook(void) {
     if (MH_CreateHook((LPVOID)FUN_PLAY_WEATHER_SOUND, (LPVOID)&WeatherSound_h, (LPVOID *)&WeatherSound_o) != MH_OK ||
         MH_EnableHook((LPVOID)FUN_PLAY_WEATHER_SOUND) != MH_OK) {
         WeatherSound_o = NULL;
+    }
+    if (MH_CreateHook((LPVOID)FUN_GAME_TIME_MINUTES, (LPVOID)&GameTimeMinutes_h, (LPVOID *)&GameTimeMinutes_o) != MH_OK ||
+        MH_EnableHook((LPVOID)FUN_GAME_TIME_MINUTES) != MH_OK) {
+        GameTimeMinutes_o = NULL;
+    }
+    if (MH_CreateHook((LPVOID)FUN_GAME_TIME_DAY_PROGRESS, (LPVOID)&GameTimeProgress_h, (LPVOID *)&GameTimeProgress_o) != MH_OK ||
+        MH_EnableHook((LPVOID)FUN_GAME_TIME_DAY_PROGRESS) != MH_OK) {
+        GameTimeProgress_o = NULL;
     }
 }
 
