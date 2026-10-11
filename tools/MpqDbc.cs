@@ -114,6 +114,34 @@ public class Mpq {
     if (enc) sct = Decrypt(sct, key);
     return Dec(sct, (int)Math.Min(sector, size));
   }
+  static byte[] Slice(byte[] b, long off, int len) {
+    if (b == null || off < 0 || off + len > b.Length) return null;
+    byte[] r = new byte[len]; Array.Copy(b, off, r, 0, len); return r;
+  }
+  // `length` bytes from `offset` in a file, decompressing only the sectors
+  // they're in. Null if the file isn't there or the range is outside it.
+  public byte[] ReadRange(string name, long offset, int length) {
+    uint[] blk = Find(name); if (blk == null || (blk[3] & 0x80000000) == 0) return null;
+    uint pos = blk[0], csize = blk[1], size = blk[2], flags = blk[3];
+    if (offset < 0 || length <= 0 || offset + length > size) return null;
+    bool enc = (flags & 0x00010000) != 0, packed = (flags & 0x0000FF00) != 0;
+    if ((flags & 0x01000000) != 0 || (enc && !packed)) return Slice(Read(name), offset, length);
+    if (!packed) return ReadAt(bas + pos + offset, length);
+    uint key = enc ? FileKey(name, pos, size, flags) : 0;
+    int ns = (int)((size + sector - 1) / sector);
+    byte[] tbl = ReadAt(bas + pos, (ns + 1) * 4);
+    if (enc) tbl = Decrypt(tbl, key - 1);
+    int first = (int)(offset / sector), last = (int)((offset + length - 1) / sector);
+    var o = new MemoryStream();
+    for (int i = first; i <= last; i++) {
+      int a = (int)BitConverter.ToUInt32(tbl, i * 4), z = (int)BitConverter.ToUInt32(tbl, i * 4 + 4);
+      if (a < 0 || z <= a || z > csize) return null;
+      byte[] sct = ReadAt(bas + pos + a, z - a);
+      if (enc) sct = Decrypt(sct, key + (uint)i);
+      byte[] d = Dec(sct, (int)Math.Min(sector, size - (long)i * sector)); o.Write(d, 0, d.Length);
+    }
+    return Slice(o.ToArray(), offset - (long)first * sector, length);
+  }
   public byte[] Read(string name) {
     uint[] blk = Find(name); if (blk == null || (blk[3] & 0x80000000) == 0) return null;
     uint pos = blk[0], csize = blk[1], size = blk[2], flags = blk[3];
@@ -176,6 +204,36 @@ public class GameFiles {
   Dictionary<string, bool> found = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
   Dictionary<string, bool> values = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
   public GameFiles(Mpq[] archives) { mpqs = archives; }
+
+  // The newest archive that has the file, or null.
+  Mpq Newest(string name) {
+    for (int i = mpqs.Length - 1; i >= 0; i--) if (mpqs[i].Has(name)) return mpqs[i];
+    return null;
+  }
+
+  // Whether a model has attachment point 0, where the rider sits on a mount
+  // (a shield on characters): 1 yes, 0 no, -1 can't tell (no such file, not
+  // an M2 of version 256-257, unreadable). In those M2 headers the attachment
+  // lookup table, int16s indexed by attachment ID (-1 = none), is the
+  // M2Array (count, offset) at 0x10C.
+  public int MountPoint(string path) {
+    int dot = path.LastIndexOf('.');
+    string m2 = (dot > 0 ? path.Substring(0, dot) : path) + ".m2";
+    string name = m2; Mpq m = Newest(m2);
+    if (m == null) { name = path; m = Newest(path); }
+    if (m == null) return -1;
+    try {
+      byte[] head = m.ReadStart(name);
+      if (head == null || head.Length < 0x114 || head[0] != 'M' || head[1] != 'D' || head[2] != '2' || head[3] != '0') return -1;
+      uint version = BitConverter.ToUInt32(head, 4);
+      if (version < 256 || version > 257) return -1;
+      uint count = BitConverter.ToUInt32(head, 0x10C), ofs = BitConverter.ToUInt32(head, 0x110);
+      if (count == 0) return 0;
+      byte[] first = m.ReadRange(name, ofs, 2);
+      if (first == null) return -1;
+      return BitConverter.ToInt16(first, 0) >= 0 ? 1 : 0;
+    } catch (Exception) { return -1; }
+  }
   public bool Has(string name) {
     bool yes;
     if (found.TryGetValue(name, out yes)) return yes;

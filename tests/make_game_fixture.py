@@ -2,12 +2,14 @@
 tools/build_models.ps1 and tools/build_items.ps1. MPQ v1, files stored plain;
 hash and block tables encrypted like Blizzard's, so tools/MpqDbc.cs reads them.
 
-Usage: python3 tests/make_game_fixture.py <out dir> [--mostly-empty]
+Usage: python3 tests/make_game_fixture.py <out dir> [--mostly-empty] [--no-rider-points]
 Then run tools/build_models.ps1 and tools/build_items.ps1 with -GameDir <out dir>, their
 inputs from <out dir> (Creatures.lua, Items.lua, item_displays.tsv, turtle_items.tsv,
 empty.tsv) and every output path pointed outside Data/ (PowerShell 7 works on Linux).
-Expected: HiddenModels "2029,4528,9999,11121", HiddenItems "2,3,11"; with
---mostly-empty the model check turns itself off.
+Expected: HiddenModels "2029,4528,9999,11121", HiddenItems "2,3,11", ModelTags
+mounts 90001-90005 (named Riding...) and 90010-90011 (Spectral Tiger, by its rider
+point); with --mostly-empty the model check turns itself off, with --no-rider-points
+the rider point rule does (only 90001-90005 are mounts).
 """
 import os
 import struct
@@ -123,18 +125,25 @@ def dbc(rows, fields):
     return struct.pack("<4sIIII", b"WDBC", len(rows), fields, fields * 4, len(strings)) + bytes(body) + bytes(strings)
 
 
-def m2(version=256, vertices=10, views=1, pad=6000):
-    head = bytearray(0x60)
+def m2(version=256, vertices=10, views=1, pad=6000, rider=None):
+    """rider: None = no attachments, True / False = attachment 0 present or
+    not (the lookup table goes after the padding, past the first sector)."""
+    head = bytearray(0x140)
     head[0:4] = b"MD20"
     struct.pack_into("<I", head, 4, version)
-    struct.pack_into("<II", head, 0x44, vertices, 0x60)
-    struct.pack_into("<II", head, 0x4C, views, 0x60)
-    return bytes(head) + b"\x11" * pad
+    struct.pack_into("<II", head, 0x44, vertices, 0x140)
+    struct.pack_into("<II", head, 0x4C, views, 0x140)
+    body = bytes(head) + b"\x11" * pad
+    if rider is not None:
+        struct.pack_into("<II", head, 0x10C, 3, len(body))
+        body = bytes(head) + b"\x11" * pad + struct.pack("<hhh", 0 if rider else -1, 1, 2)
+    return body
 
 
 def main():
     out = sys.argv[1]
     mostly_empty = "--mostly-empty" in sys.argv
+    no_rider = "--no-rider-points" in sys.argv
     data = os.path.join(out, "Data")
     os.makedirs(data, exist_ok=True)
 
@@ -153,8 +162,15 @@ def main():
     for k in range(10, 40):
         model_rows.append((k, 0, "Creature\\Beast%d\\Beast%d.mdx" % (k, k)))
         empty = mostly_empty and k < 30
-        base["Creature\\Beast%d\\Beast%d.m2" % (k, k)] = m2(vertices=0 if empty else 50)
+        base["Creature\\Beast%d\\Beast%d.m2" % (k, k)] = m2(vertices=0 if empty else 50, rider=False if k < 20 else None)
         base["Creature\\Beast%d\\Beast%dSkin.blp" % (k, k)] = b"BLP2"
+    # Mounts: five named "Riding..." (known), a Spectral Tiger (only its rider
+    # point says so; its lookup table is past the first, compressed, sector).
+    for k in range(1, 6):
+        model_rows.append((50 + k, 0, "Creature\\RidingBeast%d\\RidingBeast%d.mdx" % (k, k)))
+        base["Creature\\RidingBeast%d\\RidingBeast%d.m2" % (k, k)] = m2(rider=None if no_rider else True)
+    model_rows.append((60, 0, "Creature\\SpectralTiger\\SpectralTiger.mdx"))
+    base["Creature\\SpectralTiger\\SpectralTiger.m2"] = m2(rider=True, pad=9000)
 
     # Displays: 0 ID, 1 model, 3 extra, 6-8 skins.
     display_rows = [
@@ -170,6 +186,9 @@ def main():
         display_rows.append([70000 + k, k, 0, 0, 0, 0, "Beast%dSkin" % k])
     for k in range(10, 16):
         display_rows.append([80000 + k, k, 0, 0, 0, 0, "Beast%dSkin" % k])
+    for k in range(1, 6):
+        display_rows.append([90000 + k, 50 + k])
+    display_rows += [[90010, 60], [90011, 60]]
     extra = [[1, 1, 1, 3, 2, 4, 5, 0] + [0] * 10 + [0, ""]]
     patch["DBFilesClient\\CreatureModelData.dbc"] = dbc(model_rows, 16)
     patch["DBFilesClient\\CreatureDisplayInfo.dbc"] = dbc(display_rows, 11)
@@ -191,7 +210,8 @@ def main():
     base["Item\\TextureComponents\\TorsoUpperTexture\\Plate_Chest_A_U.blp"] = b"BLP2"
     base["Item\\ObjectComponents\\Head\\Helm_Plate_A_OrM.m2"] = m2()
 
-    write_mpq(os.path.join(data, "model.MPQ"), base, compress={"Creature\\Empty\\Empty.m2", "Creature\\Good\\Good.m2"})
+    write_mpq(os.path.join(data, "model.MPQ"), base, compress={"Creature\\Empty\\Empty.m2", "Creature\\Good\\Good.m2",
+                                                                 "Creature\\SpectralTiger\\SpectralTiger.m2"})
     write_mpq(os.path.join(data, "patch.MPQ"), patch, compress={"DBFilesClient\\CreatureDisplayInfo.dbc"})
 
     # Inputs that normally come from the repository.
