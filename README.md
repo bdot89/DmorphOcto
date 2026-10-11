@@ -6,7 +6,7 @@
 
 **Become any creature, ride any mount, wear any item** · WoW 1.12 · OctoWoW
 
-![Version](https://img.shields.io/badge/version-2.4.0-33ff99?style=flat-square)
+![Version](https://img.shields.io/badge/version-2.5.0-33ff99?style=flat-square)
 ![WoW 1.12.1](https://img.shields.io/badge/WoW-1.12.1-c79c6e?style=flat-square)
 ![Lua 5.0](https://img.shields.io/badge/Lua-5.0-2c2d72?style=flat-square)
 ![Models](https://img.shields.io/badge/models-16%2C000%2B-b46bff?style=flat-square)
@@ -116,7 +116,7 @@ It prints what it found. If a check would hide a suspicious share of everything,
 
 | Part | What it does |
 |---|---|
-| **Dressing room** (left) | Your character in your race's dress-up room. Drag to turn it. **Zoom** with the mouse wheel or the **+** / **-** buttons to see the details, right-drag to move it, **Reset view** to see all of it again. The plate underneath names your look. |
+| **Dressing room** (left) | Your character in your race's dress-up room. Drag to turn it. **Zoom** with the mouse wheel or the **+** / **-** buttons to see the details, right-drag to move it, **Reset view** to see all of it again. The plate underneath names your look, and its **Size** slider makes your character smaller or bigger in the world (25% to 300%; right-click: your own size; needs DmorphHelper). |
 | **Slots** around the model | Left-click: browse items for that slot. Right-click: back to your own gear. Morphed slots glow green. |
 | **Reset model** / **Reset everything** | Your own body back (items stay) / clear every morph, mount skins too. |
 | **Setup** (bottom left) | Green **Setup OK** when VanillaHelpers runs and morphing works, red **Setup: fix me** when it doesn't. Click it for every part DMorph uses (VanillaHelpers, and the optional DmorphHelper, ClassicAPI, SuperWoW), whether it's running and how to fix it. It opens by itself when morphing can't work. |
@@ -146,6 +146,7 @@ Type them in the chat box like in DMorph. They never reach the server. Each also
 | `.race <1-10>` or `.race nightelf` | `1` Human, `2` Orc, `3` Dwarf, `4` Night Elf, `5` Undead, `6` Tauren, `7` Gnome, `8` Troll, `9` Goblin, `10` High Elf. |
 | `.gender` | Swap the gender of your race or race morph. |
 | `.item <slot> <itemID>` | Morph one slot, e.g. `.item 1 2955` or `.item head` + a shift-clicked item link. `0` resets the slot. |
+| `.scale <size>` | Your size: `.scale 0.5` (half), `.scale 2` or `.scale 200%` (double), `.scale 0` resets. Works on any morph, from a tiny Ragnaros to a giant Tauren. Needs DmorphHelper. |
 | `.mount <displayID>` | Skin for all your mounts: any creature, shown while you ride. `.mount 0` removes it. |
 | `.glow <slot> <enchantID>` | A weapon's glow, e.g. `.glow mainhand 1900` (Crusader). Slots `mainhand`, `offhand`, `ranged`; `0` = no glow, `own` = your own. `.enchant` works too. Needs DmorphHelper. |
 | `.demorph` / `.demorph all` | Reset your model and picked looks / your model, looks, items, glows and mount skins. |
@@ -172,7 +173,7 @@ Slots: `1` head, `3` shoulder, `4` shirt, `5` chest, `6` waist, `7` legs, `8` fe
 - **Flight paths and spellbook after a race morph:** the game shows flight paths and sorts your spellbook by the race it thinks you are, so as a Human morph a Horde character would see no flight paths and spells would move. While the flight map or the spellbook is open, DMorph puts your own race back (you'll see your own model for that moment); the morph returns when you close it.
 - **Chat after a race morph:** a race morph also changes the race the game thinks you are, and with it the language it speaks by default (an Undead morphed into a Human would try Common: "You don't know that language"). DMorph sends your chat in a language your character knows instead: the one you picked, else your own default, else Orcish or Common for your faction.
 - **Shapeshifting** (druid forms and the like) shows your morph instead of the form. Reset your model first if you want the form.
-- No `.scale` (VanillaHelpers can't scale models), no Draenei (race 11 isn't in 1.12), and F5/F10 aren't taken over: set the reset keys under *Key Bindings > DMorph*.
+- No Draenei (race 11 isn't in 1.12), and F5/F10 aren't taken over: set the reset keys under *Key Bindings > DMorph*.
 
 ---
 
@@ -180,7 +181,7 @@ Slots: `1` head, `3` shoulder, `4` shirt, `5` chest, `6` waist, `7` legs, `8` fe
 
 DMorph itself is a DLL for WotLK 3.3.5a and can't run on the 1.12 client. This addon uses **VanillaHelpers**, a 1.12 client mod that OctoLauncher ships, through its `SetUnitDisplayID`, `SetUnitVisibleItemID`, `SetUnitMountDisplayID` and `UnitDisplayInfo` functions. The previews use ClassicAPI's `Model:SetDisplayInfo`. Each new model loads out of sight and only shows once it's ready, so nothing flashes white.
 
-**DmorphHelper** (`helper/DmorphHelper.c`, built with MinGW-w64 by `helper/build.sh`) adds four Lua functions next to VanillaHelpers': `DmorphHelper_GetItemEnchants` / `SetItemEnchants` (a visible weapon's enchant IDs, which the game draws the glow from) and `DmorphHelper_GetLook` / `SetLook` (your skin colour, face, hair style, hair colour and facial hair). It writes those values on your client only and makes the game rebuild your model, the way VanillaHelpers does. It uses VanillaHelpers' own game addresses and starts only once it sees VanillaHelpers' hooks at two of them.
+**DmorphHelper** (`helper/DmorphHelper.c`, built with MinGW-w64 by `helper/build.sh`) adds six Lua functions next to VanillaHelpers': `DmorphHelper_GetItemEnchants` / `SetItemEnchants` (a visible weapon's enchant IDs, which the game draws the glow from) and `DmorphHelper_GetLook` / `SetLook` (your skin colour, face, hair style, hair colour and facial hair) and `DmorphHelper_GetScale` / `SetScale` (your size). It writes those values on your client only and makes the game rebuild your model, the way VanillaHelpers does. It uses VanillaHelpers' own game addresses and starts only once it sees VanillaHelpers' hooks at two of them.
 
 - `DmorphOcto.lua`: morph state, wardrobe, search, item lookup and chat commands. `Share.lua`: sharing morphs with other DMorph users. `UI.lua`: the window and minimap button.
 - `Data/Glows.lua` and `Data/CharOptions.lua`: the glows and the skin, face and hair choices from your game files (`tools\update_from_game.ps1` writes them; the copies here come from OctoWoW's files as of 11 October 2026, so run it again after a client patch).
@@ -194,7 +195,7 @@ Written for the client's Lua 5.0: no `#`, no `%`, no `string.match`.
 - **Tests:** `tests/run_tests.lua` drives the addon (chat, window, previews, filters, races and looks, glows, mount skins, favourites, sets, item lookup, wardrobe, sharing with other users, `/reload`, logins) inside `tests/mock_wow.lua`, a strict mock of the 1.12 UI, of VanillaHelpers and of DmorphHelper. Run `lua tests/run_tests.lua` with Lua 5.0, or on Windows `powershell -ExecutionPolicy Bypass -File tools\run_tests.ps1` (builds `tools/LuaHost`, .NET 8, and uses the Lua runtime OBS Studio installs; `LUA51_DLL` picks another).
 - **Catalogue:** `python3 tools/build_data.py <ClassicDB_1_12_1_*.sql.gz> --shelllab <ShellLab's data/shelllab.db>` rebuilds `Creatures.lua`, `Items.lua`, `ClassicTags.lua` (bosses, rares, mounts), `ItemTypes.lua` and `tools/data/classic_item_displays.tsv`. Then, on Windows with the game installed, `tools\update_from_game.ps1` runs `tools\build_models.ps1` (model files, NPC looks, tags, `HiddenModels.lua`), `tools\build_items.ps1` (extra items, sets, `HiddenItems.lua`) and `tools\build_options.ps1` (`Glows.lua`, `CharOptions.lua`), from the client's MPQs, its item cache, Atlas-CFM's loot tables and `tools/data` (Turtle WoW data exported from [ShellLab](https://github.com/oplancelot/ShellLab)). Run it after a client patch.
 - **Game-file tools:** `python3 tests/make_game_fixture.py <dir>` builds a fake game folder (MPQs with DBCs, models, textures) to run the PowerShell tools against; its header says what they should find. PowerShell 7 runs them on Linux too.
-- **DmorphHelper:** `sh helper/build.sh` with `gcc-mingw-w64-i686` rebuilds `helper/DmorphHelper.dll` (MinHook is in `helper/minhook`).
+- **DmorphHelper:** `sh helper/build.sh` with `gcc-mingw-w64-i686` rebuilds `helper/DmorphHelper.dll` (MinHook is in `helper/minhook`). On Windows, unzip [winlibs](https://winlibs.com)' 32-bit (i686) MSVCRT build and run it from Git Bash: `PATH=/c/path/to/mingw32/bin:$PATH sh helper/build.sh`. After changing what it can do, raise `HELPER_VERSION` in both `DmorphHelper.c` and `DmorphOcto.lua`, so the Setup check asks players to run the installer again.
 - **Pictures:** `docs/src` has the banner and the two in-world galleries as HTML (rendered with headless Edge) and the in-game crops they use. The character name is blanked out of the window screenshots.
 
 ## Credits

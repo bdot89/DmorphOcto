@@ -618,8 +618,17 @@ local function UpdatePlate()
 	if state.mount then
 		info = info .. " - mount morphed"
 	end
+	if state.scale then
+		info = info .. " - size " .. math.floor(state.scale * 100 + 0.5) .. "%"
+	end
 	ui.plateTitle:SetText(title)
 	ui.plateInfo:SetText(info)
+	-- The size slider shows the picked size without picking it again.
+	if ui.sizeSlider then
+		ui.sizeSync = true
+		ui.sizeSlider:SetValue(state.scale or 1)
+		ui.sizeSync = nil
+	end
 end
 
 local RequestPreview
@@ -2649,6 +2658,52 @@ local function BuildStage()
 	ui.plateInfo:SetPoint("BOTTOM", plate, "BOTTOM", 0, 8)
 	ui.plateInfo:SetWidth(ART_W - 16)
 	ui.plateInfo:SetTextColor(0.75, 0.75, 0.75)
+
+	-- Your size in the world, 25% to 300% (DmorphHelper v2). Applied once the
+	-- slider stands still: each change rebuilds your model.
+	ui.sizeTimer = NewTimer()
+	local size = CreateFrame("Slider", "DmorphOctoSize", plate)
+	size:SetFrameLevel(base + 6)
+	size:SetOrientation("HORIZONTAL")
+	size:SetWidth(ART_W - 170)
+	size:SetHeight(16)
+	size:SetPoint("BOTTOM", plate, "BOTTOM", 26, 44)
+	size:SetThumbTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
+	size:SetBackdrop({
+		bgFile = "Interface\\Buttons\\UI-SliderBar-Background", edgeFile = "Interface\\Buttons\\UI-SliderBar-Border",
+		tile = true, tileSize = 8, edgeSize = 8, insets = { left = 3, right = 3, top = 6, bottom = 6 },
+	})
+	size:SetMinMaxValues(0.25, 3)
+	size:SetValueStep(0.05)
+	ui.sizeLabel = size:CreateFontString("DmorphOctoSizeLabel", "OVERLAY", "GameFontHighlightSmall")
+	ui.sizeLabel:SetPoint("RIGHT", size, "LEFT", -8, 0)
+	ui.sizeLabel:SetText("Size 100%")
+	size:SetScript("OnValueChanged", function()
+		local value = math.floor(this:GetValue() * 20 + 0.5) / 20
+		ui.sizeLabel:SetText("Size " .. math.floor(value * 100 + 0.5) .. "%")
+		if ui.sizeSync then
+			return
+		end
+		Debounce(ui.sizeTimer, 0.3, function()
+			if math.abs(value - 1) < 0.001 then
+				SetStatus(M.SetScale(nil))
+			else
+				SetStatus(M.SetScale(value))
+			end
+			UpdatePlate() -- back to the size you have if it couldn't change
+		end)
+	end)
+	size:SetScript("OnMouseUp", function()
+		if arg1 == "RightButton" then
+			this:SetValue(1)
+		end
+	end)
+	size:SetScript("OnEnter", function()
+		Tooltip(this, "Size", "Drag to make your character smaller or bigger, in the world.",
+			"Right-click: your own size. Needs DmorphHelper (Setup shows it).")
+	end)
+	size:SetScript("OnLeave", HideTooltip)
+	ui.sizeSlider = size
 
 	local function AddSlots(slots, x)
 		for i = 1, table.getn(slots) do

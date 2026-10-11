@@ -214,8 +214,8 @@ check(vh.items[1] == nil and DmorphOctoDB.items[1] == nil, ".item <slot> 0 reset
 say(".item 1 2955")
 
 say(".scale 0.5")
-check(table.getn(Mock.sent) == 0 and contains(lastChat(), "scale"),
-	".scale is answered locally and never sent as /say")
+check(table.getn(Mock.sent) == 0 and contains(lastChat(), "your size"),
+	".scale is answered locally and never sent as /say (without DmorphHelper it says it's needed)")
 
 say("hello there")
 check(Mock.sent[1] == "hello there", "normal chat goes through")
@@ -1701,12 +1701,22 @@ local OPTIONS = {
 
 local game
 local function installHelper(look)
-	game = { look = look, real = look, enchants = { [16] = { 803, 0 }, [17] = { 0, 0 }, [18] = { 0, 0 } }, lookWrites = 0 }
+	game = { look = look, real = look, enchants = { [16] = { 803, 0 }, [17] = { 0, 0 }, [18] = { 0, 0 } }, lookWrites = 0,
+		scale = 1 }
 	local function whole(v, max)
 		return type(v) == "number" and v >= 0 and v <= max and v == math.floor(v)
 	end
 	function DmorphHelper_Version()
-		return 1
+		return 2
+	end
+	function DmorphHelper_GetScale(unit)
+		return game.scale
+	end
+	function DmorphHelper_SetScale(unit, scale)
+		if unit ~= "player" or type(scale) ~= "number" or scale < 0.1 or scale > 10 then
+			error("Usage: DmorphHelper_SetScale(unit, scale 0.1-10)")
+		end
+		game.scale = scale
 	end
 	function DmorphHelper_GetItemEnchants(unit, slot)
 		if unit ~= "player" or not whole(slot, 19) or slot < 1 then
@@ -1739,6 +1749,7 @@ end
 local function removeHelper()
 	DmorphHelper_Version, DmorphHelper_GetItemEnchants, DmorphHelper_SetItemEnchants = nil, nil, nil
 	DmorphHelper_GetLook, DmorphHelper_SetLook = nil, nil
+	DmorphHelper_GetScale, DmorphHelper_SetScale = nil, nil
 end
 
 local function sameLook(a, b)
@@ -1801,15 +1812,40 @@ DmorphOctoDB, DmorphOctoAccount = nil, nil
 loadWithHelper()
 Mock.Tick(1.1)
 slash("dmorph status")
-check(contains(allChat(), "DmorphHelper v1 is loaded"), "status shows the helper's version")
+check(contains(allChat(), "DmorphHelper v2 is loaded"), "status shows the helper's version")
 slash("dmorph check")
 check(contains(allChat(), "DmorphHelper: |cff33ff99OK"), "the check says the helper runs")
 local currentVersion = DmorphHelper_Version
-DmorphHelper_Version = function() return 0 end
+DmorphHelper_Version = function() return 1 end
 slash("dmorph check")
-check(contains(allChat(), "An older DmorphHelper (v0)") and contains(allChat(), "Install DmorphHelper.bat"),
+check(contains(allChat(), "An older DmorphHelper (v1)") and contains(allChat(), "Install DmorphHelper.bat"),
 	"an older DLL in the game folder is flagged, with how to update it")
 DmorphHelper_Version = currentVersion
+
+-- Your size.
+slash("scale 2")
+check(game.scale == 2 and contains(lastChat(), "Size: 200%"), ".scale 2 doubles your size")
+game.scale = 1 -- the server sends your real size again
+Mock.Tick(1.1)
+check(game.scale == 2, "the watcher puts the size back")
+slash("scale 50%")
+check(game.scale == 0.5, ".scale 50% halves it")
+slash("scale 20")
+check(game.scale == 0.5 and contains(lastChat(), "0.1 to 10"), "a size out of range is refused")
+slash("")
+check(DmorphOctoSize:GetValue() == 0.5 and DmorphOctoSizeLabel.text == "Size 50%" and contains(DmorphOctoLookInfo.text, "size 50%"),
+	"the window's size slider and plate show the size")
+DmorphOctoSize:SetValue(1.5)
+Mock.Tick(0.4)
+check(game.scale == 1.5 and DmorphOctoSizeLabel.text == "Size 150%", "dragging the slider sets your size once it stands still")
+Mock.RunScript(DmorphOctoSize, "OnMouseUp", "RightButton")
+Mock.Tick(0.4)
+check(game.scale == 1 and DmorphOcto.GetScale() == nil, "right-click puts your own size back")
+DmorphOcto_ToggleUI()
+slash("scale 3")
+slash("demorph all")
+Mock.Tick(1.1)
+check(game.scale == 1, "resetting everything puts your own size back")
 slash("")
 Mock.Click(DmorphOctoTabGlows)
 check(DmorphOctoGlowState.text == "Main hand: your own (Fiery Weapon)", "the tab shows your own glow by name")

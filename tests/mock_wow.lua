@@ -241,6 +241,11 @@ end
 function methods:SetMinMaxValues(lo, hi) self.min, self.max = lo, hi end
 function methods:GetMinMaxValues() return self.min or 0, self.max or 0 end
 function methods:SetValueStep() end
+function methods:SetOrientation(o)
+	assert(o == "HORIZONTAL" or o == "VERTICAL", "SetOrientation: HORIZONTAL or VERTICAL")
+	self.orientation = o
+end
+function methods:SetThumbTexture(path) self.thumb = path end
 function methods:GetValue() return self.value or 0 end
 function methods:SetValue(v)
 	local lo, hi = self:GetMinMaxValues()

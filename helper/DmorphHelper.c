@@ -5,6 +5,7 @@
 //   - the enchant glow on a weapon (the enchant IDs in a visible item slot)
 //   - a player's skin colour, face, hair style, hair colour and facial hair
 //     (PLAYER_BYTES and PLAYER_BYTES_2)
+//   - a player's size (OBJECT_FIELD_SCALE_X, a float: what Enlarge spells change)
 //
 // Lua functions (registered when the game loads its own):
 //   DmorphHelper_Version()                                   -> version
@@ -12,6 +13,8 @@
 //   DmorphHelper_SetItemEnchants(unit, slot, permanent, temporary)
 //   DmorphHelper_GetLook(unit)                               -> skin, face, hairStyle, hairColour, facialHair
 //   DmorphHelper_SetLook(unit, skin, face, hairStyle, hairColour, facialHair)
+//   DmorphHelper_GetScale(unit)                              -> scale (1 = normal size)
+//   DmorphHelper_SetScale(unit, scale)                       (0.1 to 10)
 // unit is a unit token for a player you could help ("player", "target", ...);
 // slot is an inventory slot, 1-19. The functions only write the values: the
 // addon keeps what it wants and puts it back after the server resends them.
@@ -25,13 +28,14 @@
 
 #include <windows.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "MinHook.h"
 
 #define GAME_FASTCALL __attribute__((fastcall))
 #define GAME_THISCALL __attribute__((thiscall))
 
-#define HELPER_VERSION 1
+#define HELPER_VERSION 2
 
 // Game functions, build 5875 (from VanillaHelpers' Offsets.h).
 #define FUN_INVALID_FUNCTION_PTR_CHECK 0x42A320
@@ -51,6 +55,7 @@
 #define HIGHEST_ADDRESS 0x704CD0
 
 // Descriptor fields, as indexes into a unit's uint32 field array.
+#define OBJECT_FIELD_SCALE_X 0x4 // a float
 #define UNIT_FIELD_DISPLAYID 0x83
 #define PLAYER_BYTES 0xC1
 #define PLAYER_BYTES_2 0xC2
@@ -203,6 +208,38 @@ static int GAME_FASTCALL Script_SetLook(void *L) {
     return 0;
 }
 
+static const char *SCALE_USAGE = "Usage: DmorphHelper_GetScale(unit)";
+static const char *SET_SCALE_USAGE = "Usage: DmorphHelper_SetScale(unit, scale 0.1-10)";
+
+static int GAME_FASTCALL Script_GetScale(void *L) {
+    void *unit = PlayerArg(L, 1, SCALE_USAGE);
+    float scale;
+    memcpy(&scale, Fields(unit) + OBJECT_FIELD_SCALE_X, sizeof scale);
+    LuaPushNumber(L, scale);
+    return 1;
+}
+
+static int GAME_FASTCALL Script_SetScale(void *L) {
+    void *unit = PlayerArg(L, 1, SET_SCALE_USAGE);
+    if (!LuaIsNumber(L, 2)) {
+        LuaError(L, SET_SCALE_USAGE);
+        return 0;
+    }
+    double v = LuaToNumber(L, 2);
+    if (!(v >= 0.1 && v <= 10)) {
+        LuaError(L, SET_SCALE_USAGE);
+        return 0;
+    }
+    float scale = (float)v, current;
+    uint32_t *f = Fields(unit);
+    memcpy(&current, f + OBJECT_FIELD_SCALE_X, sizeof current);
+    if (current != scale) {
+        memcpy(f + OBJECT_FIELD_SCALE_X, &scale, sizeof scale);
+        Reload(unit);
+    }
+    return 0;
+}
+
 static void GAME_FASTCALL LoadScriptFunctions_h(void) {
     LoadScriptFunctions_o();
     RegisterFunction("DmorphHelper_Version", (uintptr_t)&Script_Version);
@@ -210,6 +247,8 @@ static void GAME_FASTCALL LoadScriptFunctions_h(void) {
     RegisterFunction("DmorphHelper_SetItemEnchants", (uintptr_t)&Script_SetItemEnchants);
     RegisterFunction("DmorphHelper_GetLook", (uintptr_t)&Script_GetLook);
     RegisterFunction("DmorphHelper_SetLook", (uintptr_t)&Script_SetLook);
+    RegisterFunction("DmorphHelper_GetScale", (uintptr_t)&Script_GetScale);
+    RegisterFunction("DmorphHelper_SetScale", (uintptr_t)&Script_SetScale);
 }
 
 // The game's own image must reach every address used here (a 1.12.1 exe).

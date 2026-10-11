@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.4.0"
+local VERSION = "2.5.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1060,6 +1060,15 @@ function InitDB()
 	end
 	db.looks = picked
 	db.lookReal, db.lookWritten = ValidLook(db.lookReal), ValidLook(db.lookWritten)
+	-- Your size (DmorphHelper v2): the picked one, the real one last seen and
+	-- what was last written, each 0.1-10.
+	for _, key in ipairs({ "scale", "scaleReal", "scaleWritten" }) do
+		local v = tonumber(db[key])
+		if not (v and v >= 0.1 and v <= 10) then
+			v = nil
+		end
+		db[key] = v
+	end
 	for _, key in ipairs({ "glowReal", "glowWritten" }) do
 		local kept = {}
 		if type(db[key]) == "table" then
@@ -1438,12 +1447,12 @@ end
 -- game folder and adds it to dlls.txt (an addon can't write files there).
 local INSTALL_HELPER = "Close the game, double-click \"Install DmorphHelper.bat\" in Interface\\AddOns\\DmorphOcto, "
 	.. "then start the game from OctoLauncher."
-local MISSING_HELPER = "DmorphHelper.dll isn't loaded, so weapon glows and real skin, face and hair changes "
+local MISSING_HELPER = "DmorphHelper.dll isn't loaded, so weapon glows, your size and real skin, face and hair changes "
 	.. "are unavailable. " .. INSTALL_HELPER
 M.MISSING_HELPER = MISSING_HELPER
 -- The DmorphHelper_Version() the DLL in helper\ reports. An older one in the
 -- game folder (DMorph was updated, the DLL wasn't copied again) is flagged.
-local HELPER_VERSION = 1
+local HELPER_VERSION = 2
 -- Rows 1-5 of the Races tab, in DmorphHelper_GetLook's order.
 local OWN_LOOK_NPC = { "npcSkin", "npcFace", "npcHairStyle", "npcHairColour" }
 
@@ -1672,12 +1681,42 @@ function M.GetLookState()
 	return race, gender, o, RealLook(), false
 end
 
+-- Your size needs DmorphHelper v2.
+local function HasScale()
+	return type(DmorphHelper_GetScale) == "function" and type(DmorphHelper_SetScale) == "function"
+end
+M.HasScale = HasScale
+
+-- Puts the picked size on (the server sends the real one again now and
+-- then), and the real one back once nothing is picked.
+local function WatchScale()
+	if not HasScale() then
+		return
+	end
+	local ok, current = pcall(DmorphHelper_GetScale, "player")
+	if not (ok and type(current) == "number") then
+		return
+	end
+	local written = db.scaleWritten
+	if not (written and math.abs(current - written) < 0.001) then
+		db.scaleReal = current
+	end
+	local want = db.scale or (written and db.scaleReal)
+	if want and math.abs(current - want) >= 0.001 and pcall(DmorphHelper_SetScale, "player", want) then
+		db.scaleWritten = want
+	end
+	if not db.scale then
+		db.scaleWritten = nil
+	end
+end
+
 -- Puts the picked glows and look on, and puts the real ones back where
 -- nothing is picked any more.
 local function WatchHelper()
 	if not (sessionReady and HasHelper()) or helperHold > 0 then
 		return
 	end
+	WatchScale()
 	local current = ReadLook()
 	if current then
 		if not SameValues(current, db.lookWritten) then
@@ -1732,6 +1771,38 @@ local function HelperBegin()
 		return false, MISSING_HELPER
 	end
 	return true
+end
+
+-- Your size, 0.1-10 (1 = normal), or nil for your own. It works on any
+-- model: a small Ragnaros, a giant Tauren.
+function M.SetScale(scale)
+	local ok, err = HelperBegin()
+	if not ok then
+		return false, err
+	end
+	if not HasScale() then
+		return false, "Changing your size needs DmorphHelper v2 (this DMorph comes with it). " .. INSTALL_HELPER
+	end
+	if scale ~= nil then
+		scale = tonumber(scale)
+		if not (scale and scale >= 0.1 and scale <= 10) then
+			return false, "Size is a number from 0.1 to 10 (1 is normal)."
+		end
+		scale = math.floor(scale * 100 + 0.5) / 100
+	end
+	db.scale = scale
+	WatchScale()
+	Notify()
+	if scale then
+		return true, format("Size: %d%%. Only you see it.", math.floor(scale * 100 + 0.5))
+	end
+	return true, "Your own size again."
+end
+
+-- The size you picked (nil: your own) and the real one last seen.
+function M.GetScale()
+	InitDB()
+	return db.scale, db.scaleReal
 end
 
 -- enchantID: an enchant whose glow the slot shows, 0 for no glow, nil for
@@ -1943,7 +2014,7 @@ function M.ResetAll()
 		return false, MissingAPI()
 	end
 	db.display, db.race, db.gender = nil, nil, 0
-	db.looks, db.glows = {}, {}
+	db.looks, db.glows, db.scale = {}, {}, nil
 	local ok, err = ApplyBody()
 	WatchHelper()
 	db.mount, db.mountSkins = nil, {}
@@ -2283,6 +2354,7 @@ local function ShowHelp()
 	Print(".demorph - reset your model (DMorph's F5); .demorph all - reset model and items (F10)")
 	Print(".outfit [name] - list or put on saved outfits; .outfit save <name>; .outfit delete <name>")
 	Print(".mount <displayID> - morph your mount (.mount 0 resets)")
+	Print(".scale <size> - your size, e.g. .scale 0.5 or .scale 2 (.scale 0 resets; needs DmorphHelper)")
 	Print(".glow <mainhand/offhand/ranged> <enchantID> - a weapon's enchant glow (0 none, own your own); needs DmorphHelper.dll")
 	Print(".share on/off - whether other DMorph users see your morph; .share others on/off - whether you see theirs")
 	Print(".dmorph status - show what is morphed; .dmorph check - is everything DMorph needs running, and how to fix it. Keys: Key Bindings > DMorph.")
@@ -2342,6 +2414,9 @@ local function ShowStatus()
 	end
 	if db.mount then
 		Print("Mount skin: " .. M.DescribeDisplay(db.mount) .. ".")
+	end
+	if db.scale then
+		Print(format("Size: %d%%.", math.floor(db.scale * 100 + 0.5)))
 	end
 	for real, skin in pairs(db.mountSkins) do
 		Print("Skin for " .. M.DescribeDisplay(real) .. ": " .. M.DescribeDisplay(skin) .. ".")
@@ -2412,8 +2487,21 @@ function commands.glow(args)
 end
 commands.enchant = commands.glow
 
-function commands.scale()
-	Print(".scale isn't available on OctoWoW: VanillaHelpers has no API for model scale.")
+function commands.scale(args)
+	local word = strlower(args[1] or "")
+	if word == "" or word == "0" or word == "reset" or word == "own" then
+		return Report(M.SetScale(nil))
+	end
+	-- .scale 1.5 or .scale 150%
+	local _, _, number, percent = strfind(word, "^([%d%.]+)(%%?)$")
+	local scale = tonumber(number or "")
+	if scale and percent == "%" then
+		scale = scale / 100
+	end
+	if not scale then
+		return Print("Usage: .scale <size>, e.g. .scale 0.5 (half), .scale 2 or .scale 200% (double); .scale 0 resets.")
+	end
+	Report(M.SetScale(scale))
 end
 
 function commands.demorph(args)
