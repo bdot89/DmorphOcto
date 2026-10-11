@@ -1568,7 +1568,23 @@ newClient(49)
 removeMorphAPI()
 DmorphOctoDB = nil
 loadUI()
-check(contains(lastChat(), "VanillaHelpers"), "missing DLL is reported at login")
+check(contains(allChat(), "VanillaHelpers isn't running") and contains(allChat(), "No client mods are running at all")
+	and contains(allChat(), "from OctoLauncher (not WoW.exe)"),
+	"missing DLL is reported at login: no client mod runs, so start the game from the launcher")
+check(contains(allChat(), "/dmorph check"), "and it points to the setup check")
+SUPERWOW_VERSION = "1.5"
+slash("dmorph check")
+check(contains(allChat(), "VanillaHelpers: |cffff5555NOT WORKING") and contains(allChat(), "only it is missing")
+	and contains(allChat(), "Tick the 'vanillaHelpers' mod"),
+	"with other client mods running, the check says only VanillaHelpers is missing")
+check(contains(allChat(), "SuperWoW: |cff33ff99OK") and contains(allChat(), "ClassicAPI: |cffaaaaaanot running"),
+	"and lists the optional parts")
+SUPERWOW_VERSION = nil
+VANILLAHELPERS_VERSION = 10001
+slash("dmorph check")
+check(contains(allChat(), "VanillaHelpers v1.0.1 is running, but morphing needs v1.1.0"),
+	"an old VanillaHelpers is named, with the version morphing needs")
+VANILLAHELPERS_VERSION = nil
 say(".morph 4527")
 check(table.getn(Mock.sent) == 0 and contains(lastChat(), "VanillaHelpers"),
 	"commands without the DLL explain instead of being sent")
@@ -1577,6 +1593,17 @@ check(contains(allChat(), "VanillaHelpers"), "help mentions the missing DLL")
 slash("")
 check(DmorphOctoFrame:IsVisible() and contains(DmorphOctoFrameStatus.text, "VanillaHelpers"),
 	"the window opens and says the DLL is missing")
+check(DmorphOctoSetup:IsVisible() and DmorphOctoSetupName1.text == "VanillaHelpers"
+	and DmorphOctoSetupState1.text == "Not working" and contains(DmorphOctoSetupText1.text, "OctoLauncher"),
+	"and opens the setup check, with how to fix it")
+check(contains(DmorphOctoSetupButton.text, "fix me"), "the Setup button is red")
+installMorphAPI()
+Mock.Click(DmorphOctoSetupRecheck)
+check(DmorphOctoSetupState1.text == "OK" and contains(DmorphOctoSetupButton.text, "Setup OK")
+	and contains(DmorphOctoSetupSummary.text, "Morphing works"), "Check again sees VanillaHelpers once it runs")
+Mock.Click(DmorphOctoSetupClose)
+check(not DmorphOctoSetup:IsVisible(), "Close hides the check")
+removeMorphAPI()
 Mock.Type(DmorphOctoModelSearch, "thrall")
 Mock.Click(DmorphOctoModelListRow1)
 check(contains(DmorphOctoFrameStatus.text, "VanillaHelpers"), "clicking a model without the DLL explains")

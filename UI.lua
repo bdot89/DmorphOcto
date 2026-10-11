@@ -2826,6 +2826,82 @@ local function ShareMenu()
 	end, true)
 end
 
+-- Setup check (M.GetSetupReport): a footer button that says whether morphing
+-- works, and a panel with each part DMorph uses and how to fix what doesn't.
+local CHECK_COLOURS = { ok = { 0.2, 1, 0.6 }, bad = { 1, 0.33, 0.33 }, off = { 0.6, 0.6, 0.6 } }
+local CHECK_WORDS = { ok = "OK", bad = "Not working", off = "Not running" }
+
+local function UpdateSetupButton()
+	if not ui.setupButton then
+		return
+	end
+	if M.HasMorphAPI() then
+		ui.setupButton:SetText("|cff33ff99Setup OK|r")
+	else
+		ui.setupButton:SetText("|cffff5555Setup: fix me|r")
+	end
+end
+
+local function FillSetupPanel()
+	local report = M.GetSetupReport()
+	if M.HasMorphAPI() then
+		ui.setupSummary:SetText("|cff33ff99Morphing works.|r The optional parts below add extras.")
+	else
+		ui.setupSummary:SetText("|cffff5555Morphing doesn't work yet.|r Follow the VanillaHelpers line, then press Check again.")
+	end
+	for i = 1, table.getn(ui.setupRows) do
+		local row, entry = ui.setupRows[i], report[i]
+		if entry then
+			local colour = CHECK_COLOURS[entry.state]
+			row.name:SetText(entry.name)
+			row.state:SetText(CHECK_WORDS[entry.state])
+			row.state:SetTextColor(colour[1], colour[2], colour[3])
+			row.text:SetText(entry.text)
+		else
+			row.name:SetText("")
+			row.state:SetText("")
+			row.text:SetText("")
+		end
+	end
+	UpdateSetupButton()
+end
+
+local function ShowSetupPanel()
+	FillSetupPanel()
+	ui.setupPanel:Show()
+end
+
+local function BuildSetupPanel()
+	local panel = CreateFrame("Frame", "DmorphOctoSetup", frame)
+	panel:Hide()
+	panel:SetWidth(580)
+	panel:SetHeight(340)
+	panel:SetPoint("CENTER", frame, "CENTER", 0, 10)
+	panel:SetFrameLevel(frame:GetFrameLevel() + 30)
+	panel:EnableMouse(true)
+	Panel(panel, 0.06, 0.06, 0.07)
+	Label(panel, "DMorph setup check", "GameFontNormalLarge", 16, -14)
+	ui.setupSummary = Label(panel, "", "GameFontHighlight", 16, -40, "DmorphOctoSetupSummary")
+	ui.setupRows = {}
+	for i = 1, 4 do
+		local y = -68 - (i - 1) * 60
+		local row = {}
+		row.name = Label(panel, "", "GameFontNormal", 16, y, "DmorphOctoSetupName" .. i)
+		row.state = Label(panel, "", "GameFontHighlight", 140, y, "DmorphOctoSetupState" .. i)
+		row.text = Label(panel, "", "GameFontHighlightSmall", 16, y - 18, "DmorphOctoSetupText" .. i)
+		row.text:SetWidth(548)
+		row.text:SetHeight(38)
+		row.text:SetJustifyV("TOP")
+		ui.setupRows[i] = row
+	end
+	Button(panel, "Check again", 110, 16, -306, FillSetupPanel, "DmorphOctoSetupRecheck")
+	Label(panel, "/dmorph check prints this in chat.", "GameFontDisableSmall", 140, -311)
+	Button(panel, "Close", 80, 484, -306, function()
+		ui.setupPanel:Hide()
+	end, "DmorphOctoSetupClose")
+	ui.setupPanel = panel
+end
+
 local function Build()
 	frame = CreateFrame("Frame", "DmorphOctoFrame", UIParent)
 	frame:Hide()
@@ -2852,8 +2928,11 @@ local function Build()
 	end)
 	frame:SetScript("OnShow", function()
 		PlaySound("igCharacterInfoOpen")
+		UpdateSetupButton()
 		if not M.HasMorphAPI() then
-			SetStatus(false, M.MISSING_API)
+			-- Nothing can morph: show what's wrong and how to fix it straight away.
+			SetStatus(false, M.MissingAPI())
+			ShowSetupPanel()
 		end
 		ShowTab(currentTab)
 		ShowArt()
@@ -2918,8 +2997,16 @@ local function Build()
 	ui.status = Label(frame, "", "GameFontHighlightSmall", 22, -462, "DmorphOctoFrameStatus")
 	ui.status:SetWidth(W - 44)
 	ui.status:SetHeight(30)
-	Label(frame, "Other DMorph users see your morph, and you see theirs (friendly players). /dmorph help: chat commands.",
-		"GameFontDisableSmall", 22, -500)
+	ui.setupButton = Button(frame, "", 120, 22, -495, ShowSetupPanel, "DmorphOctoSetupButton")
+	ui.setupButton:SetScript("OnEnter", function()
+		Tooltip(this, "Setup check", "Whether VanillaHelpers and the optional client mods are running,",
+			"and how to fix what isn't.")
+	end)
+	ui.setupButton:SetScript("OnLeave", HideTooltip)
+	UpdateSetupButton()
+	Label(frame, "DMorph users see each other's morphs (friendly players). /dmorph help: commands.",
+		"GameFontDisableSmall", 152, -500)
+	BuildSetupPanel()
 	local share = Button(frame, "Sharing", 80, W - 230, -495, ShareMenu, "DmorphOctoShare")
 	share:SetScript("OnEnter", function()
 		local _, _, known, morphed = M.GetShareStatus()

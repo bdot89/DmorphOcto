@@ -6,7 +6,7 @@
 
 **Become any creature, ride any mount, wear any item** · WoW 1.12 · OctoWoW
 
-![Version](https://img.shields.io/badge/version-2.2.2-33ff99?style=flat-square)
+![Version](https://img.shields.io/badge/version-2.3.0-33ff99?style=flat-square)
 ![WoW 1.12.1](https://img.shields.io/badge/WoW-1.12.1-c79c6e?style=flat-square)
 ![Lua 5.0](https://img.shields.io/badge/Lua-5.0-2c2d72?style=flat-square)
 ![Models](https://img.shields.io/badge/models-16%2C000%2B-b46bff?style=flat-square)
@@ -73,7 +73,10 @@ More creature morphs:
 1. In **OctoLauncher**, enable the **`vanillaHelpers`** mod. DMorph needs it to change your model.
 2. Put the addon folder in `Interface\AddOns\` so that you have `Interface\AddOns\DmorphOcto\DmorphOcto.toc`.
    - Used **Code > Download ZIP**? The folder is called `DmorphOcto-main`. Rename it to **`DmorphOcto`** or the game won't load it.
-3. Start the game. Click the polymorph button by the minimap, or type **`/dmorph`**.
+3. Start the game **from OctoLauncher** (client mods only load that way). Click the polymorph button by the minimap, or type **`/dmorph`**.
+4. The **Setup** button at the bottom of the window is green when morphing works. If it's red ("Setup: fix me"), click it: it shows what isn't running and how to fix it. `/dmorph check` prints the same in chat.
+
+**"VanillaHelpers isn't running"?** The mod is ticked in OctoLauncher but the game didn't load it. Close the game completely (check it isn't still running), then press Play in OctoLauncher again; don't start `WoW.exe` directly. If your other client mods (SuperWoW, ClassicAPI, ...) run but VanillaHelpers doesn't, check that the game folder's `dlls.txt` has a `VanillaHelpers.dll` line.
 
 ### DmorphHelper: weapon glows and real skin, face and hair
 
@@ -116,6 +119,7 @@ It prints what it found. If a check would hide a suspicious share of everything,
 | **Dressing room** (left) | Your character in your race's dress-up room. Drag to turn it. **Zoom** with the mouse wheel or the **+** / **-** buttons to see the details, right-drag to move it, **Reset view** to see all of it again. The plate underneath names your look. |
 | **Slots** around the model | Left-click: browse items for that slot. Right-click: back to your own gear. Morphed slots glow green. |
 | **Reset model** / **Reset everything** | Your own body back (items stay) / clear every morph, mount skins too. |
+| **Setup** (bottom left) | Green **Setup OK** when VanillaHelpers runs and morphing works, red **Setup: fix me** when it doesn't. Click it for every part DMorph uses (VanillaHelpers, and the optional DmorphHelper, ClassicAPI, SuperWoW), whether it's running and how to fix it. It opens by itself when morphing can't work. |
 | **Sharing** (bottom) | **Others see my morph** / **I see their morphs**: both on to start with. Hover it to see how many DMorph users you've met. |
 | **Corner grip** (bottom right) | Drag to make the window bigger or smaller. It remembers the size. |
 | **Models** tab | Grid of previews (mouse wheel turns pages) or list view. Gold frame = the model you wear. **Right-click** stars a model. |
@@ -147,6 +151,7 @@ Type them in the chat box like in DMorph. They never reach the server. Each also
 | `.demorph` / `.demorph all` | Reset your model and picked looks / your model, looks, items, glows and mount skins. |
 | `.outfit`, `.outfit <name>`, `.outfit save <name>`, `.outfit delete <name>` | List, put on, save or delete outfits. |
 | `.share on/off` / `.share others on/off` | Whether other DMorph users see your morph / whether you see theirs. `.share` shows both, how many DMorph users you've met and how many messages went out. |
+| `.dmorph check` | Is everything DMorph uses running, and how to fix what isn't (the same as the window's Setup button). |
 | `.dmorph status` / `/dmorph help` | What's morphed and which VanillaHelpers and DmorphHelper are loaded / all commands. |
 
 Slots: `1` head, `3` shoulder, `4` shirt, `5` chest, `6` waist, `7` legs, `8` feet, `9` wrist, `10` hands, `15` back, `16` main hand, `17` off hand, `18` ranged, `19` tabard.

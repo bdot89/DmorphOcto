@@ -11,11 +11,50 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.2.2"
+local VERSION = "2.3.0"
 local PREFIX = "|cff33ff99DMorph|r: "
-local MISSING_API = "VanillaHelpers v1.1.0 or newer is not loaded, so morphing is unavailable. "
-	.. "Enable the 'vanillaHelpers' mod in OctoLauncher (or add VanillaHelpers.dll to dlls.txt) "
-	.. "and restart the game."
+-- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
+-- came in v1.1.0. Older versions load and set it, but can't morph.
+local MORPH_VERSION = 10100
+
+local function VersionText(v)
+	return format("%d.%d.%d", math.floor(v / 10000), math.floor(math.mod(v, 10000) / 100), math.mod(v, 100))
+end
+
+-- The other client mods that load the same way as VanillaHelpers. If none
+-- of them runs either, the game wasn't started through OctoLauncher.
+local function OtherClientMods()
+	local mods = {}
+	if SUPERWOW_VERSION then
+		table.insert(mods, "SuperWoW")
+	end
+	if type(C_Item) == "table" then
+		table.insert(mods, "ClassicAPI")
+	end
+	if type(GetNampowerVersion) == "function" then
+		table.insert(mods, "nampower")
+	end
+	if type(UnitXP) == "function" then
+		table.insert(mods, "UnitXP")
+	end
+	return mods
+end
+
+-- Why morphing doesn't work, and how to fix it (one chat-sized message).
+local function MissingAPI()
+	if type(VANILLAHELPERS_VERSION) == "number" and VANILLAHELPERS_VERSION < MORPH_VERSION then
+		return "VanillaHelpers v" .. VersionText(VANILLAHELPERS_VERSION) .. " is running, but morphing needs v1.1.0 or newer. "
+			.. "Update the 'vanillaHelpers' mod in OctoLauncher, close the game and start it again."
+	elseif type(VANILLAHELPERS_VERSION) == "number" then
+		return "VanillaHelpers is running but its morph functions are missing: reinstall the 'vanillaHelpers' mod in OctoLauncher "
+			.. "and restart the game."
+	elseif table.getn(OtherClientMods()) > 0 then
+		return "VanillaHelpers isn't running, so morphing is unavailable (your other client mods are, so only it is missing). "
+			.. "Tick the 'vanillaHelpers' mod in OctoLauncher, close the game completely and press Play again."
+	end
+	return "VanillaHelpers isn't running, so morphing is unavailable. No client mods are running at all: start the game "
+		.. "from OctoLauncher (not WoW.exe), with the 'vanillaHelpers' mod ticked. Close the game completely first."
+end
 
 -- Player model display IDs, indexed by race ID. VanillaHelpers recognises
 -- exactly these and rewrites race and gender as well, so your own skin, face
@@ -62,7 +101,7 @@ local SLOT_ALIASES = {
 
 DmorphOcto = {
 	VERSION = VERSION,
-	MISSING_API = MISSING_API,
+	MissingAPI = MissingAPI,
 	RACES = RACES,
 	SLOT_ORDER = SLOT_ORDER,
 	SLOT_NAMES = SLOT_NAMES,
@@ -1355,6 +1394,41 @@ local function HasHelper()
 end
 M.HasHelper = HasHelper
 
+-- What DMorph needs and what it can use, for the window's Setup check and
+-- /dmorph check: { name, state = "ok" / "bad" / "off" (optional, missing), text }.
+function M.GetSetupReport()
+	local report = {}
+	local function Add(name, state, text)
+		table.insert(report, { name = name, state = state, text = text })
+	end
+	if HasMorphAPI() then
+		local version = ""
+		if type(VANILLAHELPERS_VERSION) == "number" then
+			version = " v" .. VersionText(VANILLAHELPERS_VERSION)
+		end
+		Add("VanillaHelpers", "ok", "Running" .. version .. ": morphing works.")
+	else
+		Add("VanillaHelpers", "bad", MissingAPI())
+	end
+	if HasHelper() then
+		Add("DmorphHelper", "ok", "Running: weapon glows and real skin, face and hair work.")
+	else
+		Add("DmorphHelper", "off", "Optional, not running: weapon glows and real skin, face and hair need it. "
+			.. "Close the game and run tools\\install_helper.ps1 in the DmorphOcto folder.")
+	end
+	if type(C_Item) == "table" then
+		Add("ClassicAPI", "ok", "Running: 3D previews of models work.")
+	else
+		Add("ClassicAPI", "off", "Optional, not running: the Models tab shows a list instead of 3D previews.")
+	end
+	if SUPERWOW_VERSION then
+		Add("SuperWoW", "ok", "Running: other DMorph users' morphs show without targeting them.")
+	else
+		Add("SuperWoW", "off", "Optional, not running: target or mouse over other DMorph users to see their morphs.")
+	end
+	return report
+end
+
 -- Every glow the client can draw (Data/Glows.lua): per glow its visual ID, an
 -- enchant ID that shows it, its name (the shortest enchant name), all the
 -- enchant names and its effect models.
@@ -1588,7 +1662,7 @@ end
 -- Glow and look actions need both DLLs.
 local function HelperBegin()
 	if not Begin() then
-		return false, MISSING_API
+		return false, MissingAPI()
 	end
 	if not HasHelper() then
 		return false, MISSING_HELPER
@@ -1791,7 +1865,7 @@ end
 
 function M.ResetModel()
 	if not Begin() then
-		return false, MISSING_API
+		return false, MissingAPI()
 	end
 	db.display, db.race, db.gender = nil, nil, 0
 	db.looks = {}
@@ -1802,7 +1876,7 @@ end
 
 function M.ResetAll()
 	if not Begin() then
-		return false, MISSING_API
+		return false, MissingAPI()
 	end
 	db.display, db.race, db.gender = nil, nil, 0
 	db.looks, db.glows = {}, {}
@@ -1823,7 +1897,7 @@ end
 
 function M.SetDisplay(displayID)
 	if not Begin() then
-		return false, MISSING_API
+		return false, MissingAPI()
 	end
 	displayID = ParseID(displayID)
 	if not displayID then
@@ -1849,7 +1923,7 @@ end
 -- gender is 0 or 1; anything else keeps the current gender.
 function M.SetRace(race, gender)
 	if not Begin() then
-		return false, MISSING_API
+		return false, MissingAPI()
 	end
 	if not RACES[race] then
 		return false, "Unknown race. Races: " .. RaceList()
@@ -1869,7 +1943,7 @@ end
 
 function M.ToggleGender()
 	if not Begin() then
-		return false, MISSING_API
+		return false, MissingAPI()
 	end
 	local race, gender = M.GetBodyRace()
 	if not race then
@@ -1881,7 +1955,7 @@ end
 -- itemID 0 resets the slot.
 function M.SetItem(slot, itemID)
 	if not Begin() then
-		return false, MISSING_API
+		return false, MissingAPI()
 	end
 	if not SLOT_NAMES[slot] then
 		return false, "Neck, rings and trinkets don't show on your model. Slots: " .. SlotList()
@@ -1906,7 +1980,7 @@ end
 -- all your mounts. displayID 0 takes the skin off.
 function M.SetMountSkin(displayID, real)
 	if not Begin() then
-		return false, MISSING_API
+		return false, MissingAPI()
 	end
 	if not HasMountAPI() then
 		return false, "This VanillaHelpers can't morph mounts: update it to v1.1.0 or newer."
@@ -1946,7 +2020,7 @@ end
 -- slot is known. Slots the set has no piece for keep what they show.
 function M.WearSet(index)
 	if not Begin() then
-		return false, MISSING_API
+		return false, MissingAPI()
 	end
 	local catalog = M.GetSetCatalog()
 	local pieces = catalog.pieces[index]
@@ -2087,7 +2161,7 @@ end
 -- Puts on the whole outfit: slots it doesn't morph go back to your own gear.
 function M.LoadOutfit(name)
 	if not Begin() then
-		return false, MISSING_API
+		return false, MissingAPI()
 	end
 	local outfit = account.outfits[name]
 	if not outfit then
@@ -2147,19 +2221,17 @@ local function ShowHelp()
 	Print(".mount <displayID> - morph your mount (.mount 0 resets)")
 	Print(".glow <mainhand/offhand/ranged> <enchantID> - a weapon's enchant glow (0 none, own your own); needs DmorphHelper.dll")
 	Print(".share on/off - whether other DMorph users see your morph; .share others on/off - whether you see theirs")
-	Print(".dmorph status - show what is morphed. Keys: Key Bindings > DMorph.")
+	Print(".dmorph status - show what is morphed; .dmorph check - is everything DMorph needs running, and how to fix it. Keys: Key Bindings > DMorph.")
 	if not HasMorphAPI() then
-		Print(MISSING_API)
+		Print(MissingAPI())
 	end
 end
 
 local function ShowStatus()
 	if not HasMorphAPI() then
-		Print(MISSING_API)
+		Print(MissingAPI())
 	elseif type(VANILLAHELPERS_VERSION) == "number" then
-		local v = VANILLAHELPERS_VERSION
-		Print(format("VanillaHelpers v%d.%d.%d is loaded.", math.floor(v / 10000),
-			math.floor(math.mod(v, 10000) / 100), math.mod(v, 100)))
+		Print("VanillaHelpers v" .. VersionText(VANILLAHELPERS_VERSION) .. " is loaded.")
 	end
 	if HasHelper() then
 		local ok, version = pcall(DmorphHelper_Version)
@@ -2305,10 +2377,24 @@ function commands.outfit(args, line)
 	Report(M.LoadOutfit(M.FindOutfit(rest) or rest))
 end
 
+-- /dmorph check: is everything DMorph uses running, and how to fix what isn't.
+local CHECK_COLOURS = { ok = "|cff33ff99", bad = "|cffff5555", off = "|cffaaaaaa" }
+local CHECK_WORDS = { ok = "OK", bad = "NOT WORKING", off = "not running" }
+
+local function ShowCheck()
+	local report = M.GetSetupReport()
+	for i = 1, table.getn(report) do
+		local entry = report[i]
+		Print(entry.name .. ": " .. CHECK_COLOURS[entry.state] .. CHECK_WORDS[entry.state] .. "|r - " .. entry.text)
+	end
+end
+
 function commands.dmorph(args)
 	local action = strlower(args[1] or "")
 	if action == "status" then
 		return ShowStatus()
+	elseif action == "check" then
+		return ShowCheck()
 	elseif action == "" and M.ToggleUI then
 		return M.ToggleUI()
 	end
@@ -2432,7 +2518,8 @@ frame:SetScript("OnEvent", function()
 	if not HasMorphAPI() then
 		if not warnedMissingAPI then
 			warnedMissingAPI = true
-			Print(MISSING_API)
+			Print(MissingAPI())
+			Print("Open the window (/dmorph) and click Setup, or type /dmorph check, to see what's running.")
 		end
 		return
 	end
