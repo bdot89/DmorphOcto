@@ -77,7 +77,6 @@ DmorphOcto_ModelData = [[
 18942	2	Ancient Warrior
 20904	3	Ancientmount
 12051	1	Ancientof Lore
-19034	3	Ancientofarcane (Ethereal Ragnaros)
 16624	2	Andalideth Suncaller
 18218	2	Andrelas Thas'danil
 18322	2	Animated Shredder
@@ -91,7 +90,6 @@ DmorphOcto_ModelData = [[
 21231	3	Ant H (Gilneas Knight01)
 18045	2	Antnormi
 18029	2	Applebough
-18502	2	Aputuq
 18246	2	Aqir Drone
 18504	2	Arc'tiras
 18031	2	Arcandir
@@ -409,7 +407,6 @@ DmorphOcto_ModelData = [[
 18070	2	Chok'Garok
 18095	2	Cho’gall
 16046	2	Chradarmu
-18495	2	Chromie's Time Rift
 18116	2	Chronar
 18675	2	Citadel Footman
 18680	2	Citadel Inquisitor
@@ -513,7 +510,6 @@ DmorphOcto_ModelData = [[
 18462	3	Crawler (Var7)
 18463	3	Crawler (Var8)
 18464	3	Crawler (Var9)
-21134	3	Creature Demoncrystal 02
 16177	1	Creature Scourge Crystal Damaged
 18682	2	Crimson
 20512	2	Crimson Hawkstrider
@@ -571,7 +567,6 @@ DmorphOcto_ModelData = [[
 18090	2	Darkmoon Dancing Bear
 20492	2	Darkpelt Shadowcaster
 20495	2	Darkpelt Shadowcaster
-20437	2	Darksaber
 18873	2	Darkseer Geshtol
 18902	2	Darlen Darkgrin
 18842	2	Darneg Darkbeard
@@ -637,7 +632,6 @@ DmorphOcto_ModelData = [[
 2717	1	Dragon (Skin1 Green)
 2930	1	Dragon (Skin1 Green)
 2718	1	Dragon (Skin1 Red)
-1686	1	Dragon (Skin1)
 14307	1	Dragon Foot Soldier
 14309	1	Dragon Foot Soldier
 14356	1	Dragon Foot Soldier (Blue)
@@ -702,9 +696,6 @@ DmorphOcto_ModelData = [[
 20452	3	Drake (Twilight Drake1 Red)
 20875	3	Drakemount (Drake Black1)
 18278	3	Drakemount (Drake Blue1)
-18283	3	Drakemount (Drake Bronze1s)
-18284	3	Drakemount (Drake Green1s)
-18285	3	Drakemount (Drake Red1s)
 18287	3	Drakemount (Drake Twilight Green 01)
 18289	3	Drakemount (Drake Twilight Red 01)
 21352	3	Drakemountemerald
@@ -767,7 +758,6 @@ DmorphOcto_ModelData = [[
 21605	3	Dwarf Female NPC
 21606	3	Dwarf Female NPC
 53	1	Dwarf Male (player model)
-803	1	Dwarf Male NPC
 1627	1	Dwarf Male NPC
 1764	1	Dwarf Male NPC
 1792	1	Dwarf Male NPC
@@ -937,8 +927,6 @@ DmorphOcto_ModelData = [[
 4733	1	Fel Bat (Violet01)
 15227	1	Fel Bat (White01)
 12171	1	Fel Beast
-18582	3	Fel Cannon
-18583	3	Fel Cannon 02
 18198	2	Fel Elf Ranger (Deadscar)
 18199	2	Fel Elf Ranger (Deadscar)
 18200	2	Fel Elf Ranger (Deadscar)
@@ -957,7 +945,6 @@ DmorphOcto_ModelData = [[
 18157	3	Fel Guard (White)
 11491	1	Fel Guard (Yellow)
 7972	1	Fel Hound
-20808	3	Fel Houndmount
 18577	3	Fel Orc Dire
 18579	3	Fel Reaver (Reaver1 Arcane)
 18580	3	Fel Reaver (Reaver1 Black)
@@ -1193,8 +1180,6 @@ DmorphOcto_ModelData = [[
 547	1	Ghoul (Blue)
 546	1	Ghoul (Red)
 19133	3	Giant Spider
-19134	3	Giant Spider (Black)
-19135	3	Giant Spider (Orange)
 18669	2	Gigno Flaxwhisker
 20528	2	Gilaras Sunfury
 20424	2	Gilneas Stable Horse
@@ -1220,7 +1205,6 @@ DmorphOcto_ModelData = [[
 986	1	Gnoll (Rothide Whelp)
 3198	1	Gnoll Caster (Moss Hide)
 1888	1	Gnoll Caster (Shadow Hide)
-123	1	Gnoll Melee (Magenta)
 528	1	Gnoll Melee (River Paw Fighter)
 350	3	Gnome
 1101	1	Gnome
@@ -1861,7 +1845,6 @@ DmorphOcto_ModelData = [[
 1911	1	Horse (Zebra)
 21614	3	Horsedragonmount
 50	1	Human Female (player model)
-302	1	Human Female (player model)
 3319	1	Human Female (player model)
 752	1	Human Female Blacksmith (Merchant01 Green Apron)
 162	1	Human Female Blacksmith (Merchant01 Red Apron)
@@ -1875,7 +1858,6 @@ DmorphOcto_ModelData = [[
 96	1	Human Female Merchant Thin
 225	1	Human Female Merchant Thin (Merchant02)
 1049	1	Human Female Merchant Thin (Merchant03)
-176	1	Human Female NPC
 1261	1	Human Female NPC
 1474	1	Human Female NPC
 1612	1	Human Female NPC
@@ -1886,8 +1868,6 @@ DmorphOcto_ModelData = [[
 2204	1	Human Female NPC
 2494	1	Human Female NPC
 2583	1	Human Female NPC
-2983	1	Human Female NPC
-2984	1	Human Female NPC
 3318	1	Human Female NPC
 3949	1	Human Female NPC
 4718	1	Human Female NPC
@@ -1986,18 +1966,13 @@ DmorphOcto_ModelData = [[
 1493	1	Human Male NPC
 1613	1	Human Male NPC
 1617	1	Human Male NPC
-1641	1	Human Male NPC
 1767	1	Human Male NPC
-1901	1	Human Male NPC
-2039	1	Human Male NPC
 2080	1	Human Male NPC
 2287	1	Human Male NPC
 2288	1	Human Male NPC
 2393	1	Human Male NPC
 2493	1	Human Male NPC
 2960	1	Human Male NPC
-2981	1	Human Male NPC
-2982	1	Human Male NPC
 3333	1	Human Male NPC
 3372	1	Human Male NPC
 3374	1	Human Male NPC
@@ -2013,7 +1988,6 @@ DmorphOcto_ModelData = [[
 9815	1	Human Male NPC
 10139	1	Human Male NPC
 10296	1	Human Male NPC
-10949	1	Human Male NPC
 11509	1	Human Male NPC
 13320	1	Human Male NPC
 13321	1	Human Male NPC
@@ -2172,8 +2146,6 @@ DmorphOcto_ModelData = [[
 101	1	HUMS Citizen Mid (Human Male Low)
 106	1	HUMS Citizen Mid (Human Male Low)
 126	1	HUMS Citizen Mid (Human Male Low)
-18139	3	HUMS Footman Big
-18138	3	HUMS Guard Big
 2728	1	Hydra (Black)
 21267	3	Hydra (Red)
 5051	1	Hydra (White)
@@ -2226,8 +2198,6 @@ DmorphOcto_ModelData = [[
 18042	2	Infinite Timeripper
 18043	2	Infinite Whelp
 18043	2	Infinite Whelpling
-18502	2	Inuksuk
-18502	2	Inunquaq
 20524	2	Ithirilen Shadewind
 20510	2	Ivory Hawkstider
 14345	0	Ivory War Raptor
@@ -2242,7 +2212,6 @@ DmorphOcto_ModelData = [[
 18418	2	Johnny Deepdrowned
 20574	2	Jolie Keenwit
 20334	2	Judge Sutherland
-8989	0	K'ron Tusk
 20464	2	Ka'zinka
 18194	2	Ka'zmir Somberwind
 99	0	Kaay Carlson
@@ -2295,7 +2264,6 @@ DmorphOcto_ModelData = [[
 18673	2	Lancaster Lightblessed
 18514	2	Lansa Skyseer
 16685	2	Larane Dawnbringer
-18495	2	Large Time Rift
 20432	2	Larodar Wildwhisper
 18144	2	Larry
 19155	2	Larry Bolder
@@ -2595,7 +2563,6 @@ DmorphOcto_ModelData = [[
 9490	1	Mountain Giant (Tundra)
 21486	3	Mountain Giant Boss
 18992	2	Mountaineer Truthforge
-6353	1	Mounted Death Knight
 18357	3	Mounted Demon Knight
 21145	3	Mounted Knight (Arathor Knight01)
 1545	1	Mounted Knight (Blue 01)
@@ -2807,8 +2774,6 @@ DmorphOcto_ModelData = [[
 52	1	Orc Female (player model)
 8650	1	Orc Female (player model)
 12063	1	Orc Female (player model)
-1907	1	Orc Female NPC
-1908	1	Orc Female NPC
 2413	1	Orc Female NPC
 2577	1	Orc Female NPC
 4352	1	Orc Female NPC
@@ -2882,8 +2847,6 @@ DmorphOcto_ModelData = [[
 565	1	Orc Male Merchant Light (Black Rock Clan Runner)
 1869	1	Orc Male NPC
 1870	1	Orc Male NPC
-1906	1	Orc Male NPC
-1909	1	Orc Male NPC
 2576	1	Orc Male NPC
 2997	1	Orc Male NPC
 3888	1	Orc Male NPC
@@ -3073,7 +3036,6 @@ DmorphOcto_ModelData = [[
 20849	3	Pandaren Serpent Mount Lightning (Pandarenserpent White)
 20850	3	Pandaren Serpent Mount Lightning (Pandarenserpent Yellow)
 20846	3	Pandaren Serpent Mount Lightning (Pandarenserpent)
-18502	2	Panukuki
 623	0	Paranus
 18370	3	Parrot (Brown)
 18369	3	Parrot (Lavender)
@@ -3269,11 +3231,9 @@ DmorphOcto_ModelData = [[
 21343	3	Riding Horse Spectral
 18435	2	Riding Ice Saber
 18309	2	Riding Infinite Drake
-6470	1	Riding Raptor (Red)
 18281	2	Riding Red Drake
 18512	2	Riding Sea Turtle
-20874	3	Riding Silithid (Tank Armored Tan)
-20441	3	Riding Silithid (Tank Armored White)
+20874	3	Riding Silithid
 18816	3	Riding Talbuk (Black Epic)
 18817	3	Riding Talbuk (Blue Epic)
 18818	3	Riding Talbuk (Brown Epic)
@@ -3444,7 +3404,6 @@ DmorphOcto_ModelData = [[
 11034	1	Serpent (Serpant Olive)
 14557	1	Serpent (Serpant Olive)
 15135	1	Serpent (Serpant Purple)
-20634	3	Serpent (Serpant Ruby)
 20633	3	Serpent (Serpant Violet)
 1529	1	Serpent Totem
 4761	1	Shade (Reflect)
@@ -3610,7 +3569,6 @@ DmorphOcto_ModelData = [[
 18055	3	Succubusold (Succubus Red)
 18056	3	Succubusold (Succubus Skinviolet)
 18052	3	Succubusold (Succubus)
-18495	2	Sun
 18386	2	Sunscale Hatchling
 20867	3	Suramar Mount
 18950	2	Surveyor Bronzehorn
@@ -3754,7 +3712,6 @@ DmorphOcto_ModelData = [[
 20340	2	Teezle Dualflash
 16682	2	Telina Shadehand
 20341	2	Tenner Pipegadge
-20503	2	Tenris Mirkblood
 18003	2	Teslinah
 20342	2	Tess Greymane
 20504	2	Thalassian Boar
@@ -3833,7 +3790,6 @@ DmorphOcto_ModelData = [[
 15215	1	Tigon Female
 18098	2	Tiki
 16162	0	Time Anomaly
-18495	2	Time Rift
 18044	2	Time-Lord Epochronos
 18721	2	Tin'go
 18812	2	Tinubi
@@ -3863,7 +3819,6 @@ DmorphOcto_ModelData = [[
 18245	2	Tomb Creeper
 18246	2	Tomb Creeper
 18248	2	Tomb Creeper
-18502	2	Tonlok
 16818	2	Toranial Mishulas
 16746	2	Torial Dawnrise
 18951	2	Torlig Redbrand
@@ -3872,7 +3827,6 @@ DmorphOcto_ModelData = [[
 18670	2	Tradesman Laz
 18893	2	Trainer Sinopa
 18894	2	Trainer Tokala
-18502	2	Travel through the Northeast Passage
 18382	3	Trex
 21507	3	Tripod
 21508	3	Tripod (Black)
@@ -4037,7 +3991,6 @@ DmorphOcto_ModelData = [[
 337	1	Troll Whelp (Jungle Split Skull Scout)
 20612	3	Ts Boat 02
 18510	2	Turbo-Charged Flying Machine
-18385	3	Turkey
 21523	3	Turtle Christmas
 20833	3	Turtlemount
 20781	3	Tuskarboat
@@ -4261,7 +4214,6 @@ DmorphOcto_ModelData = [[
 18305	3	Wyvern Armored (Skin01)
 18306	3	Wyvern Armored (Skin01)
 18308	3	Wyvern Armored (Skin01)
-18307	3	Wyvern Mount (Riding Green)
 18302	3	Wyvern Mount (Skin01 Blue)
 18303	3	Wyvern Mount (Skin01 Green)
 18001	2	Xecc

@@ -1,11 +1,12 @@
 <div align="center">
 
-<img src="docs/banner.png" alt="DMorph for OctoWoW: become any creature in the game" width="100%">
+<img src="docs/banner.png" alt="DMorph for OctoWoW: become any creature, ride any mount, wear any item" width="100%">
 
 # DMorph (OctoWoW)
 
-**Become any creature in the game** · WoW 1.12 · OctoWoW
+**Become any creature, ride any mount, wear any item** · WoW 1.12 · OctoWoW
 
+![Version](https://img.shields.io/badge/version-2.2.0-33ff99?style=flat-square)
 ![WoW 1.12.1](https://img.shields.io/badge/WoW-1.12.1-c79c6e?style=flat-square)
 ![Lua 5.0](https://img.shields.io/badge/Lua-5.0-2c2d72?style=flat-square)
 ![Models](https://img.shields.io/badge/models-16%2C000%2B-b46bff?style=flat-square)
@@ -15,8 +16,8 @@
 </div>
 
 A morph window for the OctoWoW client, inspired by [DMorph](https://darksectordds.github.io/html/dmorph/index.html).
-Pick any creature, race or item, see it on your character straight away, and save the looks you like.
-**Morphs are only on your screen:** nobody else sees them.
+Pick any creature, race, mount skin, glow or item, see it on your character straight away, and save the looks you like.
+**Morphs change only what DMorph users see:** you, and other players with DMorph. Everyone else sees your real character.
 
 **What it does**
 
@@ -38,16 +39,28 @@ Pick any creature, race or item, see it on your character straight away, and sav
 
 <table>
 <tr>
-<td width="50%"><img src="docs/models.jpg" alt="Models tab"><br><b>Models</b>: browse or search every model. Click one to become it, or type any display ID and step through with &lt; &gt;.</td>
-<td width="50%"><img src="docs/races.jpg" alt="Races tab"><br><b>Races</b>: click a portrait to wear that race and gender. Your own race is marked.</td>
+<td width="50%"><img src="docs/models.jpg" alt="Models tab"><br><b>Models</b>: every model, here filtered to the 549 bosses. Click one to become it, or type any display ID and step through with &lt; &gt;.</td>
+<td width="50%"><img src="docs/mounts.jpg" alt="Mounts tab"><br><b>Mounts</b>: pick a skin for all your mounts or one of them. The one you have on is ticked and turns in the <b>Your skin</b> box.</td>
 </tr>
 <tr>
-<td><img src="docs/items.jpg" alt="Items tab"><br><b>Items</b>: click a slot by the model, search, and click an item. Morphed slots glow green.</td>
-<td><img src="docs/wardrobe.jpg" alt="Wardrobe tab"><br><b>Wardrobe</b>: name your look and save it. Click an outfit twice to put it on.</td>
+<td><img src="docs/races.jpg" alt="Races tab"><br><b>Races</b>: any race and gender, then step through its real skin colour, face, hair style, hair colour and features.</td>
+<td><img src="docs/glows.jpg" alt="Glows tab"><br><b>Glows</b>: every weapon enchant glow in the game, for main hand, off hand or ranged.</td>
+</tr>
+<tr>
+<td><img src="docs/items.jpg" alt="Items tab"><br><b>Items</b>: pick a slot, then filter by type, quality and source. Click an item to wear it.</td>
+<td><img src="docs/sets.jpg" alt="Sets tab"><br><b>Sets</b>: every item set. One click puts on all its pieces (here Armor of Might).</td>
+</tr>
+<tr>
+<td><img src="docs/wardrobe.jpg" alt="Wardrobe tab"><br><b>Wardrobe</b>: name your look and save it. Outfits are shared by all your characters.</td>
+<td><img src="docs/favourites.jpg" alt="Favourites tab"><br><b>Favourites</b>: the models and mount skins you starred, ready every time you log in.</td>
 </tr>
 </table>
 
-**In the world.** Four morphs in Orgrimmar:
+**In the world.** A Black Spectral Tiger mount skin in Orgrimmar, and a Black Drake morph:
+
+<img src="docs/world.jpg" alt="Mount skin and creature morph in Orgrimmar" width="100%">
+
+More creature morphs:
 
 <img src="docs/morphs.jpg" alt="Four creature morphs in Orgrimmar" width="100%">
 
@@ -161,7 +174,7 @@ DMorph itself is a DLL for WotLK 3.3.5a and can't run on the 1.12 client. This a
 **DmorphHelper** (`helper/DmorphHelper.c`, built with MinGW-w64 by `helper/build.sh`) adds four Lua functions next to VanillaHelpers': `DmorphHelper_GetItemEnchants` / `SetItemEnchants` (a visible weapon's enchant IDs, which the game draws the glow from) and `DmorphHelper_GetLook` / `SetLook` (your skin colour, face, hair style, hair colour and facial hair). It writes those values on your client only and makes the game rebuild your model, the way VanillaHelpers does. It uses VanillaHelpers' own game addresses and starts only once it sees VanillaHelpers' hooks at two of them.
 
 - `DmorphOcto.lua`: morph state, wardrobe, search, item lookup and chat commands. `Share.lua`: sharing morphs with other DMorph users. `UI.lua`: the window and minimap button.
-- `Data/Glows.lua` and `Data/CharOptions.lua`: the glows and the skin, face and hair choices from your game files (`tools\update_from_game.ps1` writes them; they ship empty).
+- `Data/Glows.lua` and `Data/CharOptions.lua`: the glows and the skin, face and hair choices from your game files (`tools\update_from_game.ps1` writes them; the copies here come from OctoWoW's files as of 11 October 2026, so run it again after a client patch).
 - `Data/Creatures.lua` and `Data/Items.lua`: the [cmangos classic-db](https://github.com/cmangos/classic-db) 1.12.1 database. `Data/Models.lua`, `ModelTags.lua` and `Looks.lua`: every other display ID in the client's own data, its boss / rare / mount tags, and the NPC looks per race. `Data/ItemsExtra.lua` and `ItemSets.lua`: Turtle WoW's and OctoWoW's items and the client's item sets. `Data/ItemTypes.lua`: each item's type (cloth, plate, dagger, ...) from both databases.
 - Saved data: `WTF\Account\<account>\SavedVariables\DmorphOcto.lua` (outfits, favourites, window settings, looked-up items, minimap button) and each character's `SavedVariables\DmorphOcto.lua` (current look, glows, picked faces, and your real ones to put back).
 
@@ -173,7 +186,7 @@ Written for the client's Lua 5.0: no `#`, no `%`, no `string.match`.
 - **Catalogue:** `python3 tools/build_data.py <ClassicDB_1_12_1_*.sql.gz> --shelllab <ShellLab's data/shelllab.db>` rebuilds `Creatures.lua`, `Items.lua`, `ClassicTags.lua` (bosses, rares, mounts), `ItemTypes.lua` and `tools/data/classic_item_displays.tsv`. Then, on Windows with the game installed, `tools\update_from_game.ps1` runs `tools\build_models.ps1` (model files, NPC looks, tags, `HiddenModels.lua`), `tools\build_items.ps1` (extra items, sets, `HiddenItems.lua`) and `tools\build_options.ps1` (`Glows.lua`, `CharOptions.lua`), from the client's MPQs, its item cache, Atlas-CFM's loot tables and `tools/data` (Turtle WoW data exported from [ShellLab](https://github.com/oplancelot/ShellLab)). Run it after a client patch.
 - **Game-file tools:** `python3 tests/make_game_fixture.py <dir>` builds a fake game folder (MPQs with DBCs, models, textures) to run the PowerShell tools against; its header says what they should find. PowerShell 7 runs them on Linux too.
 - **DmorphHelper:** `sh helper/build.sh` with `gcc-mingw-w64-i686` rebuilds `helper/DmorphHelper.dll` (MinHook is in `helper/minhook`).
-- **Pictures:** `docs/src` has the banner and gallery as HTML (rendered with headless Edge) and the in-game crops they use.
+- **Pictures:** `docs/src` has the banner and the two in-world galleries as HTML (rendered with headless Edge) and the in-game crops they use. The character name is blanked out of the window screenshots.
 
 ## Credits
 

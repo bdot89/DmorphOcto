@@ -43,14 +43,29 @@ DmorphOcto_ItemExtra[1] = [[
 80850	3	Circlet of the Living Volcano
 47396	4	Circlet of the Talon
 83258	3	Coif of the Lost Soul
+33716	3	Combatant's Chain Helm
+101950	3	Combatant's Chain Helm
+33752	3	Combatant's Dragonhide Helmet
+102223	3	Combatant's Dragonhide Helmet
+104418	3	Combatant's Dragonhide Helmet
+33584	3	Combatant's Lamellar Faceguard
+33476	3	Combatant's Mail Helm
+33404	3	Combatant's Plate Helm
+33680	3	Combatant's Plate Helm
+102180	3	Combatant's Plate Helm
+104483	3	Combatant's Plate Helm
 81262	4	Core Forged Helmet
 47219	4	Coronet of Faith
 47234	4	Coronet of Pestilence
 47198	4	Coronet of Prophecy
+103734	4	Coronet of Prophecy
 47206	4	Coronet of Transcendence
+33824	3	Corpsman's Headdress
+102969	3	Corpsman's Mail Helm
 83472	3	Cover of the Necromancer
 61725	2	Cowl of Memento
 83451	3	Cowl of Mivax
+103475	3	Cowl of Resolve
 80801	4	Cowl of Terror
 81006	3	Cowl of the Fang
 58120	3	Cowl of Whispering Shadows
@@ -67,6 +82,7 @@ DmorphOcto_ItemExtra[1] = [[
 47240	4	Crown of Might
 56060	4	Crown of Molten Ascension
 102195	4	Crown of Molten Ascension
+104003	4	Crown of Molten Ascension
 58186	3	Crown of Oppression
 47228	4	Crown of Pestilence
 33000	4	Crown of Prophecy
@@ -85,6 +101,10 @@ DmorphOcto_ItemExtra[1] = [[
 60116	3	Dalaran Wizard's Hat
 60724	4	Dalarani Conjurer's Hat
 61291	4	Darkflame Helm
+102540	4	Darkflame Helm
+102837	4	Darkflame Helm
+104504	4	Darkflame Helm
+104508	4	Darkflame Helm
 50507	1	Darkmaster's Cowl
 50506	1	Darkmaster's Helmet (Human Male Only)
 50341	1	Darnassus Sentinel Faceguard
@@ -101,6 +121,7 @@ DmorphOcto_ItemExtra[1] = [[
 47381	4	Dreamwalker Helmet
 50349	1	Dun Morogh Mountaineer Hood
 47120	4	Earthfury Crown
+47128	4	Earthfury Visor
 47162	4	Earthshatter Crown
 60614	3	Emissary's Cap
 81328	3	Energyseekers Cover
@@ -120,6 +141,7 @@ DmorphOcto_ItemExtra[1] = [[
 80221	1	Forever-Lovely Rose
 55119	4	Forgotten Hide Helm
 61575	2	Forgotten Veil
+104264	4	Foror's Eyepatch
 83244	2	Freebooter's Pirate Hat
 47099	4	Frostfire Crown
 81216	2	Fur-Lined Orcish Helm
@@ -131,6 +153,7 @@ DmorphOcto_ItemExtra[1] = [[
 61313	3	Greymane Helmet
 83250	2	Grifter's Cover
 83400	2	Grifter's Cover
+103376	4	Halo of Transcendence
 60216	3	Hat of Forest Medicine
 42106	3	Hat of the Junior Chef
 60573	3	Hateforge Helmet
@@ -139,6 +162,7 @@ DmorphOcto_ItemExtra[1] = [[
 61156	2	Headband of a Hundred Feathers
 84002	4	Headguard of the Scarlet Bastion
 80833	2	Hellcaller's Diadem
+104265	4	Helm of Heroism
 60636	2	Helm of Nethergarde
 47390	4	Helm of the Talon
 47144	4	Helmet of Ten Storms
@@ -158,13 +182,6 @@ DmorphOcto_ItemExtra[1] = [[
 47016	4	Judgement Helmet
 61070	2	Kabuto of the Protector
 61069	2	Kabuto of the Senshi
-83025	0	Kazgrim Goggle Scarf Test Helm 4
-83026	0	Kazgrim Mask Scarf Test Helm 0
-83027	0	Kazgrim Mask Scarf Test Helm 1
-83028	0	Kazgrim Mask Scarf Test Helm 2
-83030	0	Kazgrim Mask Scarf Test Helm 4
-36016	0	kazgrim test dk helm c blue
-36005	0	kazgrim test troll voodoo mask
 50322	1	Kul Tiras Marine Helmet
 60451	3	Kul Tiras Marine Helmet
 58110	3	Lantern-Helm of the Deep
@@ -175,12 +192,14 @@ DmorphOcto_ItemExtra[1] = [[
 47060	4	Lionheart Headpiece
 47066	4	Lionheart Helmet
 80810	3	Lost Defender's Helmet
+163	2	Lucky Top Hat
 56064	4	Mastercrafted Diamond Crown
 60620	2	Mining Helmet
 55337	2	Mistwood Tiara
 55382	3	Mitre of the First Light
 60612	3	Mixologist Goggles
 61047	3	Monolith Headguard
+102130	3	Monolith Headguard
 81402	2	Mountain Watcher's Crown
 55033	2	Mystic's Feather Headdress
 47306	4	Nathrezim Crown
@@ -196,9 +215,11 @@ DmorphOcto_ItemExtra[1] = [[
 56089	2	Ornate Mithril Crown
 36017	2	Outland Exile Hood
 61535	2	Outlaw's Pirate Hat
+33722	4	Partisan's Chain Helm
 83490	3	Pillager Captain's Hat
 83292	2	Pillager's Hood
 47297	4	Plagueheart Crown
+58071	2	Plundered Pirate Hat
 81063	2	Primalist's Headdress
 55054	3	Prismatic Scale Barbute
 81217	2	Protective Orcish Helm
@@ -207,6 +228,8 @@ DmorphOcto_ItemExtra[1] = [[
 83492	3	Raider Captain's Hat
 47318	4	Ravenstalker Headpiece
 61252	3	Red Hat of Destruction
+103799	3	Red Hat of Destruction
+104151	3	Red Hat of Destruction
 47051	4	Redemption Crown
 47042	4	Redemption Helmet
 61086	3	Reveler's Hat
@@ -225,10 +248,12 @@ DmorphOcto_ItemExtra[1] = [[
 83078	3	Seer's Headdress of Visions
 50415	1	Sen'jin Guard's Mask
 60748	2	Sentinel's Crown
-23325	1	Shangtest Test Helmet
 80789	3	Sharpsight Eyepatch
 60436	3	Sightless Leather Hood
 50028	1	Simple Red Blindfold
+100743	3	Spellweaver's Turban
+100949	3	Spellweaver's Turban
+104136	3	Spellweaver's Turban
 83415	3	Steel Plate Barbute
 47152	4	Stormcaller's Crown
 47157	4	Stormcaller's Helmet
@@ -246,20 +271,30 @@ DmorphOcto_ItemExtra[1] = [[
 83491	3	Swashbuckler Captain's Hat
 61323	3	Swiftcaster's Chapeau
 81080	1	Syndicate Mask
+33458	3	Tactician's Coronal
 33734	3	Tactician's Coronal
+33698	3	Tactician's Coronet
+103313	3	Tactician's Coronet
+33806	3	Tactician's Headdress
+101188	3	Tactician's Headdress
+101675	3	Tactician's Mail Helm
 70036	2	Tattered Defias Mask
 60974	2	Tel Co. Protective Helmet
 60540	3	The Creator's Goggles
 83443	3	The Crown of Shattering
+8	1	The Greatest Wizzard Hat
 60786	4	The Night Watchman
 50329	1	Theramore Guard's Helmet
 61060	3	Thornweave Mask
 47214	4	Tiara of the Oracle
 61039	3	Timeless Artificier's Optics
 61053	3	Timeloop Headguard
+101446	3	Timeloop Headguard
+102578	3	Timeloop Headguard
 61003	3	Timeskipper's Helm of Alacrity
 60007	4	Towerforge Crown
 51036	1	Trade Co. Standard-Issue Helmet
+103509	3	Tribal War Feathers
 47324	4	Trickster Helmet
 83530	4	Turban of Veiled Mists
 84037	2	Undercity Bucket Hat
@@ -275,13 +310,16 @@ DmorphOcto_ItemExtra[1] = [[
 61548	2	Witch Doctor's Mask
 61580	2	Wolf's Skull
 51219	1	Woolen Cowl
+33136	2	Wraps of the Rift Traveler
 61701	3	Wraps of the Transmogrified
+104606	3	Wraps of the Transmogrified
 61420	2	Wreath of Worgen Blood
 82950	3	X-51 Arcane Ocular Implants
 82951	3	X-52 Stealth Ocular Implants
 82952	3	X-53 Ranger Ocular Implants
 82953	3	X-54 Guardian Ocular Implants
 41077	4	Yshgo'lar, Cowl of Fanatical Devotion
+104180	3	Zulian Headdress
 ]]
 DmorphOcto_ItemExtra[3] = [[
 83448	3	Amice of the Webweaver
@@ -292,6 +330,7 @@ DmorphOcto_ItemExtra[3] = [[
 83290	2	Augerer's Mantle
 47033	4	Avenger's Shoulderguards
 47038	4	Avenger's Spaulders
+26322	1	Blackened Leather Spaulders
 60567	3	Blackhammer Pauldrons
 81366	3	Blackrock Clan Mantle
 60275	2	Blatarg's Mantle
@@ -302,13 +341,29 @@ DmorphOcto_ItemExtra[3] = [[
 83065	3	Brave's Feathered Mantle
 47331	4	Cenarion Mantle
 47339	4	Cenarion Shoulderpads
+100843	4	Cenarion Spaulders
 81167	3	Chieftain's Ceremonial Mantle
 60439	3	Chieftain's Mantle
 60555	3	Cloudweaver Mantle
+33717	3	Combatant's Chain Spaulders
+102590	3	Combatant's Chain Spaulders
+33753	3	Combatant's Dragonhide Epaulets
+104360	3	Combatant's Dragonhide Epaulets
+33585	3	Combatant's Lamellar Pauldrons
+33843	3	Combatant's Leather Epaulets
+33477	3	Combatant's Mail Spaulders
+33405	3	Combatant's Plate Shoulderguards
+33681	3	Combatant's Plate Shoulderguards
+102172	3	Corpsman's Mail Spaulders
+33825	3	Corpsman's Satin Mantle
 50418	3	Corrupted Plate Pauldrons
+102131	3	Crystal Pauldrons
 81361	3	Dampener's Pauldrons
 50505	1	Darkmaster's Shoulders
+104262	4	Deep Earth Spaulders
 70037	2	Defias Enforcer Shoulderguards
+104385	4	Defiler's Chain Pauldrons
+104437	4	Defiler's Leather Shoulders
 83285	2	Diviner's Epaulets
 47293	4	Doomcaller's Spaulders
 61335	3	Dragonbane Pauldrons
@@ -329,12 +384,15 @@ DmorphOcto_ItemExtra[3] = [[
 47095	4	Enigma Epaulets
 70064	3	Epaulets of Courage
 60182	3	Epaulets of Forest Wisdom
+33001	4	Epaulets of Prophecy
 80186	3	Epaulets of the Damned
 81051	3	Epaulets of the Dark Reaver
 61027	3	Epaulets of the Forgotten Past
+104511	3	Epaulets of the Forgotten Past
 47115	4	Epaulets of the Guardian
 61586	2	Explorer's Shoulders
 47277	4	Felheart Mantle
+104137	4	Felheart Shoulder Pads
 60209	2	Fleet Pauldrons
 60215	3	Foreststrider Spaulders
 55512	4	Forgotten Hide Pauldrons
@@ -344,6 +402,9 @@ DmorphOcto_ItemExtra[3] = [[
 47363	4	Genesis Spaulders
 84601	3	Grass of Eternity
 100279	3	Grass of Eternity
+100753	3	Grass of Eternity
+103245	3	Grass of Eternity
+103912	3	Grass of Eternity
 50193	3	Gravewalker Pauldrons
 61324	3	Greymane Shoulders
 61604	2	Greyshire Pauldrons
@@ -358,6 +419,7 @@ DmorphOcto_ItemExtra[3] = [[
 50040	1	High Inquisitor's Shoulders
 33368	3	Hydracoil Spaulders
 60572	3	Incendosaur Skin Pauldrons
+102892	3	Incendosaur Skin Pauldrons
 58299	3	Invoker's Hollow Mantle
 50305	1	Ironforge Guard's Shoulders
 47017	4	Judgement Shoulderguards
@@ -392,8 +454,10 @@ DmorphOcto_ItemExtra[3] = [[
 61756	4	Nordanaar Guardian Spaulders
 60610	2	Ogre-Head Pauldrons
 50367	1	Orgrimmar Grunt Pauldrons
+33723	4	Partisan's Chain Spaulders
 65014	4	Pauldron of Deflection
 60792	3	Pauldrons of Elusiveness
+101447	3	Pauldrons of Elusiveness
 47241	4	Pauldrons of Might
 60727	3	Pauldrons of Sealed Magics
 47137	4	Pauldrons of Ten Storms
@@ -402,6 +466,7 @@ DmorphOcto_ItemExtra[3] = [[
 51018	1	Pauldrons of the Templar
 61649	3	Pauldrons of the Timbermaw
 61038	3	Pauldrons of the Timeless
+58164	2	Pauldrons of War
 47249	4	Pauldrons of Wrath
 83293	2	Pillager's Amice
 47298	4	Plagueheart Mantle
@@ -414,6 +479,7 @@ DmorphOcto_ItemExtra[3] = [[
 51047	3	Sacrosanct Epaulets
 61539	2	Scaleshard Shoulders
 50099	1	Scholomance Academy Shoulders
+58170	2	Scrap Metal Pauldrons
 83072	3	Seer's Feathered Mantle
 50414	1	Sen'jin Guard's Shoulders
 60751	2	Sentinel's Pauldrons
@@ -428,8 +494,12 @@ DmorphOcto_ItemExtra[3] = [[
 47403	4	Shoulderpads of the Talon
 47207	4	Shoulderpads of Transcendence
 81264	4	Shoulderpads of True Flight
+103130	4	Shoulderpads of True Flight
 70050	3	Shoulderplates of Misfortune
+104266	4	Spaulders of Heroism
 51787	4	Spaulders of Insight
+103079	4	Spaulders of Might
+104560	4	Spaulders of Might
 47145	4	Spaulders of Ten Storms
 47215	4	Spaulders of the Oracle
 47391	4	Spaulders of the Talon
@@ -447,7 +517,12 @@ DmorphOcto_ItemExtra[3] = [[
 58147	3	Stormreaver Mantle
 50313	1	Stormwind Guard's Shoulders
 50335	1	Stromgarde Guard's Shoulders
+58267	2	Sunkissed Shoulderpads
+33459	3	Tactician's Dreadweave Shoulders
 33735	3	Tactician's Dreadweave Shoulders
+101676	3	Tactician's Mail Spaulders
+33807	3	Tactician's Satin Mantle
+33699	3	Tactician's Silk Spaulders
 60975	2	Tel Co. Huntsman Pauldrons
 60346	3	The Ogre Mantle
 50328	1	Theramore Guard's Shoulders
@@ -460,6 +535,7 @@ DmorphOcto_ItemExtra[3] = [[
 60316	3	Truthkeeper Mantle
 80710	2	Turtle Scale Shoulderguards
 80753	3	Vileplate Pauldrons
+33210	3	Withered Bark Pauldrons
 ]]
 DmorphOcto_ItemExtra[4] = [[
 51890	3	Adventurer's Shirt
@@ -500,6 +576,7 @@ DmorphOcto_ItemExtra[4] = [[
 20897	0	Lookout's Shirt
 91780	2	Lovely Green Shirt
 51240	2	Master Dragonslayer's Shirt
+102124	1	Master Dragonslayer's Shirt
 69103	1	Netherforged Warbrands
 69108	1	Night Tribal Tattoo
 69106	1	Nightscale Markings
@@ -559,8 +636,10 @@ DmorphOcto_ItemExtra[5] = [[
 83066	3	Brave's Battle Harness
 60784	4	Breastplate of Beast Mastery
 61275	4	Breastplate of Earthen Might
+100953	4	Breastplate of Earthen Might
 70055	3	Breastplate of Forgotten Valor
 70058	3	Breastplate of Fortitutde
+104301	4	Breastplate of Heroism
 47138	4	Breastplate of Ten Storms
 83416	4	Breastplate of the Chromatic Flight
 81052	3	Breastplate of the Dark Reaver
@@ -587,6 +666,7 @@ DmorphOcto_ItemExtra[5] = [[
 47272	4	Chestguard of the Brotherhood
 47146	4	Chestpiece of Ten Storms
 47242	4	Chestplate of Might
+104421	4	Chestplate of Might
 51771	4	Chestplate of the Dark Reaver
 47250	4	Chestplate of Wrath
 81218	2	Chieftain's Ceremonial Harness
@@ -594,9 +674,22 @@ DmorphOcto_ItemExtra[5] = [[
 60556	3	Cloudweaver Vest
 61269	3	Clutchweave Robe
 58106	3	Coal-Dusted Worker's Vest
+33718	3	Combatant's Chain Breastplate
+102591	3	Combatant's Chain Breastplate
+33754	3	Combatant's Dragonhide Hauberk
+102224	3	Combatant's Dragonhide Hauberk
+104351	3	Combatant's Dragonhide Hauberk
+33586	3	Combatant's Lamellar Chestplate
+104308	3	Combatant's Leather Chestpiece
+33478	3	Combatant's Mail Armor
+33406	3	Combatant's Plate Armor
+33682	3	Combatant's Plate Armor
+103037	3	Combatant's Plate Armor
+104485	3	Combatant's Plate Armor
 80213	1	Comfy Robe
 81015	2	Cook's Apron
 80708	2	Cookie's Apron
+33826	3	Corpsman's Satin Vestments
 61516	2	Corrupt Chainmail
 41213	1	Cream Dress Coat
 51741	3	Cryptbone Hauberk
@@ -616,13 +709,16 @@ DmorphOcto_ItemExtra[5] = [[
 41063	3	Doctor's Labcoat
 47294	4	Doomcaller's Raiments
 36018	2	Draenic Wanderer Harness
+58111	2	Dragonmaw Hauberk
 47263	4	Dreadnaught Chestplate
 47383	4	Dreamwalker Raiments
 47374	4	Dreamwalker Vest
 50343	1	Dun Morogh Mountaineer Chestguard
+41916	2	Dune Wanderer's Hauberk
 69149	1	Dusk Star Gown
 41017	1	Dust-covered Robe
 47122	4	Earthfury Breastplate
+47130	4	Earthfury Raiments
 65024	4	Earthguard Tunic
 47164	4	Earthshatter Breastplate
 58237	4	Emberwoven Binding Garments
@@ -636,6 +732,7 @@ DmorphOcto_ItemExtra[5] = [[
 83207	3	Feymist Robe
 65039	4	Fiery Chain Breastplate
 60542	3	Figgle's Coveralls
+102686	3	Figgle's Coveralls
 41578	3	Flamekeeper's Robe
 81021	2	Flashfreeze Robe
 83260	3	Footman's Breastplate
@@ -656,6 +753,7 @@ DmorphOcto_ItemExtra[5] = [[
 41255	1	Formal Teal Waistcoat
 41256	1	Formal White Waistcoat
 41257	1	Formal Yellow Waistcoat
+103055	3	Freezing Lich Robes
 47101	4	Frostfire Vestments
 41088	1	Fur-Trimmed Fir Gown
 47369	4	Genesis Raiments
@@ -704,15 +802,9 @@ DmorphOcto_ItemExtra[5] = [[
 60390	4	Jacket of the Scarlet Admiral
 69117	1	Jaina Proudmoore Robe
 41092	1	Jingle Belle Frock
+102893	3	Jinxed Hoodoo Skin
 47018	4	Judgement Chestguard
 47026	4	Judgement Chestplate
-36000	0	Kazgrim Test Druid Chest 1
-36001	0	Kazgrim Test Druid Chest 2
-36002	0	Kazgrim Test Druid Chest 3
-36003	0	Kazgrim Test Druid Chest 4
-83049	0	Kazgrim Test Troll Chest
-83052	0	Kazgrim Test Troll Feather Chest
-36006	0	Kazgrim Test Troll red Chest
 61345	2	Kimono of the Sea
 83407	2	Kodo Hide Vest
 69122	1	Kul Tiras Archmage Robe
@@ -738,6 +830,7 @@ DmorphOcto_ItemExtra[5] = [[
 41211	1	Navy Dress Coat
 50514	1	Necromancer's Cuirass
 47286	4	Nemesis Raiments
+105	0	Neophyte's Robe
 20891	0	Neophyte's Robe
 69137	1	Nephelae Gown
 69141	1	Nereid Gown
@@ -751,6 +844,7 @@ DmorphOcto_ItemExtra[5] = [[
 60213	3	Outrider Chain
 60880	2	Packrunner Harness
 80713	2	Padded Keeper Tunic
+33850	4	Partisan's Leather Chestpiece
 69131	1	Peach Garden Robes
 83294	3	Pillager's Robe
 51736	4	Plague-Infected Robe
@@ -791,6 +885,8 @@ DmorphOcto_ItemExtra[5] = [[
 47044	4	Redemption Chestguard
 47053	4	Redemption Chestplate
 61250	3	Reedwoven Tunic
+104059	3	Reedwoven Tunic
+104512	3	Reedwoven Tunic
 41186	2	Reefscale Robe
 61325	3	Regal Goldforged Breastplate
 61319	3	Regal Robes of the Regent
@@ -804,15 +900,18 @@ DmorphOcto_ItemExtra[5] = [[
 61396	2	Robe of Humility
 61326	3	Robe of Light's Ambassador
 65003	4	Robe of Sacrifice
+103246	4	Robe of Sacrifice
 100159	4	Robe of the Archmage
 80816	2	Robe of the Burning Blade
 61002	3	Robe of the Custodian
+102352	3	Robe of the Custodian
 61206	4	Robe of the Dreamways
 41056	2	Robe of the Obedient
 47230	4	Robes of Pestilence
 61603	2	Robes of Ravenshire
 69128	1	Robes of Spring
 83079	3	Robes of the Archdruid
+42360	2	Robes of the Bonerattler
 58142	3	Robes of the Dukedom
 80776	3	Robes of the Eredar
 47110	4	Robes of the Guardian
@@ -860,9 +959,14 @@ DmorphOcto_ItemExtra[5] = [[
 60659	2	Strom Defender's Vest
 50330	1	Stromgarde Guard's Chestplate
 60284	2	Swamplink Harness
+33460	3	Tactician's Dreadweave Robe
 33736	3	Tactician's Dreadweave Robe
+33496	3	Tactician's Mail Armor
+33808	3	Tactician's Satin Vestments
+33700	3	Tactician's Silk Vestments
 41217	1	Tan Dress Coat
 80131	2	Tanned Hide Vest
+108	2	Tattered Defias Rags
 41219	1	Teal Dress Coat
 61519	2	Tel Co. Chestguard
 60973	2	Tel Co. Vest
@@ -885,6 +989,9 @@ DmorphOcto_ItemExtra[5] = [[
 65021	4	Verdant Dreamer's Breastplate
 58192	3	Vest of Dark Desires
 61284	4	Vest of Encroaching Darkness
+101990	4	Vest of Encroaching Darkness
+102445	4	Vest of Encroaching Darkness
+197	2	Vest of the Beastkeeper
 41157	1	Vest of the Covenant
 60609	2	Vest of the Messenger
 47398	4	Vest of the Talon
@@ -908,6 +1015,7 @@ DmorphOcto_ItemExtra[5] = [[
 ]]
 DmorphOcto_ItemExtra[6] = [[
 50428	3	Ancient Clutch
+103740	4	Arcanist Belt
 47083	4	Arcanist Cord
 80846	3	Arena Belt
 80847	3	Arena Cord
@@ -915,10 +1023,12 @@ DmorphOcto_ItemExtra[6] = [[
 80848	3	Arena Sash
 81265	4	Ashskin Belt
 51784	4	Belt of Archaic Power
+116	3	Belt of Binding
 41127	2	Belt of Forgiving
 47149	4	Belt of Ten Storms
 80714	3	Binding Chain
 61331	3	Blackcowl Sash
+42268	3	Bloodhoof Sash
 83429	3	Bloody Gladiator's Belt
 60350	3	Bloody Gladiator's Cord
 60358	3	Bloody Gladiator's Girdle
@@ -926,12 +1036,19 @@ DmorphOcto_ItemExtra[6] = [[
 50800	3	Bramblethorn Girdle
 83069	3	Brave's Leather Belt
 60927	2	Breen's Girdle
+35009	4	Campaigner's Belt
+35010	4	Campaigner's Belt
+35011	4	Campaigner's Belt
+35012	4	Campaigner's Belt
+35013	4	Campaigner's Belt
 35014	4	Campaigner's Belt
+104486	4	Campaigner's Belt
 47343	4	Cenarion Girdle
 47335	4	Cenarion Sash
 80125	1	Charred Belt
 81221	2	Chieftain's Ceremonial Belt
 61758	4	Cloverlink Belt
+104422	4	Cloverlink Belt
 83447	3	Clutch of Hivaxxis
 61628	2	Clutch of Joshua
 83531	4	Clutch of Mending Winds
@@ -961,6 +1078,7 @@ DmorphOcto_ItemExtra[6] = [[
 82955	2	Explorer's League Cinch
 51401	2	Farmer's Sash
 47281	4	Felheart Sash
+100755	4	Felheart Sash
 60161	2	Flaxwhisker Sash
 80115	1	Frayed Sash
 47104	4	Frostfire Cord
@@ -1003,7 +1121,6 @@ DmorphOcto_ItemExtra[6] = [[
 60590	2	Isle Watcher's Sash
 47029	4	Judgement Girdle
 47021	4	Judgement Waistguard
-83039	0	Kazgrim Test Goblin Belt
 50317	1	Kul Tiras Marine Girgle
 47013	4	Lawbringer Girdle
 47005	4	Lawbringer Waistguard
@@ -1021,6 +1138,7 @@ DmorphOcto_ItemExtra[6] = [[
 50358	1	Night Watch Guard Waist
 61288	3	Nightwoven Belt
 58184	3	Obedient Shackles
+104472	4	Onslaught Girdle
 50363	1	Orgrimmar Grunt Girdle
 61568	3	Overcharged Belt
 47302	4	Plagueheart Sash
@@ -1035,6 +1153,7 @@ DmorphOcto_ItemExtra[6] = [[
 61497	3	Ravenwood Belt
 47047	4	Redemption Waistguard
 61254	3	Reedmesh Belt
+100844	3	Reedmesh Belt
 41105	1	Refugee's Sash
 60626	3	Regal Goldthreaded Sash
 80614	3	Revantusk Mystic's Belt
@@ -1071,6 +1190,7 @@ DmorphOcto_ItemExtra[6] = [[
 51785	4	Stoneslate Belt
 47359	4	Stormrage Girdle
 47351	4	Stormrage Sash
+58131	2	Stormreaver Belt
 50309	1	Stormwind Guard's Waistguard
 50331	1	Stromgarde Guard's Waistguard
 41116	1	Sunstrider Leather Belt
@@ -1101,6 +1221,7 @@ DmorphOcto_ItemExtra[6] = [[
 61290	3	Zephyrian Girdle
 ]]
 DmorphOcto_ItemExtra[7] = [[
+58259	4	Advisor's Trousers of the Eldreth
 100649	4	Advisor's Trousers of the Eldreth
 61239	4	Ancient Jade Leggings
 58045	3	Ancient Legplates
@@ -1134,8 +1255,19 @@ DmorphOcto_ItemExtra[7] = [[
 65036	4	Chromatic Leggings
 41846	3	Cindermaw Leggings
 60557	3	Cloudweaver Kilt
+33720	3	Combatant's Chain Legguards
+102592	3	Combatant's Chain Legguards
+33756	3	Combatant's Dragonhide Leggings
+33588	3	Combatant's Lamellar Legplates
+33480	3	Combatant's Mail Leggings
+33408	3	Combatant's Plate Legguards
+33684	3	Combatant's Plate Legguards
+101793	3	Combatant's Plate Legguards
+104487	3	Combatant's Plate Legguards
 61597	3	Conspirator's Trickpockets
 51877	1	Copper Scale Leggings
+33516	3	Corpsman's Mail Leggings
+33828	3	Corpsman's Satin Pants
 60481	2	Corsair's Leggings
 55380	2	Craftsman's Pants
 81123	3	Crimson Defender's Leggings
@@ -1148,6 +1280,7 @@ DmorphOcto_ItemExtra[7] = [[
 83454	3	Deathrune Leggings
 60277	2	Deepfrond Leggings
 50033	1	Demon Hunter Kilt
+41917	2	Desert Seeker's Pants
 41035	1	Dirty Trousers
 83280	2	Diviner's Pantaloons
 47295	4	Doomcaller's Leggings
@@ -1202,13 +1335,6 @@ DmorphOcto_ItemExtra[7] = [[
 47030	4	Judgement Leggings
 47022	4	Judgement Legguards
 81365	3	Kargron's Leggings
-83038	0	Kazgrim Test Goblin Pants
-83042	0	Kazgrim Test Orc Belt 2
-83043	0	Kazgrim Test Orc Belt 3
-83044	0	Kazgrim Test Orc Belt 4
-83054	0	Kazgrim Test Troll Feather Pants
-83056	0	Kazgrim Test Troll Pants
-36008	0	Kazgrim Test Troll red Pants
 84032	4	Kilt of the Devoted
 83409	2	Kodo Hide Leggings
 50318	1	Kul Tiras Marine Breeches
@@ -1216,7 +1342,9 @@ DmorphOcto_ItemExtra[7] = [[
 47006	4	Lawbringer Legguards
 61515	2	Leafcovered Leggings
 60503	3	Leggings of Alacrity
+101449	3	Leggings of Alacrity
 61505	2	Leggings of Fiery Temper
+103300	2	Leggings of Fiery Temper
 47246	4	Leggings of Might
 47231	4	Leggings of Pestilence
 33006	4	Leggings of Prophecy
@@ -1232,11 +1360,16 @@ DmorphOcto_ItemExtra[7] = [[
 61058	3	Leggings of the Nullifier
 47393	4	Leggings of the Talon
 47254	4	Leggings of Wrath
+102947	4	Leggings of Wrath
+104423	4	Leggings of Wrath
 47273	4	Legguards of the Brotherhood
 51775	4	Legguards of the Dark Reaver
 61035	3	Legguards of the Last Stand
+104366	4	Legplates of Heroism
+104062	4	Legplates of Might
 60407	3	Legplates of the Raider
 55109	4	Legwraps of Meticulous Planning
+196	1	Lemon Spring Shorts
 55099	4	Leysteel Legplates
 47075	4	Lionheart Leggings
 47069	4	Lionheart Legguards
@@ -1265,10 +1398,13 @@ DmorphOcto_ItemExtra[7] = [[
 47237	4	Pants of Pestilence
 47204	4	Pants of Prophecy
 47150	4	Pants of Ten Storms
+104554	4	Pants of Ten Storms
 81112	1	Pants of the Fire Festival
 81111	1	Pants of the Midsummer Solstice
 47405	4	Pants of the Talon
 47212	4	Pants of Transcendence
+33852	4	Partisan's Leather Leggings
+204	1	Peach Spring Shorts
 83297	2	Pillager's Pantaloons
 83029	1	Pink Lace Skirt
 51776	4	Plagued Mind Leggings
@@ -1300,6 +1436,7 @@ DmorphOcto_ItemExtra[7] = [[
 41192	2	Royalist Legguards
 60289	3	Rune-Etched Legplates
 55058	4	Rune-Inscribed Plate Leggings
+102385	4	Salamander Scale Pants
 60765	2	Sandmoon Greaves
 61553	3	Satyrkin Leggings
 50100	1	Scholomance Academy Pants
@@ -1307,6 +1444,7 @@ DmorphOcto_ItemExtra[7] = [[
 50411	1	Sen'jin Guard's Pants
 60749	2	Sentinel's Leggings
 83041	1	Shadow Lace Skirt
+103057	3	Skyshroud Leggings
 61279	3	Slateplate Leggings
 83412	2	Steel Plate Legguards
 41719	2	Stonelink Leggings
@@ -1322,7 +1460,12 @@ DmorphOcto_ItemExtra[7] = [[
 50332	1	Stromgarde Guard's Greaves
 60286	2	Swampseeker's Kilt
 55472	3	Swiftstrike Kilt
+33462	3	Tactician's Dreadweave Leggings
 33738	3	Tactician's Dreadweave Leggings
+33498	3	Tactician's Mail Leggings
+104535	3	Tactician's Mail Leggings
+33810	3	Tactician's Satin Pants
+33702	3	Tactician's Silk Leggings
 41261	1	Tan Fall-Front Trousers
 60972	2	Tel Co. Jungle Pants
 50325	1	Theramore Guard's Greaves
@@ -1334,18 +1477,21 @@ DmorphOcto_ItemExtra[7] = [[
 47117	4	Trousers of the Guardian
 47217	4	Trousers of the Oracle
 47399	4	Trousers of the Talon
+58144	3	Vander Legguards
 51025	3	Vilebranch Seer's Dress
 50377	1	Wanderer's Pants
 20899	0	Warder's Pants
 51795	1	Warm Pants
 41260	1	White Fall-Front Trousers
 83048	1	White Lace Skirt
+241	2	Windcrest Pants
 83470	3	Wraithscale Leggings
 ]]
 DmorphOcto_ItemExtra[8] = [[
 69153	1	Alseid Slippers
 20895	0	Apprentice's Boots
 102822	4	Arcanist Boots
+103739	4	Arcanist Boots
 47085	4	Arcanist Slippers
 61056	3	Arcanoweave Boots
 58215	4	Ash-Forged Greaves
@@ -1374,6 +1520,8 @@ DmorphOcto_ItemExtra[8] = [[
 55280	4	Boots of Elemental Fury
 61327	3	Boots of Espionage
 61005	3	Boots of Flowing Sands
+104305	4	Boots of Heroism
+102536	4	Boots of Might
 47232	4	Boots of Pestilence
 58141	2	Boots of Silence
 47151	4	Boots of Ten Storms
@@ -1394,8 +1542,20 @@ DmorphOcto_ItemExtra[8] = [[
 80117	1	Charred Boots
 81219	2	Chieftain's Ceremonial Anklewraps
 41013	1	Coal Drudgers
+42074	2	Coastwalker Boots
+33721	3	Combatant's Chain Boots
+102593	3	Combatant's Chain Boots
+33757	3	Combatant's Dragonhide Boots
+102225	3	Combatant's Dragonhide Boots
+33589	3	Combatant's Lamellar Boots
+33481	3	Combatant's Mail Boots
+33409	3	Combatant's Plate Boots
+33685	3	Combatant's Plate Boots
+104488	3	Combatant's Plate Boots
 80717	2	Commander's Greaves
 80730	2	Convict Moccasins
+33517	3	Corpsman's Mail Boots
+33829	3	Corpsman's Satin Sandals
 41049	2	Cracked Tin Boots
 50503	1	Darkmaster's Boots
 50339	1	Darnassus Sentinel Boots
@@ -1404,10 +1564,12 @@ DmorphOcto_ItemExtra[8] = [[
 50353	1	Deathguard's Boots
 80720	3	Deep Striders
 61272	3	Deepstone Boots
+104386	3	Defiler's Chain Greaves
 50032	1	Demon Hunter Sandals
 51882	1	Demon Skin Boots
 83283	2	Diviner's Boots
 47296	4	Doomcaller's Slippers
+58115	2	Dragonmaw Greaves
 65100	4	Dragonspur Boots
 47268	4	Dreadnaught Sabatons
 61367	4	Dreamsteel Boots
@@ -1421,14 +1583,17 @@ DmorphOcto_ItemExtra[8] = [[
 47169	4	Earthshatter Sabatons
 80754	3	Earthsong Treaders
 47098	4	Enigma Slippers
+104536	3	Faith Healer's Boots
 61767	2	Feathermoon Runners
 47283	4	Felheart Boots
+104523	4	Felheart Slippers
 58123	3	Felhoof Sabatons
 65035	4	Flarecore Boots
 81370	3	Footpads of the Corruptor
 83241	2	Freebooter's Footpads
 83455	3	Frostchain Greaves
 47106	4	Frostfire Slippers
+134	2	Frostmane Battle Boots
 41101	1	Frosty Winter Slippers
 47366	4	Genesis Boots
 47371	4	Genesis Treads
@@ -1442,6 +1607,7 @@ DmorphOcto_ItemExtra[8] = [[
 41096	1	Greatfather's Boots
 47274	4	Greaves of the Brotherhood
 61024	3	Greaves of the Elusive
+101450	3	Greaves of the Elusive
 41100	1	Green Winter Slippers
 61377	2	Greymane Sabatons
 83255	2	Grifter's Boots
@@ -1457,16 +1623,12 @@ DmorphOcto_ItemExtra[8] = [[
 60524	2	Horseskin Boots
 41098	1	Icefur Boots
 60568	3	Incendosaur Skin Boots
+102363	3	Incendosaur Skin Boots
 24146	0	Initiate's Boots
 61348	2	Inlaid Plate Boots
 50303	1	Ironforge Guard's Boots
 47023	4	Judgement Greaves
 47031	4	Judgement Sabatons
-83046	0	Kazgrim Test Defias Boots
-83037	0	Kazgrim Test Goblin Boots
-83050	0	Kazgrim Test Troll Boots
-83053	0	Kazgrim Test Troll Feather Boots
-36007	0	Kazgrim Test Troll red Boots
 83406	2	Kodo Hide Boots
 50319	1	Kul Tiras Marine Boots
 47007	4	Lawbringer Greaves
@@ -1481,6 +1643,8 @@ DmorphOcto_ItemExtra[8] = [[
 55081	4	Manadrenched Feather Slippers
 55092	4	Manahide Slippers
 61297	4	Marshtreader Slippers
+100846	4	Marshtreader Slippers
+103910	4	Marshtreader Slippers
 69154	1	Meliae Slippers
 83442	3	Miasma Walkers
 51791	2	Mountaineer's Boots
@@ -1503,6 +1667,7 @@ DmorphOcto_ItemExtra[8] = [[
 50365	1	Orgrimmar Grunt Boots
 69164	1	Orphne Slippers
 51888	1	Painted Chain Boots
+33727	4	Partisan's Chain Boots
 55104	4	Pawn's Advance
 81306	3	Petrolspill Boots
 83296	2	Pillager's Shoes
@@ -1538,6 +1703,7 @@ DmorphOcto_ItemExtra[8] = [[
 81055	3	Sabatons of the Dark Reaver
 60435	3	Sabatons of the Elite Guard
 61246	4	Sabatons of the Endless March
+102134	4	Sabatons of the Endless March
 51016	1	Sabatons of the Templar
 47255	4	Sabatons of Wrath
 47226	4	Sandals of Faith
@@ -1555,6 +1721,7 @@ DmorphOcto_ItemExtra[8] = [[
 60747	2	Sentinel's Boots
 61301	2	Shaderun Boots
 61281	4	Shadeweave Boots
+100991	3	Shadowcraft Boots
 65009	3	Shadowskin Boots
 55039	3	Sharpshooter's Boots
 81115	1	Shoes of the Fire Festival
@@ -1565,6 +1732,7 @@ DmorphOcto_ItemExtra[8] = [[
 69158	1	Silver Nephelae Slippers
 69165	1	Silver Orphne Slippers
 69152	1	Silver Star Sandals
+33007	4	Slippers of Prophecy
 47118	4	Slippers of the Guardian
 47400	4	Slippers of the Talon
 80670	2	Sludge-drenched Sabatons
@@ -1580,12 +1748,18 @@ DmorphOcto_ItemExtra[8] = [[
 61389	2	Stormlight Boots
 47353	4	Stormrage Slippers
 47361	4	Stormrage Treads
+58178	2	Stormreaver Boots
 50311	1	Stormwind Guard's Sabatons
 50333	1	Stromgarde Guard's Sabatons
 61521	2	Strongstep Boots
 84004	4	Subjugator's Boots
+33463	3	Tactician's Dreadweave Boots
 33739	3	Tactician's Dreadweave Boots
+33499	3	Tactician's Mail Boots
+33811	3	Tactician's Satin Sandals
+33703	3	Tactician's Silk Footwraps
 61007	4	Temporal Bronze Boots
+102666	4	Temporal Bronze Boots
 41107	1	Thalassian Sentinel Boots
 60553	3	The Soot Boots
 50326	1	Theramore Guard's Sabatons
@@ -1626,8 +1800,10 @@ DmorphOcto_ItemExtra[9] = [[
 41014	1	Ash Covered Shackles
 84604	3	Aurastone Bracers
 83226	3	Bands of Ranathos
+55089	4	Bands of the Surgebreaker
 61440	3	Barkskin Elder Cuffs
 61723	2	Bearbane Cuffs
+55106	4	Bindings of Contained Magic
 55367	3	Bindings of Luminance
 33003	4	Bindings of Prophecy
 55331	3	Blackrock Ironclamps
@@ -1639,6 +1815,7 @@ DmorphOcto_ItemExtra[9] = [[
 60354	3	Bloody Gladiator's Wristguards
 60928	2	Bogplate Shackles
 61245	3	Bracers of Brambled Vines
+104490	4	Bracers of Heroism
 60423	3	Bracers of Lost Souls
 47201	4	Bracers of Prophecy
 83532	4	Bracers of the Crescent Moon
@@ -1646,6 +1823,7 @@ DmorphOcto_ItemExtra[9] = [[
 50432	3	Bracers of the Inevitable Fate
 80711	3	Bracers of Wild Growth
 41310	1	Bronze Cuffed Bangles
+104355	4	Cenarion Wristguards
 61257	4	Cloudplate Wristguards
 83459	3	Consumer Shackles
 55157	1	Copper Bangle
@@ -1662,12 +1840,15 @@ DmorphOcto_ItemExtra[9] = [[
 61282	3	Deepshadow Bracers
 50035	1	Demon Hunter Bracers
 61493	2	Dockmaster Cuffs
+58113	2	Dragonmaw Bracers
 61357	4	Dreamhide Bracers
 61366	4	Dreamsteel Bracers
 61362	4	Dreamthread Bracers
 50348	1	Dun Morogh Mountaineer Armplates
 41074	1	Dusty Cuffs
 80851	3	Earthclad Bracers
+47131	4	Earthfury Bindings
+47123	4	Earthfury Bracelets
 61630	2	Ebonmere Vambraces
 56050	2	Elaborate Golden Bracelets
 56061	4	Embergem Cuffs
@@ -1688,10 +1869,12 @@ DmorphOcto_ItemExtra[9] = [[
 60591	2	Hallister's Cuffs
 80721	2	Heavy Prison Cuffs
 55330	2	Hydrathorn Bracers
+213	2	Ice-Stitched Cuffs
 61052	3	Infinite Scale Bracers
 84505	4	Infused Wildthorn Bracers
 60887	2	Inlaid Wristwraps
 61188	4	Inscribed Runic Bracers
+55036	3	Lorekeeper Cuffs
 60388	3	Mariner's Cuffs
 56096	4	Mastercrafted Diamond Bangles
 55332	2	Monastery Emberbrace
@@ -1724,16 +1907,21 @@ DmorphOcto_ItemExtra[9] = [[
 60229	2	Tyrant Cuffs
 80784	3	Unbroken Prisoner's Cuffs
 60438	3	Vambraces of Kin'Tozo
+104272	3	Vambraces of the Sadist
+104425	3	Vambraces of the Sadist
 60379	2	Whispering Cuffs
 61321	3	Wildfeather Bracers
 41153	1	Winestained Bracers
 41182	1	Withered Bracers
 61598	3	Wraps of the Pauper
+55130	4	Wristwraps of Exiled Radiance
+104563	4	Zandalar Vindicator's Armguards
 ]]
 DmorphOcto_ItemExtra[10] = [[
 61253	4	Aetherforged Gauntlets
 61518	2	Apefist Pummelers
 61057	3	Arcanic Gloves
+104493	4	Arcanist Gloves
 47082	4	Arcanist Handwraps
 81215	2	Armguards of Anvilmar
 83289	2	Augerer's Gloves
@@ -1754,7 +1942,21 @@ DmorphOcto_ItemExtra[10] = [[
 81222	2	Chieftain's Ceremonial Handwraps
 60558	3	Cloudweaver Gloves
 41019	1	Coal Miner Gloves
+33719	3	Combatant's Chain Grips
+102595	3	Combatant's Chain Grips
+33755	3	Combatant's Dragonhide Gloves
+101707	3	Combatant's Dragonhide Gloves
+102226	3	Combatant's Dragonhide Gloves
+33587	3	Combatant's Lamellar Gloves
+100992	3	Combatant's Leather Handgrips
+33479	3	Combatant's Mail Gauntlets
+33407	3	Combatant's Plate Gauntlets
+33683	3	Combatant's Plate Gauntlets
+103038	3	Combatant's Plate Gauntlets
+104491	3	Combatant's Plate Gauntlets
 65038	4	Corehound Gloves
+33515	3	Corpsman's Mail Gauntlets
+33827	3	Corpsman's Satin Gloves
 55285	4	Crite's Holy Hands
 80771	3	Dark Paladin's Gauntlets
 80743	3	Darkcaster Gloves
@@ -1784,6 +1986,7 @@ DmorphOcto_ItemExtra[10] = [[
 55050	3	Essence Infused Leather Gloves
 81378	3	Eveningstar Gloves
 51400	2	Farmer's Gloves
+102985	3	Felcloth Gloves
 47280	4	Felheart Handwraps
 47140	4	Fists of Ten Storms
 83485	4	Fists of the Makers
@@ -1798,27 +2001,36 @@ DmorphOcto_ItemExtra[10] = [[
 42095	2	Gardening Gloves
 55281	4	Gauntlets of Elemental Fury
 70062	3	Gauntlets of Force
+104273	4	Gauntlets of Heroism
 61487	3	Gauntlets of Insight
 81019	3	Gauntlets of Myrmidon
 61013	3	Gauntlets of Temporal Guidance
 61050	3	Gauntlets of the Bogbeast
 60432	3	Gauntlets of the Elite Guard
+102314	3	Gauntlets of the Elite Guard
 55283	4	Gauntlets of the Grand Crusader
 60883	3	Gauntlets of the Khan
 60799	3	Gauntlets of the Lost Crusader
 51017	1	Gauntlets of the Templar
+104522	3	Gauntlets of Valor
 70051	3	Gauntlets of Wrangling
 61762	2	Gladewind Gloves
 55107	4	Gloves of Leyline Convergence
 51256	2	Gloves of Manathirst
 47244	4	Gloves of Might
+102537	4	Gloves of Might
 55098	4	Gloves of Nourishment
 47148	4	Gloves of Ten Storms
+104138	4	Gloves of the Hypnotic Flame
 80715	3	Gloves of the Lifted Cup
 55553	4	Gloves of the Primordial Burrower
 61040	3	Gloves of the Unknown
 61186	4	Gloves of Unwinding Mystery
 101490	4	Gloves of Unwinding Mystery
+101943	4	Gloves of Unwinding Mystery
+101991	4	Gloves of Unwinding Mystery
+103911	4	Gloves of Unwinding Mystery
+104537	4	Gloves of Unwinding Mystery
 47252	4	Gloves of Wrath
 41574	2	Gnoll Battle Gloves
 50396	1	Gnomeregan Guard's Gloves
@@ -1839,7 +2051,9 @@ DmorphOcto_ItemExtra[10] = [[
 47202	4	Handguards of Prophecy
 47210	4	Handguards of Transcendence
 41159	1	Handguards of Vengeance
+102384	3	Hands of the Exalted Herald
 55125	4	Handwraps of Dead Winds
+33004	4	Handwraps of Prophecy
 60577	4	Hateforge Grips
 50042	1	High Inquisitor's Gloves
 51765	3	Highlord's Grasp
@@ -1847,15 +2061,12 @@ DmorphOcto_ItemExtra[10] = [[
 65007	2	Imperial Plate Gauntlets
 80777	3	Impskin Gloves
 60582	3	Incendosaur Skin Gloves
+102727	3	Incendosaur Skin Gloves
 55378	3	Inventor's Mitts
 61384	3	Ionized Metal Grips
 50304	1	Ironforge Guard's Gloves
 47028	4	Judgement Gauntlets
 47020	4	Judgement Handguards
-83040	0	Kazgrim Test Goblin Gloves
-83055	0	Kazgrim Test Troll Feather Gloves
-83051	0	Kazgrim Test Troll Gloves
-36009	0	Kazgrim Test Troll red Gloves
 55354	4	Khadgar's Guidance
 60118	3	Kirin Tor Watch Grips
 61336	3	Knife Juggler Gloves
@@ -1875,6 +2086,7 @@ DmorphOcto_ItemExtra[10] = [[
 50366	1	Orgrimmar Grunt Gauntlets
 61298	3	Overgrown Gloves
 61300	2	Packmaster Gloves
+33725	4	Partisan's Chain Grips
 83295	2	Pillager's Grips
 41046	2	Pincer Mitts
 47301	4	Plagueheart Handwraps
@@ -1899,8 +2111,10 @@ DmorphOcto_ItemExtra[10] = [[
 80610	3	Revantusk Watcher's Handguards
 60632	2	Riftseeker Gloves
 60631	2	Riftwatcher Gloves
+42075	2	Riverflow Gloves
 83463	3	Rotworm Grips
 61266	4	Rune Infused Gauntlets
+101451	4	Rune Infused Gauntlets
 60287	3	Rune-Etched Grips
 50097	1	Scholomance Academy Gloves
 80121	1	Scorched Gloves
@@ -1923,7 +2137,11 @@ DmorphOcto_ItemExtra[10] = [[
 50312	1	Stormwind Guard's Gauntlets
 50334	1	Stromgarde Guard's Gauntlets
 70048	2	Surgeon's Gloves
+33461	3	Tactician's Dreadweave Gloves
 33737	3	Tactician's Dreadweave Gloves
+33497	3	Tactician's Mail Gauntlets
+33809	3	Tactician's Satin Gloves
+33701	3	Tactician's Silk Gloves
 61213	4	Talonwind Gauntlets
 81294	1	Technician's Field Gloves
 41115	1	Thalassian Handguards
@@ -1932,9 +2150,11 @@ DmorphOcto_ItemExtra[10] = [[
 58173	3	Thorngorged Fleshgloves
 50424	1	Thrall's Handguards
 51034	1	Trade Co. Standard-Issue Gauntlets
+150	2	Tribal War Gauntlets
 60699	2	Varlag's Clutches
 58042	2	Venomtouched Gloves
 51023	3	Vilebranch Grips
+102128	3	Voone's Vice Grips
 60224	2	Waveguard Gauntlets
 60907	3	Windbinder Gloves
 41183	1	Withered Gloves
@@ -1970,6 +2190,7 @@ DmorphOcto_ItemExtra[15] = [[
 61334	3	Cloak of the Dark Veil
 60487	4	Cloak of the Moo Lord
 80759	3	Cloak of the Protector
+42265	2	Cloudtotem Cloak
 83277	3	Dark Iron Adventurer Shawl
 41194	2	Deepmurk Cloak
 9496	2	Defias Mage Drape
@@ -1981,6 +2202,7 @@ DmorphOcto_ItemExtra[15] = [[
 55515	4	Felforged Nathrezan Veil
 64	2	Fiery Cloak
 61492	2	Fisherman's Shawl
+162	2	Frigid Cloak
 60772	2	Fur of Navakesh
 61622	2	Glaymore Shawl
 60181	3	Groveweave Cloak
@@ -1999,6 +2221,7 @@ DmorphOcto_ItemExtra[15] = [[
 41041	2	Moonfeather Cloak
 80835	2	Nagascale Cloak
 61249	4	Pelt of the Great Howler
+104274	4	Pelt of the Great Howler
 60929	2	Quagmire Shawl
 80505	3	Quel'dorei Hero's Cape
 80506	3	Quel'dorei Hero's Cloak
@@ -2007,6 +2230,7 @@ DmorphOcto_ItemExtra[15] = [[
 80605	3	Revantusk Hero's Cape
 80606	3	Revantusk Hero's Cloak
 80627	3	Revantusk Hero's Drape
+58258	4	Royal Guard Chain Cloak
 83486	4	Sandstalker's Shroud
 60762	2	Sandwalker Shawl
 60804	3	Shade of Reminisce
@@ -2030,8 +2254,10 @@ DmorphOcto_ItemExtra[15] = [[
 60214	3	Strongwind Cloak
 80796	3	Tattered Cloak of the Insurgency
 41569	2	Tattered Orcish Shawl
+158	2	Thalassian Silk Cape
 51048	3	The Veil of Hatred
 81308	2	Thunder Lizard's Hide
+102894	2	Thunder Lizard's Hide
 55084	4	Torn Wings of Midnight
 92053	2	Traveler's Backpack
 61210	4	Veil of Nightmare
@@ -2040,14 +2266,20 @@ DmorphOcto_ItemExtra[15] = [[
 51829	1	Windfeather Poncho
 61709	3	Windtalker Cape
 61010	4	Wing of the Time-Lord
+102132	4	Wing of the Time-Lord
+102315	4	Wing of the Time-Lord
+103143	4	Wing of the Time-Lord
 51757	3	Woven Ivy Cloak
 ]]
 DmorphOcto_ItemExtra[16] = [[
 60198	2	Acolyte's Staff
 51818	2	Agal's Ambusher
 55120	4	Al'Kazeth, Claw of Ruptured Elements
+33148	4	Alar'tar, Born from Hope
+104352	4	Alar'tar, Born from Hope
 41845	3	Algo'rath the Unbinder
 61453	4	Anasterian's Legacy
+102133	4	Anasterian's Legacy
 81199	3	Ancestral War Totem
 55504	4	Anchor of the Wavecutter
 81003	3	Ancient Hakkari Flayer
@@ -2059,8 +2291,10 @@ DmorphOcto_ItemExtra[16] = [[
 41076	4	Aspect of Seradane
 61448	4	Axe of Dormant Slumber
 60719	2	Axe of Fargosh
+104017	4	Axe of the Deep Woods
 60124	2	Axe of the Wildtusk
 60333	3	Azshara Keeper's Staff
+104551	4	Azuresong Mageblade
 80129	2	Balanced Hand Blade
 70011	2	Baneful Edge
 84507	2	Barkskin Fisher
@@ -2072,8 +2306,11 @@ DmorphOcto_ItemExtra[16] = [[
 41135	2	Blackstone Basher
 84600	4	Blackthorn's Blackjack
 61467	2	Blade of Caliban
+102906	4	Blade of Eternal Darkness
 61006	4	Blade of Infinite Mysteries
 100302	4	Blade of Infinite Mysteries
+100477	4	Blade of Infinite Mysteries
+104531	4	Blade of Infinite Mysteries
 60947	2	Blade of Marauder Kings
 60796	2	Blade of Rotting
 60845	2	Blade of Sentinel Hill
@@ -2090,12 +2327,14 @@ DmorphOcto_ItemExtra[16] = [[
 60294	2	Bloodstone Warblade
 61372	2	Bloody Pick
 60808	3	Bone Fracture
+104562	4	Bonereaver's Edge
 83440	3	Boneshatter Maul
 61667	2	Branch of the Great Tree
 81339	2	Brightwater Cutlass
 80727	2	Broken Bottle
 65012	2	Bronze Bruiser
 60475	2	Bronze Naga Trident
+33157	4	Broodwarden's Bulwarkblade
 80105	1	Bruiser Club
 51046	3	Call of Shadow
 80211	1	Camping Knife
@@ -2150,6 +2389,7 @@ DmorphOcto_ItemExtra[16] = [[
 50342	1	Darnassus Sentinel Glaive
 60757	2	Dawnshield Mace
 61295	3	Dawnstone Bludgeon
+102089	3	Dawnstone Bludgeon
 61185	4	Dawnstone Hammer
 58150	3	Deathedge Sabre
 41026	1	Deckman's Cudgel
@@ -2163,6 +2403,7 @@ DmorphOcto_ItemExtra[16] = [[
 58198	3	Dissolved Hookblade
 60546	3	Doomcaller Staff
 65008	4	Dream's Herald
+104287	4	Dream's Herald
 7010	1	Driftwood Fishing Pole
 4950	2	Dustwrought Cleaver
 61349	2	Dwarven Battle Bludgeon
@@ -2190,6 +2431,8 @@ DmorphOcto_ItemExtra[16] = [[
 60486	4	Fishbringer
 61534	3	Fisher's Harpoon
 61277	4	Fist of the Forgotten Order
+104271	4	Fist of the Forgotten Order
+104482	4	Fist of the Forgotten Order
 61669	2	Flameforged Handaxe
 41562	3	Flamescale Pike
 60384	3	Fleet Scimitar
@@ -2199,6 +2442,7 @@ DmorphOcto_ItemExtra[16] = [[
 81316	2	Foe Chopper
 55276	4	Forgotten Raven's Mallet
 50256	1	Fractured Sword
+205	2	Frost Seer Dirk
 2541	2	Gamemaster's Blade of Frost
 2540	2	Gamemaster's Blade of Silence
 10	1	Gamemaster's Broom of Doom
@@ -2212,6 +2456,7 @@ DmorphOcto_ItemExtra[16] = [[
 84030	4	Gauntlet of a Thousand Cuts
 61308	3	Gavel of Gilnean Justice
 61044	3	Gavel of the Northwind
+102587	3	Gavel of the Northwind
 60902	3	Gelkis Earthbinder
 80823	2	Gemstone Dagger
 80812	4	Gift of the Spider God
@@ -2259,11 +2504,6 @@ DmorphOcto_ItemExtra[16] = [[
 60828	2	Jeweled Letter Opener
 61163	2	Kaldorei Side-Blade
 61346	2	Katana of the Senshi
-36015	0	kazgrim test dk sword
-36010	0	kazgrim test totem a
-36011	0	kazgrim test totem b
-36012	0	kazgrim test totem c
-36013	0	kazgrim test totem d
 55348	4	Kirel'narak, the Death Sentence
 50615	3	Knife of Rites
 60951	3	Krog's Pike
@@ -2308,6 +2548,7 @@ DmorphOcto_ItemExtra[16] = [[
 51832	3	Nathrezim Wedge
 84503	4	Nature's Gift
 58194	3	Nethershard Sickle
+184	2	Oboka's Axe
 61610	2	Old Farmer's Pitchfork
 83259	3	Old Knighthood Blade
 55242	3	Opaline Illuminator
@@ -2339,6 +2580,7 @@ DmorphOcto_ItemExtra[16] = [[
 80529	3	Quel'dorei Magister's Channeling Blade
 80541	3	Quel'dorei Magister's Staff
 80538	3	Quel'dorei Ranger's Spear
+110	3	Rak'uhz the Coldbinder
 55116	4	Raka'shishi, Spear of the Adrift Hunt
 50031	1	Raytaf's Claw
 42124	3	Razor-sharp Skinning Knife
@@ -2346,6 +2588,7 @@ DmorphOcto_ItemExtra[16] = [[
 42110	1	Reinforced Fishing Rod
 42105	1	Reliable Fishing Rod
 60003	4	Remnants of an Old God
+58271	2	Repurposed Si:7 Dagger
 60138	2	Rethress Myrmidon Trident
 80635	3	Revantusk Defender's Deflector
 80642	3	Revantusk Mender's Cane
@@ -2362,6 +2605,7 @@ DmorphOcto_ItemExtra[16] = [[
 80637	3	Revantusk Watcher's Warblade
 55115	4	Riftcarver's Implement
 61031	3	Riftweaver
+101464	3	Riftweaver
 61537	3	Ripjaw's Tooth
 41559	2	Rock Carver
 80739	3	Rockbiter
@@ -2388,6 +2632,7 @@ DmorphOcto_ItemExtra[16] = [[
 61154	2	Savage Spear
 51834	3	Scarlet Pillar
 83262	3	Scarlet Wanderer's Hammer
+103900	3	Scepter of the Unholy
 80817	2	Scorched Bastard Sword
 60701	2	Scrapforged Greataxe
 60150	1	Scroll of Cow Portal
@@ -2432,6 +2677,7 @@ DmorphOcto_ItemExtra[16] = [[
 83471	3	Staff of Alarus
 81363	4	Staff of Azure Domination
 55148	2	Staff of Blossomed Jade
+103115	4	Staff of Dominance
 56052	2	Staff of Gallitrea
 61729	2	Staff of Shackled Lightning
 51764	3	Staff of Spreading Twilight
@@ -2449,6 +2695,10 @@ DmorphOcto_ItemExtra[16] = [[
 61042	3	Stormfist
 51790	2	Stormpike
 80728	2	Stormwind Guard Spear
+33881	4	Strategist's Demolisher
+33894	4	Strategist's Mageblade
+33883	4	Strategist's Stave
+33904	4	Strategist's War Staff
 42104	2	Sturdy Blade
 80501	2	Sturdy Broadsword
 42102	1	Sturdy Cane
@@ -2460,6 +2710,7 @@ DmorphOcto_ItemExtra[16] = [[
 80500	2	Tempered Argus Mace
 81060	4	Tempered Runeblade
 83564	4	Tempest's Rage
+102127	4	Tempest's Rage
 83269	4	Terrorblade Glaive
 27	1	Thalassian Dagger
 28	1	Thalassian Mace
@@ -2529,16 +2780,19 @@ DmorphOcto_ItemExtra[16] = [[
 55495	4	Zandalar Predator's Glaive
 ]]
 DmorphOcto_ItemExtra[17] = [[
+104288	4	Aegis of the Blood God
 51818	2	Agal's Ambusher
 55120	4	Al'Kazeth, Claw of Ruptured Elements
 60431	3	Almanac of Savagery
 102824	3	Almanac of Savagery
 41309	2	Amber Orb
 61453	4	Anasterian's Legacy
+102133	4	Anasterian's Legacy
 12798	3	Annihilator
 80804	3	Arcane Core
 41042	2	Arcane-infused Branch
 41109	1	Arcanist Dagger
+136	2	Archaeologist's Lantern
 51753	3	Archaic Slicer
 61448	4	Axe of Dormant Slumber
 41043	2	Bark Buckler
@@ -2565,13 +2819,17 @@ DmorphOcto_ItemExtra[17] = [[
 80727	2	Broken Bottle
 65012	2	Bronze Bruiser
 41313	2	Bronze Scepter
+33157	4	Broodwarden's Bulwarkblade
 55121	4	Bulwark of Enduring Earth
 61028	3	Bulwark of the Crimson Guard
+101037	3	Bulwark of the Crimson Guard
+102556	3	Bulwark of the Crimson Guard
 84033	4	Bulwark of the Light
 33135	4	Bulwark of Unshaken Earth
 80724	2	Cell Heater
 55350	4	Censer of Soulwarding
 60884	3	Ceremonial Magram Dagger
+58049	2	Charred Candle
 41847	3	Chieftain's Baton
 55498	4	Clamshell of the Depths
 60803	3	Claw of Darkness
@@ -2579,6 +2837,8 @@ DmorphOcto_ItemExtra[17] = [[
 61001	3	Claw of the Infinite
 55133	4	Claw of the Mageweaver
 61645	3	Clutch of Renewal
+102410	3	Clutch of Renewal
+103774	3	Clutch of Renewal
 60527	3	Coldheart Icicle
 60806	3	Coldheart Icicle
 55128	4	Comet Signaller
@@ -2597,6 +2857,7 @@ DmorphOcto_ItemExtra[17] = [[
 60536	3	Darkwind Glaive
 60757	2	Dawnshield Mace
 61295	3	Dawnstone Bludgeon
+102089	3	Dawnstone Bludgeon
 58150	3	Deathedge Sabre
 60539	3	Decoy Dragonling Remote
 61710	3	Defender of Nordrassil
@@ -2605,6 +2866,7 @@ DmorphOcto_ItemExtra[17] = [[
 56055	2	Draenethyst Baton
 58102	3	Dragonmaw Bulwark
 65008	4	Dream's Herald
+104287	4	Dream's Herald
 60819	3	Dustwallow Defender
 61601	2	Ebonmere Axe
 61627	2	Ebonmere Reaver
@@ -2623,10 +2885,12 @@ DmorphOcto_ItemExtra[17] = [[
 60800	2	Femur Club
 13699	2	Firestone
 58207	4	Fist of the Flamewaker
+102889	4	Fist of the Flamewaker
 80601	2	Flesh Cutter
 55276	4	Forgotten Raven's Mallet
 50379	1	Forsaken Guard's Shield
 70009	2	Frog Juice
+205	2	Frost Seer Dirk
 65013	3	Frostbound Slasher
 2541	2	Gamemaster's Blade of Frost
 2540	2	Gamemaster's Blade of Silence
@@ -2681,6 +2945,8 @@ DmorphOcto_ItemExtra[17] = [[
 51743	3	Lost Templar's Artifact
 41155	1	Lynx Sword
 42094	1	Makeshift Knife
+102970	4	Malistar's Defender
+103184	4	Malistar's Defender
 41111	1	Marauder Blade
 55336	2	Marine Root
 61314	3	Marshal's Blocker
@@ -2725,6 +2991,7 @@ DmorphOcto_ItemExtra[17] = [[
 42124	3	Razor-sharp Skinning Knife
 81319	3	Razorblade Buckler
 65030	3	Repaired Electro-Lantern
+58271	2	Repurposed Si:7 Dagger
 80643	3	Revantusk Defender's Bulwark
 80640	3	Revantusk Mender's Mojo
 80639	3	Revantusk Mystic's Hex Skull
@@ -2747,6 +3014,7 @@ DmorphOcto_ItemExtra[17] = [[
 81004	4	Sandswept Obsidian Dagger
 55090	4	Scaleshield of Azure Flight
 61238	4	Scaleshield of Emerald Flight
+33155	4	Scaleshield of Obsidian Flight
 60131	2	Scepter of Aka'sha
 60571	3	Scepter of the Molten Flame
 60150	1	Scroll of Cow Portal
@@ -2770,6 +3038,7 @@ DmorphOcto_ItemExtra[17] = [[
 70047	2	Smoldering Brand
 61670	3	Smuggled Greymane Protector
 41051	2	Snitch Shank
+157	2	Snowchilled Crest
 60726	3	Spellguard's Shield
 61737	3	Stablemaster's Nightlight
 61755	4	Stagwood Grasp
@@ -2777,6 +3046,8 @@ DmorphOcto_ItemExtra[17] = [[
 61042	3	Stormfist
 60925	3	Stormstout Surprise Stein
 50315	1	Stormwind Guard's Shield
+33894	4	Strategist's Mageblade
+33895	4	Strategist's Tome of Power
 50378	1	Stromgarde Guard's Shield
 42104	2	Sturdy Blade
 80501	2	Sturdy Broadsword
@@ -2788,6 +3059,7 @@ DmorphOcto_ItemExtra[17] = [[
 80500	2	Tempered Argus Mace
 50528	3	Tempered Defender
 83564	4	Tempest's Rage
+102127	4	Tempest's Rage
 80844	2	Tempestria's Frozen Heart
 27	1	Thalassian Dagger
 60307	2	The 'Slip' Dagger
@@ -2802,6 +3074,8 @@ DmorphOcto_ItemExtra[17] = [[
 55347	4	Thunderfall, Stormhammer of the Chief Thane
 50417	3	Time-shifting Wheel
 61009	4	Time-Shifting Wheel
+104016	4	Time-Shifting Wheel
+104548	4	Time-Shifting Wheel
 60801	2	Tome of Dark Powers
 80778	3	Tome of Feral Rage
 83480	4	Tome of Infalliable Truth
@@ -2857,11 +3131,14 @@ DmorphOcto_ItemExtra[18] = [[
 42092	1	Crude Hunting Bow
 83467	3	Cryptwatcher's Call
 61068	4	Dark Iron Desecrator
+107	1	Defias Longbow
 58193	3	Demon Hair Bow
 70013	3	Diathorus' Claw
 81290	3	Diathorus' Claw
+33156	4	Dragonhunter Javelin
 41725	3	Dragonmaw Battle Bow
 50630	3	Drudge Enforcer's Bow
+33352	2	Elder Wand
 61629	2	Farmer's Musket
 80223	3	Farstrider Lodge Protector's Bow
 80825	3	Flamestring Bow
@@ -2874,6 +3151,7 @@ DmorphOcto_ItemExtra[18] = [[
 55511	4	Hellflame
 60339	2	High Elven Rotten Bow
 61383	3	Intricate Gnomish Blunderbuss
+58253	3	Lector's Baton
 61020	4	Lodestone
 60338	2	Lordaeron Rusty Crossbow
 60882	3	Magram Windstriker
@@ -2884,6 +3162,7 @@ DmorphOcto_ItemExtra[18] = [[
 58137	3	Netherbranch
 42099	2	Oakwood Bow
 51794	2	Otherworldly Rifle
+58239	4	Overheated Skyrazors
 55096	4	Phase-shifting Crossbow
 80127	2	Polished Boomstick
 58205	4	Primal Flameslinger
@@ -2896,6 +3175,7 @@ DmorphOcto_ItemExtra[18] = [[
 80644	3	Revantusk Mystic's Mojobender
 80646	3	Revantusk Shadow Hunter's Longbow
 50529	3	Rod of Charring
+55134	4	Rod of Permafrost
 51735	4	Scourgelord's Fang
 51746	3	Shadowblaster
 60782	4	Shieldbreaker Arbalest
@@ -2904,12 +3184,14 @@ DmorphOcto_ItemExtra[18] = [[
 60427	3	Skullrattler
 55379	3	Slag Slugger
 42114	2	Sleek Pinewood Bow
+33200	2	Spine of a Shipwrecked Pirate
 51844	2	Stunning Crossbow
 80603	2	Sturdy Short Bow
 60545	3	Techrifle X-TREME 5200
 60821	3	Theramore Arbalest
 58089	3	Thornlash Branch
 61569	3	Time Frozen Bow
+102596	3	Time Frozen Bow
 80772	3	Twisted Draenei Rib
 60506	3	Vigilance
 80799	3	Wand of Divine Justice
@@ -2929,6 +3211,7 @@ DmorphOcto_ItemExtra[19] = [[
 50091	1	Black Mageweave Tabard
 81086	1	Competition Tabard
 81089	1	Durotar Labor Union Tabard
+80306	1	Gnomeregan Tabard
 50044	1	Gold Mageweave Tabard
 61368	2	Greymane Tabard
 50376	1	Hillsbrad Tabard
@@ -2954,32 +3237,44 @@ DmorphOcto_ItemExtra[19] = [[
 81088	1	Tabard of the Midsummer Solstice
 80314	1	Tabard of the Scourge
 81083	1	Tabard of Void
+80300	1	Time Warden's Tabard
+80309	1	Undercity Tabard
 81203	1	Violet Eye Tabard
+]]
+-- Their kinds, from the item cache, like Data/ItemTypes.lua: kind<TAB>itemID,itemID,...
+DmorphOcto_ItemTypeExtra = [[
+200	37,2080,2845,2849,3489,4923,6738,7941,7942,11920,12621,12773,12774,12779,12798,15230,17016,17704,19852,42091,42115,42117,55080,60124,61046,61372,61452,104017
+201	184,3488,3855,3856,5318,6975,7958,11607,11931,12282,12769,12775,12784,18324,19169,51892
+202	107,2504,3036,3778,6739,13021,13022,17069,18323,18713,20038,42092,42099,42114,42119,61569,80825,102596
+203	2098,3040,4362,4369,4372,4379,4383,6798,10508,10510,11629,13136,13137,13138,15995,16004,16007,17072,18282,51862,61011
+204	28,36,868,2075,2194,2256,2844,2848,3491,3492,4924,5541,7945,7946,7954,11684,12781,12792,12794,13024,13048,14487,17105,19170,19890,21398,21410,22384,22713,55276,58214,60952,84600,102089,103900
+205	3851,3852,4570,6214,7956,10568,11608,12772,12776,12796,17073,17193,18803,33881,51834,55504,60010,60099,61044,61185,102587,104271,104482
+206	7959,12802,13057,19167,42097,42100,42109,42122,50429,51790,55116
+207	25,110,869,1265,2847,2850,3849,3850,4017,6802,7943,7944,7961,8223,9718,12777,12797,12940,16886,16890,17015,17075,17103,17705,18310,18582,18583,18584,19168,19864,19865,21395,21650,22383,22736,33157,42090,42104,42108,42120,42121,60536,61006,61453,65008,100302,100477,102127,102133,104287,104531,104551
+208	2877,3487,3853,3854,7955,7957,7960,9385,12764,12782,12790,12992,13041,13042,13049,13051,13053,13817,15252,18822,60293,60294,61247,104562
+210	10,26,35,3446,4024,4566,5340,6631,7713,9514,9683,15444,16889,17113,18082,18534,18608,18609,18715,18842,20654,33148,33883,33904,41315,41345,42089,42098,42102,42116,51764,55060,55148,55165,55175,55241,55242,55271,55272,55326,55327,55328,55365,55366,56052,56071,61031,80860,81092,84603,101464,103115,104352
+213	11863,12795,55120,55133,61042,65010,65011,65012,65013,80834,102889
+214	6219
+215	27,205,2092,2236,2912,3490,3848,4446,4454,5112,5540,5756,6448,7166,7298,7714,7947,12259,12260,12709,12783,14555,15242,15443,17780,18392,18805,18816,19166,21416,22688,33894,42094,42103,42124,55115,58271,61001,61589,65004,80649,102906
+216	2947,3108,3111,3135,13173,15326,33156,55474,58239
+218	12651,51844,55096,60782,70049
+219	5213,5245,5252,7514,11287,11288,11289,11290,13064,13396,13938,15282,17077,18301,18338,18761,20082,22408,33200,33352,51820,55134,58205,58253,60427,61019,61020,61286,61615,80829,84602
+220	7010,19022,42096,42105,42110,42123
+400	38,40,42,43,45,46,47,49,50,51,53,54,55,58,59,89,90,92,93,109,121,122,127,129,136,137,140,141,146,148,152,154,964,2105,2410,2575,2576,2577,2579,2587,2714,3420,3428,4330,4332,4333,4334,4335,4336,4344,5107,5976,6096,6125,6134,6182,6384,6385,6786,6795,6796,6833,7009,10034,10052,10053,10054,10055,10056,15197,15199,15925,15931,15935,17067,17723,19031,19142,19505,19891,21154,21542,22253,22999,23192,23705,23709,23710,33895,41309,41313,41343,42093,50038,50044,50086,50087,50091,50092,50376,51240,55243,55244,55269,55279,55333,55334,55335,55336,55361,55362,56036,56051,56055,58049,58213,61268,61368,61645,65030,69100,69101,69102,69103,69104,69107,69108,69110,80300,80306,80309,80310,80314,81081,81082,81083,81084,81085,81089,81203,81204,102124,102126,102410,102824,103774,104489
+401	8,39,44,48,52,56,57,64,79,80,91,105,120,139,147,158,162,163,193,194,195,196,200,201,202,203,204,213,241,1395,1396,1505,1733,1764,2032,2308,2310,2316,2568,2569,2570,2572,2578,2580,2582,2583,2584,2585,2622,2721,2911,2960,2970,2971,2972,2984,3065,3260,3270,3291,3324,3373,3442,3453,3719,3833,3834,4043,4114,4197,4307,4308,4309,4310,4311,4312,4313,4314,4315,4316,4317,4318,4319,4320,4321,4322,4323,4324,4325,4326,4327,4328,4329,4331,4343,4368,4373,4385,4393,4683,4711,4726,4782,4786,4915,4916,4920,5257,5314,5343,5542,5766,5770,5965,6126,6129,6140,6238,6239,6240,6241,6242,6263,6264,6407,6449,6466,6477,6538,6593,6628,6787,6910,7026,7027,7046,7047,7048,7049,7050,7051,7052,7053,7054,7055,7056,7057,7058,7059,7060,7061,7062,7063,7064,7065,7189,7276,7283,7377,7419,7533,8195,8215,8216,8285,9407,9744,9754,9768,9812,9823,9884,9898,9929,9998,9999,10001,10002,10003,10004,10007,10008,10009,10010,10011,10018,10019,10020,10021,10023,10024,10025,10026,10027,10028,10029,10030,10031,10032,10033,10035,10036,10038,10039,10040,10041,10042,10044,10045,10046,10047,10048,10071,10159,10177,10210,10231,10499,10500,10501,10502,10503,10504,10506,10518,10543,10545,10550,10554,10588,10638,10724,10726,10807,11624,11626,12299,12546,12965,12967,12998,13013,13101,13102,13103,13105,13122,13340,13346,13397,13856,13857,13858,13860,13863,13864,13865,13866,13867,13868,13869,13870,13871,13958,14042,14043,14044,14045,14097,14100,14101,14103,14104,14106,14107,14108,14110,14111,14112,14128,14130,14132,14134,14136,14137,14138,14139,14140,14141,14142,14143,14144,14146,14152,14153,14154,14161,14169,14232,14300,14302,14314,14326,14366,14372,14375,14397,14454,14538,14593,14631,15138,15309,15449,15452,15468,15519,15526,15537,15789,15802,15999,16008,16437,16440,16441,16442,16443,16444,16486,16683,16685,16690,16693,16696,16697,16703,16795,16796,16797,16798,16799,16800,16801,16802,16803,16804,16805,16806,16807,16808,16809,16810,16811,16812,16816,16817,16819,16913,16914,16916,16917,16918,16921,16922,16979,16980,16990,17050,17078,17102,17578,17579,17580,17581,17583,17584,17602,17603,17604,17605,17607,17608,18102,18263,18327,18405,18407,18408,18409,18413,18461,18486,18509,18510,18511,18681,18697,18727,18735,18809,18811,19047,19050,19056,19059,19121,19135,19136,19145,19156,19165,19526,19682,19683,19684,19845,19848,19849,19857,19870,19888,19929,19999,20033,20034,20068,20537,20538,20539,20655,20674,20691,21318,21400,21412,21418,22063,22070,22071,22072,22073,22074,22075,22076,22077,22079,22267,22269,22652,22654,22655,22658,22660,22667,22711,22756,22757,22758,22860,22870,22883,22886,23263,23264,33000,33001,33002,33003,33004,33005,33006,33007,33136,33458,33459,33460,33461,33462,33463,33698,33699,33700,33701,33702,33703,33734,33735,33736,33737,33738,33739,33806,33807,33808,33809,33810,33811,33824,33825,33826,33827,33828,33829,35014,41091,41092,41310,41314,41318,41917,42075,42095,42106,42113,42118,42265,42268,42360,47078,47079,47080,47082,47083,47084,47085,47198,47199,47200,47201,47202,47203,47204,47205,47206,47276,47277,47278,47279,47280,47281,47282,47283,47284,47290,50029,50300,50301,50302,50303,50304,50305,50306,50308,50309,50310,50311,50312,50313,50314,50316,50317,50318,50319,50320,50321,50322,50330,50331,50332,50333,50334,50335,50336,50337,50338,50339,50340,50341,50343,50344,50345,50346,50347,50348,50349,50350,50351,50352,50353,50354,50355,50356,50357,50358,50359,50360,50361,50362,50363,50364,50365,50366,50367,50430,51048,51050,51256,51885,55036,55052,55056,55081,55084,55085,55095,55105,55106,55107,55118,55130,55144,55145,55157,55161,55178,55180,55266,55267,55273,55274,55285,55329,55330,55331,55332,55337,55338,55339,55367,55368,55371,56044,56045,56046,56050,56060,56061,56064,56068,56069,56070,56089,56092,56096,58071,58131,58134,58178,58186,58201,58208,58237,58258,58259,58267,60214,60409,60425,60430,60500,60617,60876,60907,60909,60929,61002,61010,61033,61076,61186,61187,61249,61252,61256,61261,61281,61282,61284,61285,61288,61297,61298,61360,61361,61362,61363,61701,65003,65028,65035,68070,69117,69118,69119,69120,69121,69122,69123,69124,69125,69127,69130,69131,69132,69146,69147,69148,69149,69150,69151,69152,80512,80513,80720,81308,83280,83281,83282,83283,83284,83285,83286,83287,83288,83289,83290,83291,83292,83293,83294,83295,83296,83297,83451,83465,84601,100159,100279,100649,100743,100753,100755,100844,100846,100949,101188,101466,101490,101943,101990,101991,102132,102195,102315,102352,102364,102384,102445,102686,102822,102894,102985,103055,103057,103075,103143,103245,103246,103313,103376,103475,103734,103739,103740,103799,103910,103911,103912,104003,104059,104113,104136,104137,104138,104151,104164,104180,104274,104493,104511,104512,104523,104536,104537,104606
+402	60,61,85,108,116,153,197,209,210,236,237,238,239,867,1423,1506,1843,2300,2302,2303,2307,2309,2311,2312,2314,2315,2317,2962,2985,2987,3011,3020,3058,3207,3272,3288,3435,3583,3741,4055,4061,4107,4237,4239,4242,4243,4244,4246,4247,4248,4249,4250,4251,4252,4253,4254,4255,4256,4257,4258,4259,4260,4262,4264,4455,4456,4690,4700,4709,4788,4830,4831,4914,5275,5299,5311,5316,5327,5341,5355,5404,5739,5780,5781,5782,5783,5957,5958,5961,5962,5963,5964,5966,6135,6397,6399,6408,6410,6467,6468,6558,6668,6709,7277,7280,7281,7282,7284,7285,7348,7349,7352,7358,7359,7373,7374,7375,7378,7386,7387,7390,7391,7408,7415,7751,7755,8174,8175,8176,8192,8193,8197,8200,8201,8202,8210,8211,8212,8213,8214,8262,8295,8345,8346,8348,8349,9375,9473,9780,9808,9857,9862,10073,10107,10186,10187,10399,10400,10401,10402,10403,10412,10413,10721,10783,11665,11675,11735,11821,12927,12966,13110,13112,13116,13118,13210,13404,13957,14569,14572,14594,14636,14637,14638,14640,14641,14677,14686,15017,15053,15054,15055,15056,15057,15058,15059,15060,15061,15062,15063,15064,15065,15066,15067,15068,15069,15070,15071,15072,15073,15074,15075,15083,15084,15085,15086,15087,15088,15090,15091,15092,15093,15094,15095,15096,15134,15139,15300,15329,15365,15390,15426,15450,15453,15469,15471,16446,16448,16449,16450,16451,16452,16453,16454,16455,16456,16457,16459,16498,16499,16505,16506,16507,16508,16708,16710,16713,16714,16716,16820,16821,16825,16826,16827,16828,16829,16830,16831,16832,16833,16834,16835,16836,16905,16906,16907,16908,16909,16910,16911,16977,16982,16983,16987,17005,17721,17728,18238,18325,18504,18506,18716,18948,19044,19049,19052,19058,19149,19162,19163,19685,19686,19687,19688,19689,19892,19998,20186,20575,21278,21359,21360,21361,21362,21364,22003,22004,22006,22008,22204,22241,22271,22476,22477,22478,22479,22480,22481,22482,22483,22488,22489,22490,22491,22492,22493,22494,22495,22661,22662,22663,22759,22760,22761,26322,33366,33367,33368,33752,33753,33754,33755,33756,33757,33843,33850,33852,35012,35013,41724,42101,42111,42204,47338,47339,47340,47342,47343,47344,47345,50427,51284,51897,55033,55043,55050,55079,55089,55092,55098,55104,55109,55119,55125,55126,55472,58099,58111,58112,58113,58114,58115,58144,58164,58212,60346,60379,60436,60524,60555,60556,60557,60558,60568,60786,60872,60910,61005,61060,61188,61260,61331,61356,61357,61358,61359,61449,61505,61583,61647,65009,65021,65022,65023,65024,65025,65026,65027,65037,65038,70004,70014,80713,81007,81061,81062,81063,81064,81065,81066,81265,81294,82951,83211,83400,83401,83402,83403,83404,83405,83407,83409,83447,83463,100677,100843,100879,100991,100992,101390,101707,102100,102223,102224,102225,102226,102363,102385,102427,102727,102892,102893,103300,103509,104264,104308,104351,104355,104360,104418,104437,104439
+403	134,150,285,286,287,1981,2149,2151,2245,2851,2852,2853,2854,2857,2864,2865,2866,2867,2868,2869,2870,3469,3471,3472,3473,3474,3480,3481,3482,3483,3484,3485,3733,3835,3836,3837,3840,3841,3842,3843,3844,3845,3846,3847,4534,4917,4922,4935,4946,6040,6350,6412,6578,6666,6730,6731,6733,7913,7914,7915,7916,7917,7920,7924,7925,7929,7931,7932,7963,8130,8185,8187,8189,8191,8198,8203,8204,8205,8206,8207,8208,8209,8347,8367,9366,9902,10234,10272,10407,10421,10423,10542,11606,11731,11765,12415,12416,12417,12418,12419,12420,12624,12632,12636,12641,12964,13127,13128,13131,13132,13133,13211,13963,14614,14616,14746,15045,15046,15047,15048,15049,15050,15051,15052,15076,15077,15078,15079,15080,15081,15082,15523,15533,15655,15694,16462,16463,16465,16466,16467,16468,16532,16578,16580,16666,16667,16669,16671,16672,16674,16676,16677,16679,16680,16681,16839,16840,16841,16846,16847,16848,16849,16850,16851,16935,16936,16937,16938,16939,16940,16941,16942,16978,16984,16986,16988,16989,17754,18393,18508,18721,18812,18829,19043,19048,19144,19157,19690,19691,19692,19830,19832,19833,19904,20134,20150,20295,20296,20380,20476,20477,20478,20479,20480,20481,20668,21320,21684,21705,21890,22011,22095,22191,22194,22195,22207,22232,22464,22466,22467,22664,22665,22666,22715,23279,23292,23306,23307,33476,33477,33478,33479,33480,33481,33496,33497,33498,33499,33515,33516,33517,33716,33717,33718,33719,33720,33721,33722,33723,33725,33727,35010,35011,41916,42074,46600,47120,47121,47122,47123,47124,47125,47126,47127,47128,47129,47130,47131,47132,47133,47134,47135,47136,55054,55083,55086,55102,55117,55122,58170,60007,60008,60009,60275,60573,60574,60575,60576,60577,60578,60579,60580,60581,60792,60975,61013,61017,61024,61041,61050,61053,61266,61275,61279,61620,65000,65001,65002,65006,65015,65019,65036,65039,80714,81264,81330,83260,84604,100953,101446,101447,101449,101450,101451,101675,101676,101950,102128,102172,102578,102590,102591,102592,102593,102595,102969,103130,103375,104262,104385,104386,104422,104535,104554
+404	7918,7919,7921,7922,7926,7927,7928,7930,7933,7934,7935,7936,7937,7938,7939,9291,10088,11604,11605,11632,11678,11745,12405,12406,12408,12409,12410,12414,12422,12424,12425,12426,12427,12428,12429,12610,12611,12612,12613,12614,12618,12619,12620,12625,12628,12631,12633,12639,12640,12936,13066,13142,14620,14621,14622,14623,14624,16471,16472,16473,16474,16475,16476,16477,16478,16479,16480,16483,16484,16509,16510,16513,16514,16515,16516,16735,16736,16861,16864,16865,16868,16959,16961,16963,16965,16966,17013,17014,17711,19051,19057,19148,19164,19693,19694,19695,20039,20549,20550,20551,21329,21330,21331,21332,21333,21387,21388,21389,21390,21391,22196,22197,22385,22669,22670,22671,22762,22763,22764,23286,23287,23300,23301,23314,23315,33210,33404,33405,33406,33407,33408,33409,33584,33585,33586,33587,33588,33589,33680,33681,33682,33683,33684,33685,35009,47240,47241,47242,47244,47245,47246,47247,47248,47249,47250,47252,47253,47254,47255,55034,55058,55088,55099,55108,55113,55506,58092,60287,60288,60289,60290,60291,60292,60429,60908,60928,61364,61365,61366,61367,61648,61649,65007,65014,83410,83411,83412,83413,83414,83415,101468,101793,102130,102131,102134,102180,102314,102536,102537,102540,102666,102837,102947,103037,103038,103079,104062,104265,104266,104272,104273,104301,104305,104366,104421,104423,104425,104472,104483,104484,104485,104486,104487,104488,104490,104491,104504,104505,104508,104522,104560,104563
+406	143,157,2362,3990,7465,15892,18168,19862,22198,33135,33155,51264,55121,58242,61028,101037,102556,102970,103184,104016,104288,104548
 ]]
 -- Item IDs whose slot isn't known here (Atlas-CFM loot tables, item set pieces): the addon asks the
 -- game about them. One per line: itemID<TAB>name (may be empty).
 DmorphOcto_ItemPending = [[
 103	
-104	
-107	Defias Longbow
-108	Tattered Defias Rags
-110	Rak'uhz the Coldbinder
-113	Plans: Truesilver Belt Buckle
-116	Belt of Binding
 124	Plans: Enchanted Thorium Belt Buckle
-126	Band of Hailar
 132	Plans: Obsidian Belt Buckle
-134	Frostmane Battle Boots
 135	Recipe: Honeycomb Delight
-150	Tribal War Gauntlets
-157	Snowchilled Crest
-158	
-162	Frigid Cloak
-184	Oboka's Axe
-197	Vest of the Beastkeeper
-205	Frost Seer Dirk
-213	Ice-Stitched Cuffs
-241	Windcrest Pants
+2189	Serpent Scale Mantle
 2190	Snakeswarm Robe
 23100	Idol of Fluidity
 23800	Violet Feral Raptor
@@ -3388,9 +3683,6 @@ DmorphOcto_ItemPending = [[
 26281	
 30005	Swamp Riding Crocolisk
 30017	Onyxian Drake
-33001	Epaulets of Prophecy
-33004	Handwraps of Prophecy
-33007	Slippers of Prophecy
 33008	Crown of Transcendence
 33009	Epaulets of Transcendence
 33010	Vestments of Transcendence
@@ -3447,7 +3739,6 @@ DmorphOcto_ItemPending = [[
 33086	Libram of Hallowed Ground
 33087	Libram of Ardour
 33088	Libram of the Exorciser
-33089	Totem of Thundercall
 33090	Totem of Distant Tremors
 33091	Totem of Ancient Rites
 33092	Totem of the Stonewall
@@ -3469,7 +3760,6 @@ DmorphOcto_ItemPending = [[
 33132	Totem of Calm Cascades
 33133	Earthen Ring Tabard
 33134	Plans: Bulwark of Unshaken Earth
-33136	Wraps of the Rift Traveler
 33137	Narak'la Padded Breastplate
 33138	Draenethyst Kris
 33139	Draenethyst Blade
@@ -3479,17 +3769,11 @@ DmorphOcto_ItemPending = [[
 33143	Draenethyst Necklace
 33144	Formula: Rift Tear
 33145	Schematic: Facetted Crystal Scope
-33147	Mar'kali, the Midnight Star
-33148	Alar'tar, Born from Hope
-33149	Battle Standard of the Broodcommander
 33150	Yoxtez, Black Breath of the Dragonflight
 33151	Onyxian Brood Egg
 33152	Prestor's Rod of Command
 33153	Ignited Obsidian Scale
 33154	Ring of Burning Talons
-33155	Scaleshield of Obsidian Flight
-33156	Dragonhunter Javelin
-33157	Broodwarden's Bulwarkblade
 33162	Crown of Faith
 33163	Epaulets of Faith
 33164	Vestments of Faith
@@ -3515,7 +3799,6 @@ DmorphOcto_ItemPending = [[
 33184	Windward Protector
 33185	Sash of the Wind Serpents
 33199	Bluetide Gauntles
-33200	Spine of a Shipwrecked Pirate
 33201	Ancient Beast Sash
 33202	Loop of the Mythical Beast
 33203	Spire of Unwoven Mysteries
@@ -3525,7 +3808,6 @@ DmorphOcto_ItemPending = [[
 33207	Nail of the Azure Whelpling
 33208	Memory of Leywinds
 33209	Cloak of the Veteran
-33210	Withered Bark Pauldrons
 33211	
 33212	
 33213	
@@ -3684,12 +3966,6 @@ DmorphOcto_ItemPending = [[
 33401	
 33402	
 33403	
-33404	Combatant's Plate Helm
-33405	Combatant's Plate Shoulderguards
-33406	Combatant's Plate Armor
-33407	Combatant's Plate Gauntlets
-33408	Combatant's Plate Leggings
-33409	Combatant's Plate Boots
 33410	Partisan's Plate Helm
 33411	Partisan's Plate Shoulderguards
 33412	Partisan's Plate Armor
@@ -3738,12 +4014,6 @@ DmorphOcto_ItemPending = [[
 33455	Veteran's Chain Grips
 33456	Veteran's Chain Legguards
 33457	Veteran's Chain Boots
-33458	Tactician's Coronal
-33459	Tactician's Dreadweave Shoulders
-33460	Tactician's Dreadweave Robe
-33461	Tactician's Dreadweave Gloves
-33462	Tactician's Dreadweave Leggings
-33463	Tactician's Dreadweave Boots
 33464	Strategist's Coronal
 33465	Strategist's Dreadweave Shoulders
 33466	Strategist's Dreadweave Robe
@@ -3756,12 +4026,6 @@ DmorphOcto_ItemPending = [[
 33473	Executor's Dreadweave Gloves
 33474	Executor's Dreadweave Leggings
 33475	Executor's Dreadweave Boots
-33476	Combatant's Mail Helm
-33477	Combatant's Mail Shoulders
-33478	Combatant's Mail Armor
-33479	Combatant's Mail Gauntlets
-33480	Combatant's Mail Leggings
-33481	Combatant's Mail Boots
 33482	Partisan's Mail Helm
 33483	Partisan's Mail Shoulders
 33484	Partisan's Mail Armor
@@ -3776,10 +4040,6 @@ DmorphOcto_ItemPending = [[
 33493	Veteran's Mail Sabatons
 33494	Tactician's Mail Helm
 33495	Tactician's Mail Spaulders
-33496	Tactician's Mail Armor
-33497	Tactician's Mail Gauntlets
-33498	Tactician's Mail Leggings
-33499	Tactician's Mail Boots
 33500	Strategist's Mail Helm
 33501	Strategist's Mail Shoulders
 33502	Strategist's Mail Armor
@@ -3795,9 +4055,6 @@ DmorphOcto_ItemPending = [[
 33512	Corpsman's Mail Helm
 33513	Corpsman's Mail Spaulders
 33514	Corpsman's Mail Armor
-33515	Corpsman's Mail Gauntlets
-33516	Corpsman's Mail Leggings
-33517	Corpsman's Mail Boots
 33518	Physician's Mail Helm
 33519	Physician's Mail Spaulders
 33520	Physician's Mail Armor
@@ -3864,12 +4121,6 @@ DmorphOcto_ItemPending = [[
 33581	Field Medic's Dragonhide Gloves
 33582	Field Medic's Dragonhide Leggings
 33583	Field Medic's Dragonhide Boots
-33584	Combatant's Lamellar Faceguard
-33585	Combatant's Lamellar Shoulders
-33586	Combatant's Lamellar Chestplate
-33587	Combatant's Lamellar Gauntlets
-33588	Combatant's Lamellar Legplates
-33589	Combatant's Lamellar Sabatons
 33590	Partisan's Lamellar Faceguard
 33591	Partisan's Lamellar Shoulders
 33592	Partisan's Lamellar Chestplate
@@ -3960,12 +4211,6 @@ DmorphOcto_ItemPending = [[
 33677	
 33678	
 33679	
-33680	Combatant's Plate Helm
-33681	Combatant's Plate Shoulderguards
-33682	Combatant's Plate Armor
-33683	Combatant's Plate Gauntlets
-33684	Combatant's Plate Leggings
-33685	Combatant's Plate Boots
 33686	Partisan's Plate Helm
 33687	Partisan's Plate Shoulderguards
 33688	Partisan's Plate Armor
@@ -3978,12 +4223,6 @@ DmorphOcto_ItemPending = [[
 33695	Veteran's Plate Gauntlets
 33696	Veteran's Plate Leggings
 33697	Veteran's Plate Boots
-33698	Tactician's Coronet
-33699	Tactician's Silk Spaulders
-33700	Tactician's Silk Vestments
-33701	Tactician's Silk Gloves
-33702	Tactician's Silk Leggings
-33703	Tactician's Silk Footwraps
 33704	Strategist's Coronet
 33705	Strategist's Silk Spaulders
 33706	Strategist's Silk Vestments
@@ -3996,18 +4235,8 @@ DmorphOcto_ItemPending = [[
 33713	Executor's Silk Gloves
 33714	Executor's Silk Leggings
 33715	Executor's Silk Footwraps
-33716	Combatant's Chain Helm
-33717	Combatant's Chain Spaulders
-33718	Combatant's Chain Breastplate
-33719	Combatant's Chain Grips
-33720	Combatant's Chain Legguards
-33721	Combatant's Chain Boots
-33722	Partisan's Chain Helm
-33723	Partisan's Chain Spaulders
 33724	Partisan's Chain Breastplate
-33725	Partisan's Chain Grips
 33726	Partisan's Chain Legguards
-33727	Partisan's Chain Boots
 33728	Veteran's Chain Helm
 33729	Veteran's Chain Spaulders
 33730	Veteran's Chain Breastplate
@@ -4026,12 +4255,6 @@ DmorphOcto_ItemPending = [[
 33749	Executor's Dreadweave Gloves
 33750	Executor's Dreadweave Leggings
 33751	Executor's Dreadweave Boots
-33752	Combatant's Dragonhide Helmet
-33753	Combatant's Dragonhide Shoulders
-33754	Combatant's Dragonhide Hauberk
-33755	Combatant's Dragonhide Gloves
-33756	Combatant's Dragonhide Leggings
-33757	Combatant's Dragonhide Boots
 33758	Partisan's Dragonhide Helmet
 33759	Partisan's Dragonhide Epaulets
 33760	Partisan's Dragonhide Hauberk
@@ -4080,12 +4303,6 @@ DmorphOcto_ItemPending = [[
 33803	Field Medic's Dragonhide Gloves
 33804	Field Medic's Dragonhide Leggings
 33805	Field Medic's Dragonhide Boots
-33806	Tactician's Headdress
-33807	Tactician's Satin Mantle
-33808	Tactician's Satin Vestments
-33809	Tactician's Satin Gloves
-33810	Tactician's Satin Pants
-33811	Tactician's Satin Sandals
 33812	Strategist's Headdress
 33813	Strategist's Satin Mantle
 33814	Strategist's Satin Vestments
@@ -4098,12 +4315,6 @@ DmorphOcto_ItemPending = [[
 33821	Executor's Satin Gloves
 33822	Executor's Satin Pants
 33823	Executor's Satin Sandals
-33824	Corpsman's Headdress
-33825	Corpsman's Satin Mantle
-33826	Corpsman's Satin Vestments
-33827	Corpsman's Satin Gloves
-33828	Corpsman's Satin Pants
-33829	Corpsman's Satin Sandals
 33830	Physician's Headdress
 33831	Physician's Satin Mantle
 33832	Physician's Satin Vestments
@@ -4117,16 +4328,13 @@ DmorphOcto_ItemPending = [[
 33840	Field Medic's Satin Pants
 33841	Field Medic's Satin Sandals
 33842	Combatant's Leather Mask
-33843	Combatant's Leather Epaulets
 33844	Combatant's Leather Chestpiece
 33845	Combatant's Leather Handgrips
 33846	Combatant's Leather Leggings
 33847	Combatant's Leather Footguards
 33848	Partisan's Leather Mask
 33849	Partisan's Leather Epaulets
-33850	Partisan's Leather Chestpiece
 33851	Partisan's Leather Handgrips
-33852	Partisan's Leather Leggings
 33853	Partisan's Leather Footguards
 33854	Veteran's Leather Mask
 33855	Veteran's Leather Epaulets
@@ -4136,9 +4344,7 @@ DmorphOcto_ItemPending = [[
 33859	Veteran's Leather Footguards
 33879	Partisan's Claymore
 33880	Partisan's Battle Hammer
-33881	Strategist's Demolisher
 33882	Partisan's Sunderer
-33883	Strategist's Stave
 33884	Partisan's Glaive
 33885	Partisan's Aegis
 33886	Partisan's Longsword
@@ -4149,8 +4355,6 @@ DmorphOcto_ItemPending = [[
 33891	Physician's Warhammer
 33892	Partisan's Swiftblade
 33893	Partisan's Dirk
-33894	Strategist's Mageblade
-33895	Strategist's Tome of Power
 33896	Physician's Tome of Restoration
 33897	Partisan's Hand Cannon
 33898	Partisan's Repeater
@@ -4159,7 +4363,6 @@ DmorphOcto_ItemPending = [[
 33901	Partisan's Pulverizer
 33902	Strategist's Destroyer
 33903	Partisan's Battle Axe
-33904	Strategist's War Staff
 33905	Partisan's Pig Sticker
 33906	Partisan's Shield Wall
 33907	Partisan's Blade
@@ -4245,11 +4448,9 @@ DmorphOcto_ItemPending = [[
 41386	Rune of Ferh
 41388	Jade Scale of the Dreamer
 41392	Comically Large Candle
-41403	Enchanted Amethyst
 41406	Core of Arc'Tiras
 41410	Zandara's Head
 41411	Journal of Basil Frye
-41414	Anima of the Guardian
 41415	The Scepter of Medivh
 41416	Crumpled Paper
 41420	Shadowfang Blood
@@ -4354,8 +4555,6 @@ DmorphOcto_ItemPending = [[
 47056	Redemption Girdle
 47100	Frostfire Epaulets
 47107	Frostfire Signet
-47128	Earthfury Visor
-47130	Earthfury Raiments
 47171	Earthshatter Helmet
 47173	Earthshatter Raiments
 47179	Loop of the Earthshatterer
@@ -4385,12 +4584,7 @@ DmorphOcto_ItemPending = [[
 55057	Plans: Rune-Inscribed Plate Leggings
 55059	Plans: Grandstaff of the Shen'dralar Elder
 55091	Loop of Infused Renewal
-55093	Remains of Overwhelming Power
-55094	Medivh's Hindsight
 55103	Royal Seal of Greymane
-55110	Libram of the Eternal Tower
-55132	Pendant of Purified Demon's Blood
-55134	
 55251	
 55381	Phytolance
 55388	Slain Sentry's Ring
@@ -4398,10 +4592,6 @@ DmorphOcto_ItemPending = [[
 55471	Wystan's Steel Fist
 55473	Pendant of Scarlet Rage
 55475	Cuffs of Evocation
-55486	Shifting Mantle of Ascendancy
-55488	Fractured Crown of Ascendancy
-55489	Brutal Leggings of Conquest
-55490	Brutal Leggings of Ascendancy
 55505	
 55580	Codex of Searing Shot V
 55582	Desecrated Loop
@@ -4427,18 +4617,12 @@ DmorphOcto_ItemPending = [[
 58058	Harpoon of Ahab
 58059	Razertooth Fetish
 58061	Sharkskin Sash
-58073	
-58111	Dragonmaw Hauberk
-58115	Dragonmaw Greaves
-58131	Stormreaver Belt
 58143	Kelpie's Legacy
-58144	Vander Legguards
 58159	Hood of Lifebinding
 58160	Firebound Skull
 58172	Thornspine
 58174	Totem of the Rotten Roots
 58177	Stormreaver Robe
-58178	Stormreaver Boots
 58219	Magmascale Shackles
 58220	Golem Stompers
 58221	Flameseeker Necklace
@@ -4457,16 +4641,12 @@ DmorphOcto_ItemPending = [[
 58234	
 58235	
 58236	
-58239	Overheated Skyrazors
 58251	Wristbands of Excellency
 58252	Coalescing Sabatons
-58253	Lector's Baton
 58254	Miniature Astrolabium
 58255	Crystal Pauldrons
 58256	Band of Eldretharr
 58257	Noble's Letter Opener
-58258	Royal Guard Chain Cloak
-58259	Advisor's Trousers of the Eldreth
 58261	
 58262	
 58268	

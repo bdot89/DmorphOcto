@@ -2,4 +2,23 @@
 -- Every weapon enchant glow this client can draw, one per line:
 -- visualID<TAB>enchantID<TAB>names of the enchants that show it (; between)<TAB>effect models.
 DmorphOcto_GlowData = [[
+125	2563	Agility +15; Agility +25; Strength +15	GreenGlow_Low
+31	249	Beastslaying +2; Beastslaying +6; Elemental Slayer +6	RedGlow_Low
+28	13	Critical +2%; Sharpened +2; Sharpened +3; Sharpened +4	Sparkle_A
+103	1900	Crusader; Healing Spells +55	WhiteGlow_Low
+2	805	Damage +9; Cleaning Cloth; Weapon Damage +4; Weapon Damage +5; Weapon Damage +7	BlueGlow_Med
+25	803	Demonslaying; Fiery Weapon	RedFlame_Low
+107	1023	Feedback 1; Feedback 2; Feedback 3; Feedback 4; Feedback 5; Lifestealing; Spell Damage +30	PurpleGlow_Low
+32	3	Firestone 1; Firestone 2; Firestone 3; Firestone 4; Orb of Fire; Flametongue 1; Flametongue 2; Flametongue 3; Flametongue 4; Flametongue 5; Flametongue 6; Flametongue Totem 1; Flametongue Totem 2; Flametongue Totem 3; Flametongue Totem 4	Shaman_Fire
+27	26	Frost Oil	BlueFlame_Low
+126	1894	Icy Weapon	WhiteFlame_Low
+105	1743	MHTest02	PurpleGlow_High
+33	2	Rift Tear; Cold Blood; Frostbrand 1; Frostbrand 2; Frostbrand 3; Frostbrand 4; Frostbrand 5	Shaman_Frost
+61	1	Rockbiter 1; Rockbiter 2; Rockbiter 3; Rockbiter 4; Rockbiter 5; Rockbiter 6; Rockbiter 7; Rockbiter +80	Shaman_Rock
+1	25	Shadow Oil; Unholy Weapon	SkullBalls
+29	1890	Spirit +9; Spirit +20; Intellect +9; Intellect +22	YellowGlow_Low
+42	943	Weapon Damage +3	BlueGlow_Low
+24	1896	Weapon Damage +9	BlueGlow_High
+81	283	Windfury 1; Windfury 2; Windfury 3; Windfury 4; Windfury Totem 1; Windfury Totem 2; Windfury Totem 3	Shaman_Wind
+26	7	Wound Poison; Deadly Poison; Instant Poison; Deadly Poison V; Omen of Clarity; Poison (15 Dmg); Poison (20 Dmg); Poison (25 Dmg); Wound Poison II; Wound Poison IV; Corrosive Poison; Crippling Poison; Deadly Poison II; Deadly Poison IV; Instant Poison V; Venomhide Poison; Wound Poison III; Deadly Poison III; Dissolvent Poison; Instant Poison II; Instant Poison IV; Instant Poison VI; Agitating Poison I; Instant Poison III; Crippling Poison II; Mind Numbing Poison; Poison (Instant 20); Dissolvent Poison II; Mind-numbing Poison II; Mind-Numbing Poison III	PoisonDrip
 ]]

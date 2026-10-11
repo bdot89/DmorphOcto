@@ -1295,7 +1295,7 @@ local function BuildFavouritesPage(page)
 	ui.favEmpty = Label(page, "No favourites yet. Right-click a model in the Models tab to star it.",
 		"GameFontDisableSmall", 14, -44)
 	Label(page, "Click to wear it. Right-click to take it off the list.", "GameFontDisableSmall", 10, -340)
-	Label(page, "In the Models tab, right-click a model to star it (with \"Morph: mount\", as a mount).",
+	Label(page, "Right-click a model (Models tab) or a mount skin (Mounts tab) to star it.",
 		"GameFontDisableSmall", 10, -354)
 end
 
