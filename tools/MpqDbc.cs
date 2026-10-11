@@ -235,6 +235,30 @@ public class GameFiles {
       return BitConverter.ToInt16(first, 0) >= 0 ? 1 : 0;
     } catch (Exception) { return -1; }
   }
+  // Which attachment points a model has, as bits (bit n: attachment n, for
+  // n below 32): 0 rider / shield, 1 right hand, 2 left hand, ... -1 if it
+  // can't tell (as MountPoint).
+  public long Attachments(string path) {
+    int dot = path.LastIndexOf('.');
+    string m2 = (dot > 0 ? path.Substring(0, dot) : path) + ".m2";
+    string name = m2; Mpq m = Newest(m2);
+    if (m == null) { name = path; m = Newest(path); }
+    if (m == null) return -1;
+    try {
+      byte[] head = m.ReadStart(name);
+      if (head == null || head.Length < 0x114 || head[0] != 'M' || head[1] != 'D' || head[2] != '2' || head[3] != '0') return -1;
+      uint version = BitConverter.ToUInt32(head, 4);
+      if (version < 256 || version > 257) return -1;
+      uint count = BitConverter.ToUInt32(head, 0x10C), ofs = BitConverter.ToUInt32(head, 0x110);
+      if (count == 0) return 0;
+      if (count > 32) count = 32;
+      byte[] table = m.ReadRange(name, ofs, (int)count * 2);
+      if (table == null) return -1;
+      long bits = 0;
+      for (int i = 0; i < count; i++) if (BitConverter.ToInt16(table, i * 2) >= 0) bits |= 1L << i;
+      return bits;
+    } catch (Exception) { return -1; }
+  }
   public bool Has(string name) {
     bool yes;
     if (found.TryGetValue(name, out yes)) return yes;

@@ -254,7 +254,17 @@ for ($i = 0; $i -lt $display.Count; $i++) {
 }
 
 # Famous mounts get their name as well (model file -> name), so a search finds them.
-$MOUNT_NAMES = @{ "Creature\Phoenix\Phoenix.mdx" = "Ashes of Al'ar (Phoenix)" }
+$MOUNT_NAMES = @{
+  "Creature\Phoenix\Phoenix.mdx" = "Ashes of Al'ar (Phoenix)"
+  "Creature\FlyingMachineCreature_vehicle\flyingmachinecreature_vehicle.mdx" = "Gnome Flying Machine"
+  "Creature\MotorcycleVehicle\MotorcycleVehicle.mdx" = "Motorcycle (Chopper)"
+  "Creature\nethergorgedgreatwyrm\nethergorgedgreatwyrm.mdx" = "Nether-Gorged Greatwyrm"
+  "CREATURE\Tuskarboat\tuskarboat.mdx" = "Tuskarr Boat"
+  "Creature\skiff\skiff.mdx" = "Skiff (Boat)"
+  "Creature\Stag\DruitSwiftTravelForm.mdx" = "Druid Stag (Travel Form)"
+  "Creature\GnomeRocketCar\GnomeRocketCar.mdx" = "Gnome Rocket Car"
+  "Creature\GoblinRocketCar\GoblinRocketCar.mdx" = "Goblin Rocket Car"
+}
 
 $rows = New-Object System.Collections.ArrayList
 foreach ($e in $entries) {
@@ -379,7 +389,17 @@ $MOUNT_NAME = '(?i)riding|mount(?!ain)|packmule|warhorse|mechastrider|hawkstride
 # Northrend drakes, the victorious steed, armoured raptor, lava and fel
 # horses, Antonidas' horse, nether rays, and the flight masters' wyverns,
 # hippogryphs, ghost gryphon and Turtle WoW's riding turtle.
-$MOUNT_MODEL = '(?i)\\(phoenix\\phoenix|wingedhorse\\|celestialhorse\\|drake\\northrenddrake|warhorse\\victorius|armoredraptor\\|lavahorse\\|felhorse\\felhorseepic|antonidashorse\\|netherray\\|wyvern\\wyvern\.|hippogryph\\hippogryph\.|gryphon\\gryphon_ghost|turtle\\turtle\.)'
+# Then models with a rider point (attachment 0) that aren't shield-bearing
+# humanoids, picked by hand from a scan of every creature model's attachment
+# points (11 Oct 2026; the rider point is on 182 of the 191 known mount
+# models): the Undercity bat, rocket cars, the flying machine, the
+# motorcycle, the skiff and Tuskarr boat, the fel hound, the nether-gorged
+# wyrm, Darkshade and Dragonmaw drakes, the druid stag and cats, pterrordax,
+# mistfox, tigon, unicorn, and the pet-sized wyvern and hippogryph.
+$MOUNT_MODEL = '(?i)\\(phoenix\\phoenix|wingedhorse\\|celestialhorse\\|drake\\northrenddrake|warhorse\\victorius|armoredraptor\\|lavahorse\\|felhorse\\felhorseepic|antonidashorse\\|netherray\\|wyvern\\wyvern\.|hippogryph\\hippogryph\.|gryphon\\gryphon_ghost|turtle\\turtle\.' `
+  + '|felbat\\battaxi\.|gnomerocketcar\\|goblinrocketcar\\|flyingmachinecreature_vehicle\\|motorcyclevehicle\\|skiff\\|tuskarboat\\' `
+  + '|felhoundmount\\|nethergorgedgreatwyrm\\|drakedarkshade\\|drake\\orcdrakerider\.|stag\\druitswifttravelform\.|druidcat\\' `
+  + '|pterrordax\\|mistfox\\|tigon\\|unicorn\\|wyvernpet\\|hippogryph\\hippogryphpet\.)'
 if (Test-Path $ClassicTags) {
   foreach ($line in [IO.File]::ReadAllLines($ClassicTags)) {
     if ($line -match '^(\d+)\tmount\t') { $mountIds[[int]$matches[1]] = $true }

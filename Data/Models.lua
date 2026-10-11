@@ -720,6 +720,7 @@ DmorphOcto_ModelData = [[
 21274	3	Druid Owl Bear (Blue)
 20408	3	Druid Owl Bear (NE Skin1 EM)
 20409	3	Druid Owl Bear Tauren
+21257	2	Druid Stag (Travel Form)
 21257	3	Druit Swift Travel Form
 18704	2	Drummer Ata'nal
 7850	1	Dryad (Frost)
@@ -1223,6 +1224,7 @@ DmorphOcto_ModelData = [[
 20769	3	Gnome Female NPC
 21480	3	Gnome Female NPC
 21482	3	Gnome Female NPC
+18779	2	Gnome Flying Machine
 1563	1	Gnome Male (player model)
 1889	1	Gnome Male NPC
 2456	1	Gnome Male NPC
@@ -2549,6 +2551,7 @@ DmorphOcto_ModelData = [[
 21301	3	Mothardenwealdmount (Red)
 20321	2	Mother Tanya
 21437	3	Mothpet
+21311	2	Motorcycle (Chopper)
 21311	3	Motorcycle Vehicle
 21317	3	Motorcyclefelreavermount (Fel)
 21318	3	Motorcyclefelreavermount (Fire)
@@ -2618,6 +2621,7 @@ DmorphOcto_ModelData = [[
 20260	2	Naytha Grovelight
 18013	2	Nazorna
 6930	0	Neevan Gubblewire
+20906	2	Nether-Gorged Greatwyrm
 20906	3	Nethergorgedgreatwyrm
 21498	3	Netherray (Black)
 21499	3	Netherray (Blue)
@@ -3488,6 +3492,7 @@ DmorphOcto_ModelData = [[
 735	1	Skeleton (Green)
 11473	1	Skeleton (Green)
 20866	3	Skiff
+20866	2	Skiff (Boat)
 21428	3	Skunk
 18911	2	Slaver Vilegrip
 7489	1	Slime (Aqua Blue)
@@ -3995,6 +4000,7 @@ DmorphOcto_ModelData = [[
 21523	3	Turtle Christmas
 20833	3	Turtlemount
 20781	3	Tuskarboat
+20781	2	Tuskarr Boat
 18851	2	Twilight Fireblade
 18852	2	Twilight Fireblade
 18853	2	Twilight Fireblade
