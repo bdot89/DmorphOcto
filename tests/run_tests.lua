@@ -1408,6 +1408,249 @@ for i = 1, table.getn(humanLooks) do
 end
 check(not stillThere and table.getn(humanLooks) > 100, "hidden NPC looks are left out of the Races tab")
 
+
+------------------------------------------------------------------------------
+-- DmorphHelper.dll: weapon glows and your own skin, face and hair. The fake
+-- keeps the player's look and weapon enchants the way the game's fields do,
+-- and like the real DLL it survives a /reload. The data is what
+-- tests/make_game_fixture.py's game gives tools/build_options.ps1.
+
+local GLOWS = "25\t1900\tCrusader; Holy Power\tHolyGlow\n26\t803\tFiery Weapon\tFireGlow\n"
+	.. "28\t20\tFrost\tFrostGlow\n29\t30\t\tHolyGlow\n"
+local OPTIONS = {
+	["1:0"] = {
+		skin = { 0, 1, 2, 3 }, npcSkin = { [3] = true },
+		face = { [0] = { 0, 1 }, [1] = { 0 }, [2] = { 0 }, [3] = { 0 } }, npcFace = {},
+		hairStyle = { 0, 1, 2 }, npcHairStyle = {},
+		hairColour = { [0] = { 0, 1 }, [1] = { 0 }, [2] = { 0 } }, anyHairColour = { 0, 1 }, npcHairColour = {},
+		facialHair = { 0, 1, 2 },
+	},
+	["2:0"] = {
+		skin = { 0, 1 }, npcSkin = {},
+		face = { [0] = { 0 }, [1] = { 0 } }, npcFace = {},
+		hairStyle = { 0, 1 }, npcHairStyle = {},
+		hairColour = { [0] = { 0 } }, anyHairColour = { 0 }, npcHairColour = {},
+		facialHair = { 0 },
+	},
+}
+
+local game
+local function installHelper(look)
+	game = { look = look, real = look, enchants = { [16] = { 803, 0 }, [17] = { 0, 0 }, [18] = { 0, 0 } }, lookWrites = 0 }
+	local function whole(v, max)
+		return type(v) == "number" and v >= 0 and v <= max and v == math.floor(v)
+	end
+	function DmorphHelper_Version()
+		return 1
+	end
+	function DmorphHelper_GetItemEnchants(unit, slot)
+		if unit ~= "player" or not whole(slot, 19) or slot < 1 then
+			error("Usage: DmorphHelper_GetItemEnchants(unit, slot 1-19)")
+		end
+		local e = game.enchants[slot] or { 0, 0 }
+		return e[1], e[2]
+	end
+	function DmorphHelper_SetItemEnchants(unit, slot, permanent, temporary)
+		if unit ~= "player" or not whole(slot, 19) or not whole(permanent, 1000000) or not whole(temporary, 1000000) then
+			error("Usage: DmorphHelper_SetItemEnchants(unit, slot 1-19, permanent, temporary)")
+		end
+		game.enchants[slot] = { permanent, temporary }
+	end
+	function DmorphHelper_GetLook(unit)
+		local l = game.look
+		return l[1], l[2], l[3], l[4], l[5]
+	end
+	function DmorphHelper_SetLook(unit, a, b, c, d, e)
+		for _, v in ipairs({ a, b, c, d, e }) do
+			if not whole(v, 255) then
+				error("Usage: DmorphHelper_SetLook(unit, skin, face, hairStyle, hairColour, facialHair)")
+			end
+		end
+		game.look = { a, b, c, d, e }
+		game.lookWrites = game.lookWrites + 1
+	end
+end
+
+local function removeHelper()
+	DmorphHelper_Version, DmorphHelper_GetItemEnchants, DmorphHelper_SetItemEnchants = nil, nil, nil
+	DmorphHelper_GetLook, DmorphHelper_SetLook = nil, nil
+end
+
+local function sameLook(a, b)
+	for i = 1, 5 do
+		if a[i] ~= b[i] then
+			return false
+		end
+	end
+	return true
+end
+
+-- Whether a look is one the race and gender can wear (OPTIONS).
+local function wearable(look, key)
+	local o = OPTIONS[key]
+	local function has(list, v)
+		for i = 1, table.getn(list or {}) do
+			if list[i] == v then
+				return true
+			end
+		end
+	end
+	return has(o.skin, look[1]) and has(o.face[look[1]], look[2]) and has(o.hairStyle, look[3])
+		and has(o.hairColour[look[3]] or o.anyHairColour, look[4]) and has(o.facialHair, look[5])
+end
+
+local function loadWithHelper()
+	loadUI()
+	DmorphOcto_GlowData, DmorphOcto_CharOptions = GLOWS, OPTIONS
+end
+
+-- Without the DLL the glow and look actions say what's missing.
+newClient(49)
+installMorphAPI()
+removeHelper()
+DmorphOctoDB, DmorphOctoAccount = nil, nil
+loadWithHelper()
+check(not DmorphOcto.HasHelper(), "without DmorphHelper.dll it isn't detected")
+slash("glow mainhand 1900")
+check(contains(lastChat(), "DmorphHelper.dll isn't loaded"), ".glow without the DLL says it's missing")
+slash("dmorph status")
+check(contains(allChat(), "DmorphHelper.dll is not loaded"), "status says the helper isn't loaded")
+slash("")
+Mock.Click(DmorphOctoTabGlows)
+check(contains(DmorphOctoGlowState.text, "isn't loaded"), "the Glows tab says the helper isn't loaded")
+check(DmorphOctoGlowCount.text == "4 glows" and DmorphOctoGlowListRow1.text.text == "Crusader",
+	"the Glows tab lists the game's glows")
+press(DmorphOctoGlowListRow1)
+check(contains(DmorphOctoFrameStatus.text, "DmorphHelper.dll isn't loaded"), "clicking a glow without the DLL explains")
+Mock.Click(DmorphOctoTabRaces)
+check(DmorphOctoCreatorValue1.text == "yours" and contains(DmorphOctoRacesHint.text, "an NPC has"),
+	"without the DLL the Races rows go through NPC looks")
+
+-- With it: glows.
+local REAL = { 0, 1, 0, 1, 2 }
+installHelper(REAL)
+DmorphOctoDB, DmorphOctoAccount = nil, nil
+loadWithHelper()
+Mock.Tick(1.1)
+slash("dmorph status")
+check(contains(allChat(), "DmorphHelper v1 is loaded"), "status shows the helper's version")
+slash("")
+Mock.Click(DmorphOctoTabGlows)
+check(DmorphOctoGlowState.text == "Main hand: your own (Fiery Weapon)", "the tab shows your own glow by name")
+Mock.Type(DmorphOctoGlowSearch, "holy power")
+check(DmorphOctoGlowCount.text == "1 glow" and DmorphOctoGlowListRow1.text.text == "Crusader",
+	"search finds a glow by any enchant that shows it")
+Mock.Type(DmorphOctoGlowSearch, "holyglow")
+check(DmorphOctoGlowCount.text == "2 glows", "or by its effect model")
+Mock.Type(DmorphOctoGlowSearch, "")
+check(DmorphOctoGlowListRow4.text.text == "Glow 29", "a glow no enchant names is called by its number")
+press(DmorphOctoGlowListRow1)
+check(game.enchants[16][1] == 1900 and game.enchants[16][2] == 0, "clicking a glow puts its enchant on the main hand")
+check(DmorphOctoGlowListRow1.tick.shown and DmorphOctoGlowState.text == "Main hand: Crusader",
+	"the glow you picked is ticked and named")
+game.enchants[16] = { 803, 5 } -- the server sends the real enchant (and an oil) again
+Mock.Tick(1.1)
+check(game.enchants[16][1] == 1900 and game.enchants[16][2] == 0, "the watcher puts the glow back after the server resends")
+local picked, real = DmorphOcto.GetGlow(16)
+check(picked == 1900 and real == 803, "the real enchant is remembered")
+press(DmorphOctoGlowSlot17)
+press(DmorphOctoGlowListRow3)
+check(game.enchants[17][1] == 20 and game.enchants[16][1] == 1900, "the off hand gets its own glow")
+press(DmorphOctoGlowNone)
+check(game.enchants[17][1] == 0 and game.enchants[17][2] == 0, "No glow clears the slot")
+slash("glow ranged 30")
+check(game.enchants[18][1] == 30, ".glow ranged sets the ranged slot")
+slash("glow mh 99999999")
+check(contains(lastChat(), "Usage") or contains(lastChat(), "whole numbers"), "a bad enchant ID is refused")
+-- A /reload keeps the glows and what's real.
+loadWithHelper()
+game.enchants[16] = { 803, 5 }
+Mock.Tick(1.1)
+check(game.enchants[16][1] == 1900, "glows come back after a /reload")
+slash("glow mainhand own")
+check(game.enchants[16][1] == 803 and game.enchants[16][2] == 5, "your own glow puts the real enchant back")
+Mock.Tick(1.1)
+check(game.enchants[16][1] == 803, "and the watcher leaves it alone afterwards")
+slash("dmorph status")
+check(contains(allChat(), "Glow, ranged: Glow 29"), "status lists the glows")
+
+-- Your own skin, face and hair (Races tab).
+slash("")
+Mock.Click(DmorphOctoTabRaces)
+check(DmorphOctoCreatorValue1.text == "1 of 4" and DmorphOctoCreatorValue2.text == "2 of 2"
+	and DmorphOctoCreatorValue4.text == "2 of 2", "the rows show where your own look is among the race's")
+check(contains(DmorphOctoRacesHint.text, "real skin"), "the hint says the rows change your real look")
+press(DmorphOctoCreatorNext1)
+check(game.look[1] == 1 and game.look[2] == 0 and vh.display == 49,
+	"skin colour > changes only your model's skin (and a face it doesn't have)")
+check(contains(DmorphOctoFrameStatus.text, "face changed too"), "the status says the face had to change")
+check(DmorphOctoCreatorValue1.text == "2 of 4", "the row shows the new skin colour")
+press(DmorphOctoCreatorNext1)
+press(DmorphOctoCreatorNext1)
+check(game.look[1] == 3 and DmorphOctoCreatorValue1.text == "4 of 4 (NPC)" and contains(DmorphOctoFrameStatus.text, "NPC-only"),
+	"an NPC-only skin colour is marked")
+press(DmorphOctoCreatorNext2)
+check(contains(DmorphOctoFrameStatus.text, "just one face"), "a row with one choice says so")
+press(DmorphOctoCreatorNext3)
+check(game.look[3] == 1 and game.look[4] == 0, "a hair style without your hair colour takes the closest one")
+check(contains(DmorphOctoFrameStatus.text, "hair colour changed too"), "and says so")
+check(wearable(game.look, "1:0"), "every picked look is one the race can wear")
+local mine = { game.look[1], game.look[2], game.look[3], game.look[4], game.look[5] }
+game.look = REAL -- the server sends your real look again
+Mock.Tick(1.1)
+check(sameLook(game.look, mine), "the watcher puts the picked look back")
+loadWithHelper()
+game.look = REAL
+Mock.Tick(1.1)
+check(sameLook(game.look, mine), "and after a /reload")
+slash("")
+Mock.Click(DmorphOctoTabRaces)
+check(contains(DmorphOctoCreatorTitle.text, "a look you picked"), "the title says the look is one you picked")
+-- Outfits keep the look and the glows.
+slash("outfit save Ghost")
+check(contains(DmorphOcto.DescribeOutfit(DmorphOcto.GetOutfit("Ghost")), "own face"), "outfits note a picked look")
+press(DmorphOctoOwnLook)
+Mock.Tick(0.2)
+check(sameLook(game.look, REAL), "My own look puts your real face, skin and hair back")
+Mock.Tick(1.1)
+check(sameLook(game.look, REAL), "and the watcher leaves it")
+slash("outfit Ghost")
+Mock.Tick(0.6)
+check(sameLook(game.look, mine) and game.enchants[18][1] == 30, "loading the outfit brings the look and glows back")
+-- Another race: its own look, made to fit.
+press(DmorphOctoRace2Male)
+check(sameLook(game.look, mine), "a look isn't written while the game still builds the new model")
+Mock.Tick(0.2)
+check(vh.display == 51 and sameLook(game.look, REAL), "another race shows your real look until you pick one")
+press(DmorphOctoCreatorNext1)
+check(wearable(game.look, "2:0"), "a look picked on another race fits that race")
+local orc = { game.look[1], game.look[2], game.look[3], game.look[4], game.look[5] }
+press(DmorphOctoRace1Male)
+Mock.Tick(0.2)
+check(sameLook(game.look, mine), "each race keeps its own picked look")
+press(DmorphOctoRace2Male)
+Mock.Tick(0.2)
+check(sameLook(game.look, orc), "and gets it back")
+press(DmorphOctoCreatorRandom)
+check(wearable(game.look, "2:0") and vh.display == 51, "the dice picks a look the race can wear, on your model")
+-- From an NPC look: the rows take you back to your own model with its face.
+press(DmorphOctoRace1Male)
+press(DmorphOctoCreatorNext6)
+check(contains(DmorphOctoCreatorTitle.text, "NPC look"), "the NPC look row wears whole NPC looks")
+local npcDisplay = vh.display
+press(DmorphOctoCreatorNext1)
+check(vh.display == 49 and npcDisplay ~= 49 and wearable(game.look, "1:0"),
+	"from an NPC look, a row goes back to your model with a look that fits")
+check(contains(DmorphOctoFrameStatus.text, "Your own model now"), "and says so")
+slash("demorph all")
+Mock.Tick(1.1)
+check(sameLook(game.look, REAL) and game.enchants[16][1] == 803 and game.enchants[18][1] == 0,
+	"resetting everything puts your real look and glows back")
+-- A race with no list (High Elf here) keeps the NPC rows.
+press(DmorphOctoRace10Male)
+check(contains(DmorphOctoRacesHint.text, "an NPC has"), "a race with no look list uses NPC looks")
+removeHelper()
+
 print(format("%d checks, %d failures", checks, failures))
 if failures > 0 then
 	os.exit(1)

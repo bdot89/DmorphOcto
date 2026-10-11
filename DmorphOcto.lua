@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "1.9.1"
+local VERSION = "2.0.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 local MISSING_API = "VanillaHelpers v1.1.0 or newer is not loaded, so morphing is unavailable. "
 	.. "Enable the 'vanillaHelpers' mod in OctoLauncher (or add VanillaHelpers.dll to dlls.txt) "
@@ -51,6 +51,8 @@ local SLOT_NAMES = {
 	[7] = "Legs", [8] = "Feet", [9] = "Wrist", [10] = "Hands", [15] = "Back",
 	[16] = "Main hand", [17] = "Off hand", [18] = "Ranged", [19] = "Tabard",
 }
+-- The slots whose enchant glow DmorphHelper can change.
+local GLOW_SLOT = { [16] = true, [17] = true, [18] = true }
 local SLOT_ALIASES = {
 	head = 1, shoulder = 3, shoulders = 3, shirt = 4, chest = 5, waist = 6,
 	belt = 6, legs = 7, feet = 8, boots = 8, wrist = 9, wrists = 9, hands = 10,
@@ -64,6 +66,7 @@ DmorphOcto = {
 	RACES = RACES,
 	SLOT_ORDER = SLOT_ORDER,
 	SLOT_NAMES = SLOT_NAMES,
+	GLOW_SLOTS = { 16, 17, 18 },
 }
 local M = DmorphOcto
 
@@ -769,17 +772,38 @@ function M.DescribeOutfit(outfit)
 	for _ in pairs(outfit.items) do
 		count = count + 1
 	end
-	local mount = ""
+	local extra = ""
+	if outfit.look then
+		extra = extra .. ", own face"
+	end
+	if outfit.glows and next(outfit.glows) then
+		extra = extra .. ", glows"
+	end
 	if outfit.mount then
-		mount = ", mount"
+		extra = extra .. ", mount"
 	end
 	if count == 1 then
-		return look .. ", 1 item" .. mount
+		return look .. ", 1 item" .. extra
 	end
-	return look .. ", " .. count .. " items" .. mount
+	return look .. ", " .. count .. " items" .. extra
 end
 
 -- State ---------------------------------------------------------------------
+
+-- Five look values (skin colour, face, hair style, hair colour, facial hair),
+-- copied, or nil if look isn't one.
+local function ValidLook(look)
+	if type(look) ~= "table" then
+		return nil
+	end
+	for i = 1, 5 do
+		local v = look[i]
+		if type(v) ~= "number" or v < 0 or v > 255 or v ~= math.floor(v) then
+			return nil
+		end
+	end
+	return { look[1], look[2], look[3], look[4], look[5] }
+end
 
 -- Drops anything that isn't a usable ID, e.g. from a hand-edited file.
 local function SanitizeOutfit(outfit)
@@ -807,13 +831,43 @@ local function SanitizeOutfit(outfit)
 		end
 		outfit.items[slot] = itemID
 	end
+	-- Weapon glows (DmorphHelper): slot -> enchant ID, 0 for none.
+	if type(outfit.glows) ~= "table" then
+		outfit.glows = {}
+	end
+	for slot, enchantID in pairs(outfit.glows) do
+		enchantID = ParseID(enchantID)
+		if not GLOW_SLOT[slot] or (enchantID and enchantID > 1000000) then
+			enchantID = nil
+		end
+		outfit.glows[slot] = enchantID
+	end
+	-- An outfit's own look: { race, gender, the five values }.
+	local look = outfit.look
+	if type(look) == "table" and RACES[look.race] and (look.gender == 0 or look.gender == 1) and ValidLook(look) then
+		outfit.look = ValidLook(look)
+		outfit.look.race, outfit.look.gender = look.race, look.gender
+	else
+		outfit.look = nil
+	end
 	return outfit
 end
 
+-- The current look as an outfit: db, plus the look picked for your body.
 local function CopyOutfit(outfit)
-	local copy = { display = outfit.display, race = outfit.race, gender = outfit.gender, mount = outfit.mount, items = {} }
+	local copy = { display = outfit.display, race = outfit.race, gender = outfit.gender, mount = outfit.mount,
+		items = {}, glows = {} }
 	for slot, itemID in pairs(outfit.items) do
 		copy.items[slot] = itemID
+	end
+	for slot, enchantID in pairs(outfit.glows) do
+		copy.glows[slot] = enchantID
+	end
+	local race, gender = M.GetBodyRace()
+	local look = race and ValidLook(outfit.looks[race .. ":" .. gender])
+	if look then
+		look.race, look.gender = race, gender
+		copy.look = look
 	end
 	return copy
 end
@@ -845,6 +899,31 @@ function InitDB()
 		end
 	end
 	db.ridden = ridden
+	-- DmorphHelper: the look picked per body ("race:gender" -> five values),
+	-- and per weapon slot and for the look, the real values last seen and
+	-- what was last written.
+	local picked = {}
+	if type(db.looks) == "table" then
+		for key, look in pairs(db.looks) do
+			local _, _, race = strfind(type(key) == "string" and key or "", "^(%d+):[01]$")
+			if race and RACES[tonumber(race)] then
+				picked[key] = ValidLook(look)
+			end
+		end
+	end
+	db.looks = picked
+	db.lookReal, db.lookWritten = ValidLook(db.lookReal), ValidLook(db.lookWritten)
+	for _, key in ipairs({ "glowReal", "glowWritten" }) do
+		local kept = {}
+		if type(db[key]) == "table" then
+			for slot, pair in pairs(db[key]) do
+				if GLOW_SLOT[slot] and type(pair) == "table" and type(pair[1]) == "number" and type(pair[2]) == "number" then
+					kept[slot] = { pair[1], pair[2] }
+				end
+			end
+		end
+		db[key] = kept
+	end
 	if type(DmorphOctoAccount) ~= "table" then
 		DmorphOctoAccount = {}
 	end
@@ -977,7 +1056,13 @@ local function BodyDisplayID()
 	end
 end
 
+-- After a body change the game is still building the model, and a look or
+-- glow written into it then could mix with the old one; so DmorphHelper's
+-- watcher holds off this long, then runs (see Glows and your own look).
+local helperHold, helperWait = 0, 0
+
 local function ApplyBody()
+	helperHold, helperWait = 0.5, 0.5
 	return Morph(SetUnitDisplayID, "player", BodyDisplayID())
 end
 
@@ -1140,6 +1225,437 @@ function M.GetSharedLook()
 	return BodyDisplayID(), db.items, mount
 end
 
+-- Glows and your own look (DmorphHelper.dll) ----------------------------------
+
+-- DmorphHelper.dll (helper/ in this folder) does two things VanillaHelpers
+-- can't, on your screen only like every morph: it rewrites a weapon slot's
+-- enchant IDs, which the game draws the enchant's glow from, and your skin
+-- colour, face, hair style, hair colour and facial hair (the values character
+-- creation sets). The server sends the real values again now and then (a new
+-- enchant, a loading screen), so a watcher puts the chosen ones back once a
+-- second. Whatever it reads that it didn't write is the real value, kept so
+-- "your own" can put it back.
+local MISSING_HELPER = "DmorphHelper.dll isn't loaded, so weapon glows and real skin, face and hair changes "
+	.. "are unavailable. Close the game, run tools\\install_helper.ps1 from the DmorphOcto folder, and start it again."
+M.MISSING_HELPER = MISSING_HELPER
+-- Rows 1-5 of the Races tab, in DmorphHelper_GetLook's order.
+local OWN_LOOK_NPC = { "npcSkin", "npcFace", "npcHairStyle", "npcHairColour" }
+
+local function HasHelper()
+	return type(DmorphHelper_GetItemEnchants) == "function" and type(DmorphHelper_SetItemEnchants) == "function"
+		and type(DmorphHelper_GetLook) == "function" and type(DmorphHelper_SetLook) == "function"
+end
+M.HasHelper = HasHelper
+
+-- Every glow the client can draw (Data/Glows.lua): per glow its visual ID, an
+-- enchant ID that shows it, its name (the shortest enchant name), all the
+-- enchant names and its effect models.
+local glows
+function M.GetGlows()
+	local text = DmorphOcto_GlowData or ""
+	if not glows or glows.text ~= text then
+		glows = { text = text, count = 0, visual = {}, enchant = {}, name = {}, names = {}, models = {}, search = {} }
+		for visual, enchant, names, models in string.gfind(text, "(%d+)\t(%d+)\t([^\t\n]*)\t([^\t\n]*)") do
+			local n = glows.count + 1
+			glows.count = n
+			glows.visual[n], glows.enchant[n] = tonumber(visual), tonumber(enchant)
+			local _, _, first = strfind(names, "^([^;]+)")
+			glows.name[n] = first or ("Glow " .. visual)
+			glows.names[n], glows.models[n] = names, models
+			glows.search[n] = strlower(names .. " " .. models .. " " .. visual .. " " .. enchant)
+		end
+	end
+	return glows
+end
+
+-- The glows whose names, effect models or IDs have every word of text.
+function M.FilterGlows(text)
+	local all, words = M.GetGlows(), {}
+	for word in string.gfind(strlower(text or ""), "%S+") do
+		table.insert(words, word)
+	end
+	local result, count = {}, 0
+	for i = 1, all.count do
+		local keep = true
+		for k = 1, table.getn(words) do
+			if not strfind(all.search[i], words[k], 1, true) then
+				keep = false
+				break
+			end
+		end
+		if keep then
+			count = count + 1
+			result[count] = i
+		end
+	end
+	return result, count
+end
+
+function M.DescribeGlow(enchantID)
+	if enchantID == 0 then
+		return "no glow"
+	end
+	local all = M.GetGlows()
+	for i = 1, all.count do
+		if all.enchant[i] == enchantID then
+			return all.name[i]
+		end
+	end
+	return "enchant " .. enchantID
+end
+
+-- The glow picked for a weapon slot (an enchant ID, 0 for none, nil for your
+-- own) and the slot's real permanent enchant, if seen.
+function M.GetGlow(slot)
+	InitDB()
+	local real = db.glowReal[slot]
+	return db.glows[slot], real and real[1]
+end
+
+-- The skin colours, faces and hair a race and gender can wear
+-- (Data/CharOptions.lua), or nil.
+function M.GetLookOptions(race, gender)
+	local all = DmorphOcto_CharOptions
+	local o = type(all) == "table" and race and all[race .. ":" .. gender]
+	if type(o) == "table" and type(o.skin) == "table" and table.getn(o.skin) > 0 then
+		return o
+	end
+end
+
+-- The values row f (1-5) can have with the rest of look, sorted: a face needs
+-- its skin colour, a hair colour its hair style.
+local function LookChoices(o, look, f)
+	local list
+	if f == 1 then
+		list = o.skin
+	elseif f == 2 then
+		list = o.face and o.face[look[1]]
+	elseif f == 3 then
+		list = o.hairStyle
+	elseif f == 4 then
+		list = o.hairColour and o.hairColour[look[3]] or o.anyHairColour
+	else
+		list = o.facialHair
+	end
+	return type(list) == "table" and list or {}
+end
+
+local function Nearest(list, value)
+	local best
+	for i = 1, table.getn(list) do
+		local v = list[i]
+		if v == value then
+			return v
+		end
+		if not best or math.abs(v - value) < math.abs(best - value) then
+			best = v
+		end
+	end
+	return best or value
+end
+
+-- Makes look one the race can wear, row by row; returns the rows changed.
+local function ClampLook(o, look)
+	local changed = {}
+	for f = 1, 5 do
+		local v = Nearest(LookChoices(o, look, f), look[f])
+		if v ~= look[f] then
+			look[f] = v
+			table.insert(changed, f)
+		end
+	end
+	return changed
+end
+
+-- Row f of a look: its choices, the value's place among them (0 if it isn't
+-- one), and whether only NPCs have that value.
+function M.LookRow(o, look, f)
+	local values = LookChoices(o, look, f)
+	local pos = 0
+	for i = 1, table.getn(values) do
+		if values[i] == look[f] then
+			pos = i
+		end
+	end
+	local npc = OWN_LOOK_NPC[f] and type(o[OWN_LOOK_NPC[f]]) == "table" and o[OWN_LOOK_NPC[f]][look[f]] and true
+	return values, pos, npc or false
+end
+
+local function SameValues(a, b)
+	if not (a and b) then
+		return false
+	end
+	for i = 1, 5 do
+		if a[i] ~= b[i] then
+			return false
+		end
+	end
+	return true
+end
+
+local function CopyLook(look)
+	return { look[1], look[2], look[3], look[4], look[5] }
+end
+
+local function ReadLook()
+	local ok, a, b, c, d, e = pcall(DmorphHelper_GetLook, "player")
+	if ok and type(a) == "number" then
+		return { a, b, c, d, e }
+	end
+end
+
+-- Your real look: what the game has, unless that's what we wrote.
+local function RealLook()
+	local current = HasHelper() and ReadLook()
+	if current and not SameValues(current, db.lookWritten) then
+		return current
+	end
+	return db.lookReal or current
+end
+
+-- The body your look shows on (race, gender), its options, the look it has
+-- (5 values, or nil when unknown) and whether that's one you picked.
+function M.GetLookState()
+	InitDB()
+	local race, gender = M.GetBodyRace()
+	local o = M.GetLookOptions(race, gender)
+	local picked = race and db.looks[race .. ":" .. gender]
+	if picked then
+		return race, gender, o, picked, true
+	end
+	return race, gender, o, RealLook(), false
+end
+
+-- Puts the picked glows and look on, and puts the real ones back where
+-- nothing is picked any more.
+local function WatchHelper()
+	if not (sessionReady and HasHelper()) or helperHold > 0 then
+		return
+	end
+	local current = ReadLook()
+	if current then
+		if not SameValues(current, db.lookWritten) then
+			db.lookReal = current
+		end
+		local race, gender = M.GetBodyRace()
+		local want = race and db.looks[race .. ":" .. gender]
+		local restore = not want and db.lookWritten
+		if restore then
+			want = db.lookReal
+		end
+		if want and not SameValues(current, want) then
+			if pcall(DmorphHelper_SetLook, "player", want[1], want[2], want[3], want[4], want[5]) then
+				db.lookWritten = CopyLook(want)
+			end
+		end
+		if restore then
+			db.lookWritten = nil
+		end
+	end
+	for slot in pairs(GLOW_SLOT) do
+		local ok, p, t = pcall(DmorphHelper_GetItemEnchants, "player", slot)
+		if ok and type(p) == "number" then
+			local written = db.glowWritten[slot]
+			if not (written and written[1] == p and written[2] == t) then
+				db.glowReal[slot] = { p, t }
+			end
+			local want
+			if db.glows[slot] then
+				want = { db.glows[slot], 0 }
+			elseif written then
+				want = db.glowReal[slot]
+			end
+			if want and (want[1] ~= p or want[2] ~= t) then
+				if pcall(DmorphHelper_SetItemEnchants, "player", slot, want[1], want[2]) then
+					db.glowWritten[slot] = { want[1], want[2] }
+				end
+			end
+			if not db.glows[slot] then
+				db.glowWritten[slot] = nil
+			end
+		end
+	end
+end
+
+-- Glow and look actions need both DLLs.
+local function HelperBegin()
+	if not Begin() then
+		return false, MISSING_API
+	end
+	if not HasHelper() then
+		return false, MISSING_HELPER
+	end
+	return true
+end
+
+-- enchantID: an enchant whose glow the slot shows, 0 for no glow, nil for
+-- your own.
+function M.SetGlow(slot, enchantID)
+	local ok, err = HelperBegin()
+	if not ok then
+		return false, err
+	end
+	if not GLOW_SLOT[slot] then
+		return false, "Glows show on weapons: main hand (16), off hand (17) or ranged (18)."
+	end
+	if enchantID ~= nil then
+		enchantID = ParseID(enchantID)
+		if not enchantID or enchantID > 1000000 then
+			return false, "Enchant IDs are whole numbers."
+		end
+	end
+	db.glows[slot] = enchantID
+	WatchHelper()
+	Notify()
+	if not enchantID then
+		return true, SLOT_NAMES[slot] .. ": your own glow."
+	end
+	return true, SLOT_NAMES[slot] .. ": " .. M.DescribeGlow(enchantID) .. "."
+end
+
+M.LOOK_ROWS = { "Skin colour", "Face", "Hair style", "Hair colour", "Facial hair" }
+
+local function RowName(f, gender)
+	if f == 5 and gender == 1 then
+		return "Features"
+	end
+	return M.LOOK_ROWS[f]
+end
+M.LookRowName = RowName
+
+local function NoOptions(race, gender)
+	if not race then
+		return "Couldn't detect your race, pick one first."
+	end
+	return "There's no skin, face and hair list for " .. M.DescribeBody(race, gender)
+		.. " yet. Close the game and run tools\\update_from_game.ps1, then try again."
+end
+
+-- "the face and hair colour"
+local function JoinRows(rows, gender)
+	local names = {}
+	for i = 1, table.getn(rows) do
+		table.insert(names, strlower(RowName(rows[i], gender)))
+	end
+	local n = table.getn(names)
+	if n == 1 then
+		return names[1]
+	end
+	return table.concat(names, ", ", 1, n - 1) .. " and " .. names[n]
+end
+
+local function PickLook(race, gender, look)
+	db.looks[race .. ":" .. gender] = CopyLook(look)
+	WatchHelper()
+	Notify()
+end
+
+-- Your model (race morph or your own) with these five values, made valid for
+-- it. Returns ok, message.
+function M.SetOwnLook(values)
+	local ok, err = HelperBegin()
+	if not ok then
+		return false, err
+	end
+	local race, gender, o = M.GetLookState()
+	if not o then
+		return false, NoOptions(race, gender)
+	end
+	local look = CopyLook(values)
+	local changed = ClampLook(o, look)
+	PickLook(race, gender, look)
+	if table.getn(changed) > 0 then
+		return true, M.DescribeBody(race, gender) .. " has no such " .. JoinRows(changed, gender)
+			.. ", so the closest one is on."
+	end
+	return true, "Look set."
+end
+
+-- Row f (1-5) of your model's look one value along (step 1 or -1, wrapping).
+-- A row whose new value doesn't go with another row (a face is per skin
+-- colour, a hair colour per hair style) moves that one to its closest value.
+function M.StepOwnLook(f, step)
+	local ok, err = HelperBegin()
+	if not ok then
+		return false, err
+	end
+	local race, gender, o, current = M.GetLookState()
+	if not o then
+		return false, NoOptions(race, gender)
+	end
+	if not current then
+		return false, "Couldn't read your look from the game."
+	end
+	local look = CopyLook(current)
+	ClampLook(o, look)
+	local values = LookChoices(o, look, f)
+	local n = table.getn(values)
+	if n < 2 then
+		return false, M.DescribeBody(race, gender) .. " has just one " .. strlower(RowName(f, gender)) .. "."
+	end
+	local pos = 1
+	for i = 1, n do
+		if values[i] == look[f] then
+			pos = i
+		end
+	end
+	pos = math.mod(pos - 1 + step + n, n) + 1
+	look[f] = values[pos]
+	local changed = ClampLook(o, look)
+	PickLook(race, gender, look)
+	local message = RowName(f, gender) .. " " .. pos .. " of " .. n
+	local _, _, npc = M.LookRow(o, look, f)
+	if npc then
+		message = message .. " (an NPC-only one)"
+	end
+	message = message .. "."
+	if table.getn(changed) > 0 then
+		message = message .. " The " .. JoinRows(changed, gender) .. " changed too: this one doesn't come with the old one."
+	end
+	return true, message
+end
+
+-- A random look for your model, from everything its race can wear.
+function M.RandomOwnLook()
+	local ok, err = HelperBegin()
+	if not ok then
+		return false, err
+	end
+	local race, gender, o, current = M.GetLookState()
+	if not o then
+		return false, NoOptions(race, gender)
+	end
+	local look = CopyLook(current or { 0, 0, 0, 0, 0 })
+	for try = 1, 5 do
+		for f = 1, 5 do
+			local values = LookChoices(o, look, f)
+			if table.getn(values) > 0 then
+				look[f] = values[math.random(table.getn(values))]
+			end
+		end
+		if not SameValues(look, current) then
+			break
+		end
+	end
+	PickLook(race, gender, look)
+	return true, "A random " .. M.DescribeBody(race, gender) .. " look."
+end
+
+-- Back to your real skin, face and hair on the model you show.
+function M.ResetOwnLook()
+	local ok, err = HelperBegin()
+	if not ok then
+		return false, err
+	end
+	local race, gender = M.GetBodyRace()
+	if race then
+		db.looks[race .. ":" .. gender] = nil
+	end
+	WatchHelper()
+	Notify()
+	return true, "Your own face, skin and hair."
+end
+
 local function ApplySaved()
 	if not Begin() then
 		return
@@ -1150,6 +1666,7 @@ local function ApplySaved()
 	for slot in pairs(db.items) do
 		ApplyItem(slot)
 	end
+	WatchHelper()
 	Notify()
 end
 
@@ -1169,7 +1686,9 @@ function M.ResetModel()
 		return false, MISSING_API
 	end
 	db.display, db.race, db.gender = nil, nil, 0
+	db.looks = {}
 	local ok, err = ApplyBody()
+	WatchHelper()
 	return Result(ok, err, "Model reset.")
 end
 
@@ -1178,7 +1697,9 @@ function M.ResetAll()
 		return false, MISSING_API
 	end
 	db.display, db.race, db.gender = nil, nil, 0
+	db.looks, db.glows = {}, {}
 	local ok, err = ApplyBody()
+	WatchHelper()
 	db.mount, db.mountSkins = nil, {}
 	StopSkin()
 	for i = 1, table.getn(SLOT_ORDER) do
@@ -1478,6 +1999,20 @@ function M.LoadOutfit(name)
 		end
 	end
 	db.mount = outfit.mount
+	-- The outfit's glows, and its look for its body (else your own).
+	db.glows = {}
+	for slot, enchantID in pairs(outfit.glows) do
+		db.glows[slot] = enchantID
+	end
+	local race, gender = M.GetBodyRace()
+	if race then
+		db.looks[race .. ":" .. gender] = nil
+	end
+	local look = outfit.look
+	if look and look.race == race and look.gender == gender then
+		db.looks[race .. ":" .. gender] = ValidLook(look)
+	end
+	WatchHelper()
 	return Result(ok, err, "Loaded outfit \"" .. name .. "\".")
 end
 
@@ -1502,6 +2037,7 @@ local function ShowHelp()
 	Print(".demorph - reset your model (DMorph's F5); .demorph all - reset model and items (F10)")
 	Print(".outfit [name] - list or put on saved outfits; .outfit save <name>; .outfit delete <name>")
 	Print(".mount <displayID> - morph your mount (.mount 0 resets)")
+	Print(".glow <mainhand/offhand/ranged> <enchantID> - a weapon's enchant glow (0 none, own your own); needs DmorphHelper.dll")
 	Print(".share on/off - whether other DMorph users see your morph; .share others on/off - whether you see theirs")
 	Print(".dmorph status - show what is morphed. Keys: Key Bindings > DMorph.")
 	if not HasMorphAPI() then
@@ -1516,6 +2052,12 @@ local function ShowStatus()
 		local v = VANILLAHELPERS_VERSION
 		Print(format("VanillaHelpers v%d.%d.%d is loaded.", math.floor(v / 10000),
 			math.floor(math.mod(v, 10000) / 100), math.mod(v, 100)))
+	end
+	if HasHelper() then
+		local ok, version = pcall(DmorphHelper_Version)
+		Print("DmorphHelper v" .. tostring(ok and version or "?") .. " is loaded: weapon glows and real skin, face and hair work.")
+	else
+		Print("DmorphHelper.dll is not loaded: weapon glows and real skin, face and hair changes need it (tools\\install_helper.ps1).")
 	end
 	if nativeRace then
 		Print("Your character: " .. M.DescribeBody(nativeRace, nativeGender) .. ".")
@@ -1538,6 +2080,21 @@ local function ShowStatus()
 		Print("Items: not morphed.")
 	else
 		Print("Items: " .. strsub(list, 3) .. ".")
+	end
+	for i = 1, table.getn(M.GLOW_SLOTS) do
+		local slot = M.GLOW_SLOTS[i]
+		if db.glows[slot] then
+			Print("Glow, " .. strlower(SLOT_NAMES[slot]) .. ": " .. M.DescribeGlow(db.glows[slot]) .. ".")
+		end
+	end
+	local bodies = {}
+	for key in pairs(db.looks) do
+		local _, _, race, gender = strfind(key, "^(%d+):(%d)$")
+		table.insert(bodies, M.DescribeBody(tonumber(race), tonumber(gender)))
+	end
+	if table.getn(bodies) > 0 then
+		table.sort(bodies)
+		Print("Own face, skin and hair picked for: " .. table.concat(bodies, ", ") .. ".")
 	end
 	if db.mount then
 		Print("Mount skin: " .. M.DescribeDisplay(db.mount) .. ".")
@@ -1597,6 +2154,19 @@ function commands.mount(args)
 	end
 	Report(M.SetMount(displayID))
 end
+
+-- .glow mainhand 1900, .glow offhand 0 (no glow), .glow ranged own.
+function commands.glow(args)
+	local word = strlower(args[1] or "")
+	local slot = SLOT_ALIASES[word] or ({ mh = 16, oh = 17 })[word] or ParseID(word)
+	local value = strlower(args[2] or "")
+	local enchantID = ParseID(value)
+	if not (slot and GLOW_SLOT[slot]) or not (enchantID or value == "own") then
+		return Print("Usage: .glow <mainhand/offhand/ranged> <enchantID>  (0 for no glow, own for your own)")
+	end
+	Report(M.SetGlow(slot, enchantID))
+end
+commands.enchant = commands.glow
 
 function commands.scale()
 	Print(".scale isn't available on OctoWoW: VanillaHelpers has no API for model scale.")
@@ -1764,5 +2334,17 @@ mountFrame:SetScript("OnUpdate", function()
 	if this.wait <= 0 then
 		this.wait = 0.1
 		WatchMount()
+	end
+end)
+
+-- The DmorphHelper watcher: keeps the picked glows and look on (see Glows and
+-- your own look).
+local helperFrame = CreateFrame("Frame")
+helperFrame:SetScript("OnUpdate", function()
+	helperHold = helperHold - arg1
+	helperWait = helperWait - arg1
+	if helperWait <= 0 then
+		helperWait = 1
+		WatchHelper()
 	end
 end)

@@ -3,7 +3,7 @@
 -- Left: your character in a dressing room (your race's dress-up backdrop),
 -- with the morphable slots around it. Right: tabs to browse every creature
 -- model (a grid of 3D previews, or a list), skins for your mount, favourites, races and NPC looks,
--- items per slot, item sets and a wardrobe of saved outfits. Everything goes
+-- weapon glows, items per slot, item sets and a wardrobe of saved outfits. Everything goes
 -- through the DmorphOcto.* functions in DmorphOcto.lua, the same ones the chat
 -- commands use.
 --
@@ -75,11 +75,12 @@ local TABS = {
 	{ key = "mounts", text = "Mounts" },
 	{ key = "favourites", text = "Favourites" },
 	{ key = "races", text = "Races" },
+	{ key = "glows", text = "Glows" },
 	{ key = "items", text = "Items" },
 	{ key = "sets", text = "Sets" },
 	{ key = "wardrobe", text = "Wardrobe" },
 }
-local TAB_W, TAB_GAP = 64, 4
+local TAB_W, TAB_GAP = 56, 3
 -- The gold star of the raid target icons marks favourites.
 local STAR = "Interface\\TargetingFrame\\UI-RaidTargetingIcons"
 local FAV_FILTERS = {
@@ -91,7 +92,7 @@ local FAV_FILTERS = {
 local frame -- the window, built the first time it opens
 local ui = {
 	tabs = {}, pages = {}, slots = {}, raceButtons = {}, raceCells = {}, tiles = {}, page = 1,
-	creator = {}, creatorRows = {}, mountRows = {},
+	creator = {}, creatorRows = {}, mountRows = {}, glowSlots = {},
 }
 local currentTab = "models"
 local itemSlot = 1 -- the slot the Items tab is browsing
@@ -1260,9 +1261,12 @@ end
 
 -- One tab for both ways of changing race. A portrait morphs you into that race
 -- with your own face, skin and hair, and your gear shows (VanillaHelpers' race
--- morph). The < > rows step through the faces, skin colours and hair of the
--- game's own NPCs of that race (Data/Looks.lua), one feature at a time; item
--- morphs don't show on an NPC look.
+-- morph). With DmorphHelper.dll and the game's list of looks
+-- (Data/CharOptions.lua), the first five < > rows change that model's real
+-- skin colour, face and hair, one row at a time, and the last one wears whole
+-- NPC looks. Without them every row steps through the faces, skin colours and
+-- hair of the game's own NPCs of that race (Data/Looks.lua); item morphs don't
+-- show on an NPC look.
 
 local function RaceIcon(button, race, gender)
 	local icon = button:CreateTexture(nil, "ARTWORK")
@@ -1310,6 +1314,11 @@ local function RaceTarget()
 	return c.race, c.gender, c.index
 end
 
+-- Whether rows 1-5 change your own model's look (DmorphHelper) for a race.
+local function OwnLookMode(race, gender)
+	return M.HasHelper() and M.GetLookOptions(race, gender) ~= nil
+end
+
 local function Position(list, value)
 	for i = 1, table.getn(list) do
 		if list[i] == value then
@@ -1347,13 +1356,36 @@ local function RefreshRaces()
 	else
 		ui.creatorTitle:SetText(M.DescribeBody(race, gender) .. ": your own face, skin and hair")
 	end
+	local own = OwnLookMode(race, gender)
+	local options, values5 = own and M.GetLookOptions(race, gender)
+	if own and look then
+		values5 = { look[2], look[3], look[4], look[5], look[6] }
+	elseif own and not state.display then
+		local _, _, _, current, picked = M.GetLookState()
+		values5 = current
+		if picked then
+			ui.creatorTitle:SetText(M.DescribeBody(race, gender) .. ": your model, with a look you picked")
+		end
+	end
 	for f = 1, 6 do
 		local row = ui.creatorRows[f]
-		-- Each row counts every value the race's NPCs have for it.
-		local values = look and M.GetLookValues(race, gender, f) or {}
-		local text = "yours"
-		if look then
-			text = Position(values, M.LookValue(look, f)) .. " of " .. table.getn(values)
+		local text, n = "yours", 2
+		if own and f <= 5 then
+			-- Your model's look among everything the race can wear.
+			text = "?"
+			if values5 then
+				local choices, pos, npc = M.LookRow(options, values5, f)
+				n = table.getn(choices)
+				text = (pos > 0 and pos or "?") .. " of " .. n
+				if npc then
+					text = text .. " (NPC)"
+				end
+			end
+		elseif look then
+			-- Each row counts every value the race's NPCs have for it.
+			local values = M.GetLookValues(race, gender, f)
+			n = table.getn(values)
+			text = Position(values, M.LookValue(look, f)) .. " of " .. n
 			if f == 6 then
 				text = text .. "  (" .. Count(look[7], "piece") .. ")"
 			end
@@ -1361,7 +1393,7 @@ local function RefreshRaces()
 			text = "your gear"
 		end
 		row.value:SetText(text)
-		if look and table.getn(values) < 2 then
+		if n < 2 then
 			row.value:SetTextColor(0.5, 0.5, 0.5)
 		else
 			row.value:SetTextColor(1, 1, 1)
@@ -1372,7 +1404,18 @@ local function RefreshRaces()
 			else
 				row.label:SetText("Facial hair")
 			end
+		elseif f == 6 then
+			if own then
+				row.label:SetText("NPC look")
+			else
+				row.label:SetText("Outfit")
+			end
 		end
+	end
+	if own then
+		ui.racesHint:SetText("< > change your model's real skin, face and hair; NPC look wears a whole NPC.")
+	else
+		ui.racesHint:SetText("< > go to the next value an NPC has; other rows change only if they must.")
 	end
 end
 
@@ -1403,14 +1446,45 @@ end
 -- Row f (1-6) one value along. It always changes, to the next value an NPC of
 -- this race has; if none has it with your other rows, the closest look is
 -- worn and the status says which rows came along.
+-- Your own model of the race the tab shows, from an NPC look or a creature.
+local function ToOwnModel(race, gender, index)
+	if index or M.GetState().display then
+		return M.SetRace(race, gender)
+	end
+	return true
+end
+
 local function StepFeature(f, step)
 	local race, gender, index = RaceTarget()
 	local list = M.GetLooks(race, gender)
+	if f <= 5 and OwnLookMode(race, gender) then
+		local npc = index and list[index]
+		ui.creator.index = nil
+		return Morph(function()
+			local ok, message = ToOwnModel(race, gender, index)
+			if not ok then
+				return ok, message
+			end
+			if npc then
+				-- Start from the NPC's face, skin and hair.
+				M.SetOwnLook({ npc[2], npc[3], npc[4], npc[5], npc[6] })
+			end
+			ok, message = M.StepOwnLook(f, step)
+			if ok and npc then
+				message = "Your own model now, with that NPC's face, skin and hair, so your gear shows. " .. message
+			end
+			return ok, message
+		end)
+	end
 	if table.getn(list) == 0 then
 		return WearLook(race, gender, nil)
 	end
 	if not index then
 		-- From your own look, start at the plainest NPC look of this race.
+		if OwnLookMode(race, gender) then
+			return WearLook(race, gender, 1, "The plainest " .. M.DescribeBody(race, gender)
+				.. " NPC. NPC look < > goes through the others; the rows above take you back to your model.")
+		end
 		return WearLook(race, gender, 1, "Your own face can't be changed bit by bit, so this is the plainest "
 			.. M.DescribeBody(race, gender) .. " NPC. Now use the < > rows.")
 	end
@@ -1453,8 +1527,11 @@ local function BuildRacesPage(page)
 				Morph(M.SetRace, this.race, this.gender)
 			end)
 			button:SetScript("OnEnter", function()
-				Tooltip(this, M.DescribeBody(this.race, this.gender), "Click: this race with your own face, skin and hair.",
-					"Then the < > rows go through the game's " .. M.DescribeBody(this.race, this.gender) .. " NPC looks.")
+				local after = "Then the < > rows go through the game's " .. M.DescribeBody(this.race, this.gender) .. " NPC looks."
+				if OwnLookMode(this.race, this.gender) then
+					after = "Then the < > rows change its skin colour, face and hair."
+				end
+				Tooltip(this, M.DescribeBody(this.race, this.gender), "Click: this race with your own face, skin and hair.", after)
 			end)
 			button:SetScript("OnLeave", HideTooltip)
 			table.insert(ui.raceButtons, button)
@@ -1485,6 +1562,16 @@ local function BuildRacesPage(page)
 	dice:SetHighlightTexture("Interface\\Buttons\\UI-GroupLoot-Dice-Highlight")
 	dice:SetScript("OnClick", function()
 		local race, gender, index = RaceTarget()
+		if OwnLookMode(race, gender) then
+			ui.creator.index = nil
+			return Morph(function()
+				local ok, message = ToOwnModel(race, gender, index)
+				if not ok then
+					return ok, message
+				end
+				return M.RandomOwnLook()
+			end)
+		end
 		local count = table.getn(M.GetLooks(race, gender))
 		if count == 0 then
 			return WearLook(race, gender, nil)
@@ -1496,13 +1583,27 @@ local function BuildRacesPage(page)
 		WearLook(race, gender, pick)
 	end)
 	dice:SetScript("OnEnter", function()
-		Tooltip(this, "Random look", "Any NPC face, skin, hair and outfit of this race.")
+		local race, gender = RaceTarget()
+		if OwnLookMode(race, gender) then
+			Tooltip(this, "Random look", "Any skin colour, face and hair this race can have, on your model.")
+		else
+			Tooltip(this, "Random look", "Any NPC face, skin, hair and outfit of this race.")
+		end
 	end)
 	dice:SetScript("OnLeave", HideTooltip)
 	Button(page, "My own look", 100, 48, -299, function()
 		local race, gender = RaceTarget()
 		ui.creator.index = nil
-		Morph(M.SetRace, race, gender)
+		Morph(function()
+			local ok, message = M.SetRace(race, gender)
+			if ok and M.HasHelper() then
+				local _, _, _, _, picked = M.GetLookState()
+				if picked then
+					return M.ResetOwnLook()
+				end
+			end
+			return ok, message
+		end)
 	end, "DmorphOctoOwnLook")
 	Button(page, "Swap gender", 100, 152, -299, function()
 		local race, gender, index = RaceTarget()
@@ -1525,7 +1626,7 @@ local function BuildRacesPage(page)
 	end)
 	star:SetScript("OnLeave", HideTooltip)
 	Label(page, "Portraits keep your own face, skin and hair, and your item morphs show.", "GameFontDisableSmall", 14, -340)
-	Label(page, "< > go to the next value an NPC has; other rows change only if they must.", "GameFontDisableSmall", 14, -354)
+	ui.racesHint = Label(page, "", "GameFontDisableSmall", 14, -354, "DmorphOctoRacesHint")
 end
 
 -- Mounts tab -------------------------------------------------------------------------
@@ -1821,6 +1922,125 @@ local function BuildMountsPage(page)
 	ui.mountCount = Label(page, "", "GameFontDisableSmall", 10, -362, "DmorphOctoMountCount")
 	Label(page, "Click: use as the skin. Right-click: star it. Arrows: previous / next.",
 		"GameFontDisableSmall", 110, -362)
+end
+
+-- Glows tab ---------------------------------------------------------------------------
+
+-- A weapon's enchant glow: any glow the client can draw (Data/Glows.lua), on
+-- the main hand, off hand or ranged slot. Needs DmorphHelper.dll.
+
+local glowSlot = 16
+
+local function FilterGlows(keep)
+	local count
+	ui.glowResult, count = M.FilterGlows(ui.glowSearch:GetText())
+	ui.glowCount:SetText(Count(count, "glow"))
+	ui.glowList.SetCount(count, keep)
+end
+
+local function RefreshGlows()
+	for slot, button in pairs(ui.glowSlots) do
+		if slot == glowSlot then
+			button:LockHighlight()
+		else
+			button:UnlockHighlight()
+		end
+	end
+	local picked, real = M.GetGlow(glowSlot)
+	local text = "your own"
+	if picked then
+		text = M.DescribeGlow(picked)
+	elseif real and real > 0 then
+		text = "your own (" .. M.DescribeGlow(real) .. ")"
+	end
+	ui.glowState:SetText(M.SLOT_NAMES[glowSlot] .. ": " .. text)
+	if M.HasHelper() then
+		ui.glowState:SetTextColor(1, 1, 1)
+	else
+		ui.glowState:SetText("DmorphHelper.dll isn't loaded, so glows can't show: see /dmorph status.")
+		ui.glowState:SetTextColor(1, 0.4, 0.4)
+	end
+	if M.GetGlows().count == 0 then
+		ui.glowEmpty:Show()
+	else
+		ui.glowEmpty:Hide()
+	end
+	ui.glowList.Refresh()
+end
+
+local function GlowTooltip(index, row)
+	local all = M.GetGlows()
+	local i = ui.glowResult[index]
+	if not i then
+		return
+	end
+	GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
+	GameTooltip:SetText(all.name[i])
+	local shown = 0
+	for name in string.gfind(all.names[i], "[^;]+") do
+		shown = shown + 1
+		if shown > 8 then
+			GameTooltip:AddLine("...", 0.8, 0.8, 0.8)
+			break
+		end
+		local _, _, trimmed = strfind(name, "^%s*(.-)%s*$")
+		GameTooltip:AddLine(trimmed, 1, 1, 1)
+	end
+	if all.models[i] ~= "" then
+		GameTooltip:AddLine("Effect: " .. all.models[i], 0.8, 0.8, 0.8)
+	end
+	GameTooltip:AddLine("Glow " .. all.visual[i] .. ", shown with enchant " .. all.enchant[i] .. ".", 0.6, 0.6, 0.6)
+	GameTooltip:AddLine("Click: on your " .. strlower(M.SLOT_NAMES[glowSlot]) .. ".", 0.6, 1, 0.6)
+	GameTooltip:Show()
+end
+
+local function BuildGlowsPage(page)
+	Label(page, "Weapon glows", "GameFontNormal", 10, -12)
+	for i = 1, table.getn(M.GLOW_SLOTS) do
+		local slot = M.GLOW_SLOTS[i]
+		local button = Button(page, M.SLOT_NAMES[slot], 92, 180 + (i - 1) * 96, -7, function()
+			glowSlot = this.slot
+			RefreshGlows()
+		end, "DmorphOctoGlowSlot" .. slot)
+		button.slot = slot
+		ui.glowSlots[slot] = button
+	end
+	Label(page, "Search:", nil, 10, -40)
+	ui.glowSearch = EditBox(page, "DmorphOctoGlowSearch", 140, 58, -36)
+	ui.glowSearch:SetScript("OnTextChanged", function()
+		Debounce(ui.searchTimer, 0.25, FilterGlows)
+	end)
+	ui.glowSearch:SetScript("OnEnterPressed", function()
+		this:ClearFocus()
+		FilterGlows()
+	end)
+	ui.glowCount = Label(page, "", "GameFontDisableSmall", 214, -40, "DmorphOctoGlowCount")
+
+	ui.glowList = List(page, "DmorphOctoGlowList", 8, -62, 80, function(row, index)
+		local all = M.GetGlows()
+		local i = ui.glowResult[index]
+		row.text:SetText(all.name[i])
+		row.info:SetText("glow " .. all.visual[i])
+		if M.GetGlow(glowSlot) == all.enchant[i] then
+			row.tick:Show()
+		end
+	end, function(index)
+		local all = M.GetGlows()
+		Morph(M.SetGlow, glowSlot, all.enchant[ui.glowResult[index]])
+	end, GlowTooltip)
+	ui.glowEmpty = Label(page, "No glow list yet. Close the game, run tools\\update_from_game.ps1 from the "
+		.. "DmorphOcto folder (it reads every glow from the game files), and start the game again.",
+		"GameFontDisableSmall", 14, -72, "DmorphOctoGlowEmpty")
+	ui.glowEmpty:SetWidth(PAGE_W - 28)
+
+	ui.glowState = Label(page, "", "GameFontHighlightSmall", 10, -336, "DmorphOctoGlowState")
+	Button(page, "No glow", 90, 8, -352, function()
+		Morph(M.SetGlow, glowSlot, 0)
+	end, "DmorphOctoGlowNone")
+	Button(page, "My own glow", 110, 102, -352, function()
+		Morph(M.SetGlow, glowSlot, nil)
+	end, "DmorphOctoGlowOwn")
+	Label(page, "Only you see it, like every morph.", "GameFontDisableSmall", 222, -357)
 end
 
 -- Items tab -------------------------------------------------------------------------
@@ -2152,6 +2372,7 @@ local REFRESH = {
 	mounts = RefreshMounts,
 	favourites = RefreshFavourites,
 	races = RefreshRaces,
+	glows = RefreshGlows,
 	items = RefreshItems,
 	sets = RefreshSets,
 	wardrobe = RefreshWardrobe,
@@ -2222,6 +2443,8 @@ ShowTab = function(key)
 		FilterItems()
 	elseif key == "sets" and not ui.setResult then
 		FilterSets()
+	elseif key == "glows" then
+		FilterGlows(ui.glowResult ~= nil)
 	elseif key == "favourites" then
 		FilterFavourites()
 	elseif key == "mounts" and not ui.mountResult then
@@ -2458,6 +2681,7 @@ local function BuildTabs()
 	BuildMountsPage(ui.pages.mounts)
 	BuildFavouritesPage(ui.pages.favourites)
 	BuildRacesPage(ui.pages.races)
+	BuildGlowsPage(ui.pages.glows)
 	BuildItemsPage(ui.pages.items)
 	BuildSetsPage(ui.pages.sets)
 	BuildWardrobePage(ui.pages.wardrobe)

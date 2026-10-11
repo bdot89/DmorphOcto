@@ -3,13 +3,18 @@ tools/build_models.ps1 and tools/build_items.ps1. MPQ v1, files stored plain;
 hash and block tables encrypted like Blizzard's, so tools/MpqDbc.cs reads them.
 
 Usage: python3 tests/make_game_fixture.py <out dir> [--mostly-empty] [--no-rider-points]
-Then run tools/build_models.ps1 and tools/build_items.ps1 with -GameDir <out dir>, their
-inputs from <out dir> (Creatures.lua, Items.lua, item_displays.tsv, turtle_items.tsv,
-empty.tsv) and every output path pointed outside Data/ (PowerShell 7 works on Linux).
+Then run tools/build_models.ps1, tools/build_items.ps1 and tools/build_options.ps1 with
+-GameDir <out dir>, their inputs from <out dir> (Creatures.lua, Items.lua,
+item_displays.tsv, turtle_items.tsv, empty.tsv) and every output path pointed outside
+Data/ (PowerShell 7 works on Linux).
 Expected: HiddenModels "2029,4528,9999,11121", HiddenItems "2,3,11", ModelTags
 mounts 90001-90005 (named Riding...) and 90010-90011 (Spectral Tiger, by its rider
 point); with --mostly-empty the model check turns itself off, with --no-rider-points
 the rider point rule does (only 90001-90005 are mounts).
+Glows: visuals 25 (enchant 1900, "Crusader; Holy Power"), 26 (803), 28 (20) and 29
+(30, no name), not 27 (its effect model is missing). CharOptions: "1:0" skins 0-3
+(3 NPC-only; 4 is left out, its texture is missing), faces [0]={0,1} [1]..[3]={0},
+hair styles 0-2, hair colours [0]={0,1} [1]={0}, facial hair 0-2; "1:1" and "2:0" too.
 """
 import os
 import struct
@@ -209,6 +214,62 @@ def main():
     base["Item\\ObjectComponents\\Weapon\\Sword_1H_Good.m2"] = m2()
     base["Item\\TextureComponents\\TorsoUpperTexture\\Plate_Chest_A_U.blp"] = b"BLP2"
     base["Item\\ObjectComponents\\Head\\Helm_Plate_A_OrM.m2"] = m2()
+
+    # Glows. SpellItemEnchantment (1.12.1): 0 ID, 1-12 effects, 13-20 name, 21
+    # locale mask, 22 ItemVisual, 23 flags.
+    def enchant(eid, name, visual, flags=0):
+        return [eid, 1, 0, 0, 5, 0, 0, 5, 0, 0, 7, 0, 0, name] + [""] * 7 + [0x00FF01FE, visual, flags]
+    patch["DBFilesClient\\SpellItemEnchantment.dbc"] = dbc([
+        enchant(1900, "Crusader", 25), enchant(1901, "Holy Power", 25), enchant(803, "Fiery Weapon", 26, 1),
+        enchant(900, "Ghost Glow", 27), enchant(10, "+1 Agility", 0), enchant(20, "Frost", 28), enchant(30, "", 29),
+    ], 24)
+    patch["DBFilesClient\\ItemVisuals.dbc"] = dbc([[25, 1], [26, 2, 3], [27, 3], [28, 4], [29, 1]], 6)
+    patch["DBFilesClient\\ItemVisualEffects.dbc"] = dbc([
+        [1, "Spells\\Enchantments\\HolyGlow.mdx"], [2, "Spells\\Enchantments\\FireGlow.mdx"],
+        [3, "Spells\\Enchantments\\Gone.mdx"], [4, "Spells\\Enchantments\\FrostGlow.mdx"],
+    ], 2)
+    for name in ("HolyGlow", "FireGlow", "FrostGlow"):
+        base["Spells\\Enchantments\\%s.m2" % name] = m2()
+
+    # Character options. CharSections (1.12.1): 0 ID, 1 race, 2 gender, 3
+    # section, 4 variation, 5 colour, 6-8 textures, 9 flags (1 = offered at
+    # character creation).
+    sections = []
+
+    def section(race, gender, kind, variation, colour, flags=1, texture=True):
+        tex = ""
+        if texture:
+            tex = "Character\\R%d\\G%d\\S%d_%02d_%02d.blp" % (race, gender, kind, variation, colour)
+            if texture != "missing":
+                base[tex] = b"BLP2"
+        sections.append([len(sections) + 1, race, gender, kind, variation, colour, tex, "", "", flags])
+    for c in range(3):
+        section(1, 0, 0, 0, c)
+    section(1, 0, 0, 0, 3, flags=0)
+    section(1, 0, 0, 0, 4, texture="missing")
+    section(1, 0, 1, 0, 0)
+    section(1, 0, 1, 1, 0)
+    for c in range(1, 4):
+        section(1, 0, 1, 0, c)
+    section(1, 0, 3, 0, 0)
+    section(1, 0, 3, 0, 1)
+    section(1, 0, 3, 1, 0)
+    section(1, 0, 3, 2, 0, texture=False)
+    section(1, 0, 2, 1, 0)
+    section(1, 0, 4, 0, 0)
+    section(1, 1, 0, 0, 0)
+    section(1, 1, 1, 0, 0)
+    section(1, 1, 3, 0, 0)
+    section(2, 0, 0, 0, 0)
+    section(2, 0, 0, 0, 1)
+    section(2, 0, 1, 0, 0)
+    section(2, 0, 1, 0, 1)
+    section(2, 0, 3, 0, 0)
+    patch["DBFilesClient\\CharSections.dbc"] = dbc(sections, 10)
+    hair = [(1, 0, 0), (1, 0, 1), (1, 0, 2), (1, 1, 0), (2, 0, 0), (2, 0, 1)]
+    patch["DBFilesClient\\CharHairGeosets.dbc"] = dbc([[i + 1, r, g, v, v, 0] for i, (r, g, v) in enumerate(hair)], 6)
+    facial = [(1, 0, 0), (1, 0, 1), (1, 0, 2), (1, 1, 0), (2, 0, 0)]
+    patch["DBFilesClient\\CharacterFacialHairStyles.dbc"] = dbc([[r, g, v, v, 0, 0, 0, 0, 0] for r, g, v in facial], 9)
 
     write_mpq(os.path.join(data, "model.MPQ"), base, compress={"Creature\\Empty\\Empty.m2", "Creature\\Good\\Good.m2",
                                                                  "Creature\\SpectralTiger\\SpectralTiger.m2"})
