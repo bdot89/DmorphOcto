@@ -1349,18 +1349,14 @@ local function RefreshRaces()
 	end
 	for f = 1, 6 do
 		local row = ui.creatorRows[f]
-		-- Each row counts the choices that change only that row.
-		local values
-		if f == 6 then
-			values = look and M.GetLookOutfits(race, gender, index) or {}
-		elseif look then
-			values = M.GetLookChoices(race, gender, f, index)
-		end
+		-- Each row counts every value the race's NPCs have for it.
+		local values = look and M.GetLookValues(race, gender, f) or {}
 		local text = "yours"
-		if look and f == 6 then
-			text = Position(values, index) .. " of " .. table.getn(values) .. "  (" .. Count(look[7], "piece") .. ")"
-		elseif look then
-			text = Position(values, look[f + 1]) .. " of " .. table.getn(values)
+		if look then
+			text = Position(values, M.LookValue(look, f)) .. " of " .. table.getn(values)
+			if f == 6 then
+				text = text .. "  (" .. Count(look[7], "piece") .. ")"
+			end
 		elseif f == 6 then
 			text = "your gear"
 		end
@@ -1396,7 +1392,17 @@ local function WearLook(race, gender, index, message)
 	end)
 end
 
--- Feature f (1-5) or the outfit (6) one value along.
+-- A row's name as the Races tab shows it ("Features" on women).
+local function FeatureName(f, gender)
+	if f == 5 and gender == 1 then
+		return "Features"
+	end
+	return M.LOOK_FEATURES[f]
+end
+
+-- Row f (1-6) one value along. It always changes, to the next value an NPC of
+-- this race has; if none has it with your other rows, the closest look is
+-- worn and the status says which rows came along.
 local function StepFeature(f, step)
 	local race, gender, index = RaceTarget()
 	local list = M.GetLooks(race, gender)
@@ -1405,28 +1411,30 @@ local function StepFeature(f, step)
 	end
 	if not index then
 		-- From your own look, start at the plainest NPC look of this race.
-		return WearLook(race, gender, 1, "Your own face can't be stepped, so this is the plainest NPC look. Now each < > changes only its row.")
+		return WearLook(race, gender, 1, "Your own face can't be changed bit by bit, so this is the plainest "
+			.. M.DescribeBody(race, gender) .. " NPC. Now use the < > rows.")
 	end
-	if f == 6 then
-		local outfits = M.GetLookOutfits(race, gender, index)
-		if table.getn(outfits) < 2 then
-			return SetStatus(false, "No other NPC has this face, skin and hair in other clothes.")
-		end
-		return WearLook(race, gender, outfits[Wrap(Position(outfits, index), step, table.getn(outfits))])
-	end
-	local k = M.StepLook(race, gender, f, index, step)
+	local k, pos, n, changed = M.StepLook(race, gender, f, index, step)
 	if not k then
-		-- Only f may change, and no NPC has another one with these features.
-		local others = {}
-		for g = 1, 5 do
-			if g ~= f then
-				table.insert(others, strlower(M.LOOK_FEATURES[g]))
-			end
-		end
-		return SetStatus(false, "No " .. M.DescribeBody(race, gender) .. " NPC has another " .. strlower(M.LOOK_FEATURES[f])
-			.. " with this " .. table.concat(others, ", ") .. ". Change one of those first, or roll the dice.")
+		return SetStatus(false, "Every " .. M.DescribeBody(race, gender) .. " NPC has the same " .. strlower(FeatureName(f, gender)) .. ".")
 	end
-	WearLook(race, gender, k, M.LOOK_FEATURES[f] .. " changed, nothing else.")
+	local message = FeatureName(f, gender) .. " " .. pos .. " of " .. n .. "."
+	-- Each NPC wears its own clothes, so the outfit nearly always changes with
+	-- a face or hair row; only the other face and hair rows are worth naming.
+	local names = {}
+	for i = 1, table.getn(changed) do
+		if f == 6 or changed[i] ~= 6 then
+			table.insert(names, strlower(FeatureName(changed[i], gender)))
+		end
+	end
+	if table.getn(names) > 0 then
+		local joined = names[1]
+		if table.getn(names) > 1 then
+			joined = table.concat(names, ", ", 1, table.getn(names) - 1) .. " and " .. names[table.getn(names)]
+		end
+		message = message .. " No NPC has it with your other choices, so the " .. joined .. " changed too."
+	end
+	WearLook(race, gender, k, message)
 end
 
 local function BuildRacesPage(page)
@@ -1453,12 +1461,10 @@ local function BuildRacesPage(page)
 		end
 	end
 	ui.creatorTitle = Label(page, "", "GameFontHighlight", 14, -114, "DmorphOctoCreatorTitle")
-	local names = { M.LOOK_FEATURES[1], M.LOOK_FEATURES[2], M.LOOK_FEATURES[3], M.LOOK_FEATURES[4],
-		M.LOOK_FEATURES[5], "Outfit" }
 	for f = 1, 6 do
 		local y = -136 - (f - 1) * 26
 		local row = {}
-		row.label = Label(page, names[f], "GameFontNormal", 20, y - 4)
+		row.label = Label(page, M.LOOK_FEATURES[f], "GameFontNormal", 20, y - 4)
 		Button(page, "<", 26, 170, y, function()
 			StepFeature(this.feature, -1)
 		end, "DmorphOctoCreatorPrev" .. f).feature = f
@@ -1519,7 +1525,7 @@ local function BuildRacesPage(page)
 	end)
 	star:SetScript("OnLeave", HideTooltip)
 	Label(page, "Portraits keep your own face, skin and hair, and your item morphs show.", "GameFontDisableSmall", 14, -340)
-	Label(page, "< > change only that row. \"2 of 5\": 5 NPC choices. Grey: no other choice yet.", "GameFontDisableSmall", 14, -354)
+	Label(page, "< > go to the next value an NPC has; other rows change only if they must.", "GameFontDisableSmall", 14, -354)
 end
 
 -- Mounts tab -------------------------------------------------------------------------

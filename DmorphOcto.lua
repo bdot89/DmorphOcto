@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "1.8.0"
+local VERSION = "1.9.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 local MISSING_API = "VanillaHelpers v1.1.0 or newer is not loaded, so morphing is unavailable. "
 	.. "Enable the 'vanillaHelpers' mod in OctoLauncher (or add VanillaHelpers.dll to dlls.txt) "
@@ -228,34 +228,76 @@ M.QUALITY_FILTERS = {
 	{ text = "Legendary", quality = 5 },
 }
 
+-- Display and item IDs that can't show in this client: Data/HiddenModels.lua
+-- and Data/HiddenItems.lua, written by tools/build_models.ps1 and
+-- tools/build_items.ps1 from the game's own files.
+local hiddenModels, hiddenItems
+
+local function ReadIDs(text)
+	local set = {}
+	for id in string.gfind(text or "", "%d+") do
+		set[tonumber(id)] = true
+	end
+	return set
+end
+
+local function HiddenModels()
+	if not hiddenModels then
+		hiddenModels = ReadIDs(DmorphOcto_HiddenModels)
+		DmorphOcto_HiddenModels = nil
+	end
+	return hiddenModels
+end
+
+local function HiddenItems()
+	if not hiddenItems then
+		hiddenItems = ReadIDs(DmorphOcto_HiddenItems)
+		DmorphOcto_HiddenItems = nil
+	end
+	return hiddenItems
+end
+
 -- Creatures.lua (named creatures) and Models.lua (every other display ID the
--- client has) together list every model.
+-- client has) together list every model, less the ones that can't show.
 function M.GetCreatureCatalog()
 	if creatures then
 		return creatures
 	end
+	local hidden = HiddenModels()
 	local named, other, n, m = {}, {}, 0, 0
 	for id, name in string.gfind(DmorphOcto_CreatureData or "", "(%d+)\t([^\r\n]+)") do
-		n = n + 1
-		named[n] = { tonumber(id), name, strlower(name), 0, M.KIND_CREATURE }
+		id = tonumber(id)
+		if not hidden[id] then
+			n = n + 1
+			named[n] = { id, name, strlower(name), 0, M.KIND_CREATURE }
+		end
 	end
 	for id, kind, name in string.gfind(DmorphOcto_ModelData or "", "(%d+)\t(%d)\t([^\r\n]+)") do
-		m = m + 1
-		other[m] = { tonumber(id), name, strlower(name), 0, tonumber(kind) }
+		id = tonumber(id)
+		if not hidden[id] then
+			m = m + 1
+			other[m] = { id, name, strlower(name), 0, tonumber(kind) }
+		end
 	end
 	DmorphOcto_CreatureData, DmorphOcto_ModelData = nil, nil -- the parsed tables replace the text
 	creatures = Fill(NewCatalog(), Merge(named, n, other, m))
-	-- Tags for the filters (Data/ModelTags.lua): bosses and rares by display and
-	-- name, mounts by display.
+	-- Tags for the filters: bosses and rares by display and name, mounts by
+	-- display. Data/ModelTags.lua (OctoWoW's client and Turtle WoW's ranks) and
+	-- Data/ClassicTags.lua (the 1.12.1 database); a boss stays a boss.
 	local byName, mounts = {}, {}
-	for id, tag, name in string.gfind(DmorphOcto_TagData or "", "(%d+)\t(%a+)\t([^\r\n]*)") do
-		if tag == "mount" then
-			mounts[tonumber(id)] = true
-		else
-			byName[id .. "\t" .. strlower(name)] = tag
+	for _, text in ipairs({ DmorphOcto_TagData or "", DmorphOcto_ClassicTagData or "" }) do
+		for id, tag, name in string.gfind(text, "(%d+)\t(%a+)\t([^\r\n]*)") do
+			if tag == "mount" then
+				mounts[tonumber(id)] = true
+			else
+				local key = id .. "\t" .. strlower(name)
+				if byName[key] ~= "boss" then
+					byName[key] = tag
+				end
+			end
 		end
 	end
-	DmorphOcto_TagData = nil
+	DmorphOcto_TagData, DmorphOcto_ClassicTagData = nil, nil
 	creatures.tags = {}
 	for i = 1, creatures.count do
 		local tag = byName[creatures.ids[i] .. "\t" .. creatures.lower[i]]
@@ -278,9 +320,10 @@ local EQUIP_SLOTS = {
 }
 
 local function ParseItems(text, kind, list, n, skip)
+	local hidden = HiddenItems()
 	for id, quality, name in string.gfind(text or "", "(%d+)\t(%d)\t([^\r\n]+)") do
 		id = tonumber(id)
-		if not (skip and skip[id]) then
+		if not ((skip and skip[id]) or hidden[id]) then
 			n = n + 1
 			list[n] = { id, name, strlower(name), tonumber(quality), kind }
 		end
@@ -291,9 +334,9 @@ end
 -- Items the game told us about in this or an earlier session (see Item
 -- lookup), saved as DmorphOctoAccount.itemInfo[id] = "slots<TAB>quality<TAB>name".
 local function LearnedItems(slot, skip)
-	local list, n = {}, 0
+	local list, n, hidden = {}, 0, HiddenItems()
 	for id, info in pairs(account.itemInfo) do
-		if info and not skip[id] then
+		if info and not skip[id] and not hidden[id] then
 			local _, _, slots, quality, name = strfind(info, "^([%d,]+)\t(%-?%d+)\t(.+)$")
 			if slots and strfind("," .. slots .. ",", "," .. slot .. ",", 1, true) then
 				n = n + 1
@@ -401,29 +444,36 @@ end
 function M.GetLooks(race, gender)
 	local key = race .. ":" .. gender
 	if not looks[key] then
-		local list, n = {}, 0
+		local list, n, hidden = {}, 0, HiddenModels()
 		local text = DmorphOcto_LookData and DmorphOcto_LookData[key] or ""
 		for a, b, c, d, e, f, g, h in string.gfind(text, "(%d+),(%d+),(%d+),(%d+),(%d+),(%d+),(%d+),(%d+)") do
-			n = n + 1
-			list[n] = { tonumber(a), tonumber(b), tonumber(c), tonumber(d), tonumber(e), tonumber(f), tonumber(g), tonumber(h) }
+			if not hidden[tonumber(a)] then
+				n = n + 1
+				list[n] = { tonumber(a), tonumber(b), tonumber(c), tonumber(d), tonumber(e), tonumber(f), tonumber(g), tonumber(h) }
+			end
 		end
 		looks[key] = list
 	end
 	return looks[key]
 end
 
--- The character creator's choices: look fields 2-6. Picking a value finds the
--- look with it that keeps the most of the other choices (skin first, then hair
--- style, hair colour, face and facial hair), in the fewest clothes.
-M.LOOK_FEATURES = { "Skin colour", "Face", "Hair style", "Hair colour", "Facial hair" }
-local FEATURE_WEIGHTS = { 16, 2, 8, 4, 1 }
+-- The character creator's rows and the look field each one reads. NPC looks
+-- are fixed combinations, so a row's < > goes to the next value some NPC of
+-- that race has, in the look that keeps the most of the other rows.
+M.LOOK_FEATURES = { "Skin colour", "Face", "Hair style", "Hair colour", "Facial hair", "Outfit" }
+local LOOK_FIELDS = { 2, 3, 4, 5, 6, 8 }
+-- What keeping each row is worth when another one changes. Each outweighs
+-- all the ones below it: skin colour, hair style, hair colour, face, facial
+-- hair, outfit.
+local FEATURE_WEIGHTS = { 32, 4, 16, 8, 2, 1 }
 
--- The values feature f (1-5) has among a race and gender's looks, sorted.
+-- The values row f (1-6) has among a race and gender's looks, sorted.
 function M.GetLookValues(race, gender, f)
 	local list = M.GetLooks(race, gender)
+	local field = LOOK_FIELDS[f]
 	local seen, values = {}, {}
 	for k = 1, table.getn(list) do
-		local v = list[k][f + 1]
+		local v = list[k][field]
 		if not seen[v] then
 			seen[v] = true
 			table.insert(values, v)
@@ -433,24 +483,30 @@ function M.GetLookValues(race, gender, f)
 	return values
 end
 
--- The position of the look that has `value` for feature f and is closest to
--- look `from` (a position in the same list), or nil.
+-- Row f's value in a look.
+function M.LookValue(look, f)
+	return look[LOOK_FIELDS[f]]
+end
+
+-- The position of the look that has `value` in row f and keeps the most of
+-- look `from`'s other rows (then the most similar clothes), or nil.
 function M.FindLook(race, gender, f, value, from)
 	local list = M.GetLooks(race, gender)
-	local want = list[from]
+	local field, want = LOOK_FIELDS[f], list[from]
 	local best, bestScore
 	for k = 1, table.getn(list) do
 		local look = list[k]
-		if look[f + 1] == value then
-			local score = 0
+		if look[field] == value then
+			local keep, pieces = 0, 0
 			if want then
-				for g = 1, 5 do
-					if g ~= f and look[g + 1] == want[g + 1] then
-						score = score + FEATURE_WEIGHTS[g]
+				for g = 1, 6 do
+					if g ~= f and look[LOOK_FIELDS[g]] == want[LOOK_FIELDS[g]] then
+						keep = keep + FEATURE_WEIGHTS[g]
 					end
 				end
+				pieces = math.abs(look[7] - want[7])
 			end
-			score = score * 20 - look[7]
+			local score = keep * 1000 - pieces * 20 - look[7]
 			if not best or score > bestScore then
 				best, bestScore = k, score
 			end
@@ -459,81 +515,41 @@ function M.FindLook(race, gender, f, value, from)
 	return best
 end
 
--- The choices for feature f (1-5) that keep look `from`'s other four features
--- exactly: NPC looks are fixed combinations, so only the values some NPC has
--- with all of them. For each value, the look in the same outfit if an NPC
--- wears it, else the closest in clothes. Returns the sorted values (the
--- current one included) and { [value] = position in the list }.
+-- Every value of row f and, for each, the look FindLook picks from look `from`.
 function M.GetLookChoices(race, gender, f, from)
-	local list = M.GetLooks(race, gender)
-	local cur = list[from]
-	local values, at, gaps = {}, {}, {}
-	if not cur then
-		return values, at
+	local values, at = M.GetLookValues(race, gender, f), {}
+	for i = 1, table.getn(values) do
+		at[values[i]] = M.FindLook(race, gender, f, values[i], from)
 	end
-	for k = 1, table.getn(list) do
-		local look = list[k]
-		local same = true
-		for g = 1, 5 do
-			if g ~= f and look[g + 1] ~= cur[g + 1] then
-				same = false
-				break
-			end
-		end
-		if same then
-			local v = look[f + 1]
-			local gap = math.abs(look[7] - cur[7])
-			if k == from then
-				gap = -2
-			elseif look[8] == cur[8] then
-				gap = -1
-			end
-			if not at[v] then
-				table.insert(values, v)
-			end
-			if not at[v] or gap < gaps[v] then
-				at[v], gaps[v] = k, gap
-			end
-		end
-	end
-	table.sort(values)
 	return values, at
 end
 
--- Feature f (1-5) of look `from` one choice along, in direction step: only f
--- changes. Returns the new look's position, or nil when no NPC has another
--- value of f with the other four features.
+-- Row f of look `from` one value along (step 1 or -1, wrapping around). Returns
+-- the new look's position, its place among the row's values, how many values
+-- there are, and the other rows that had to change with it ({} if none); or
+-- nil when every NPC of the race has the same value.
 function M.StepLook(race, gender, f, from, step)
-	local values, at = M.GetLookChoices(race, gender, f, from)
-	local n = table.getn(values)
-	if n < 2 then
+	local list = M.GetLooks(race, gender)
+	local values = M.GetLookValues(race, gender, f)
+	local n, cur = table.getn(values), list[from]
+	if n < 2 or not cur then
 		return nil
 	end
-	local cur = M.GetLooks(race, gender)[from][f + 1]
 	local pos = 1
 	for i = 1, n do
-		if values[i] == cur then
+		if values[i] == cur[LOOK_FIELDS[f]] then
 			pos = i
 		end
 	end
 	pos = math.mod(pos - 1 + step + n, n) + 1
-	return at[values[pos]]
-end
-
--- The positions of the looks with the same face, skin and hair as look
--- `from`: its outfits, the fewest clothes first.
-function M.GetLookOutfits(race, gender, from)
-	local list = M.GetLooks(race, gender)
-	local want, out = list[from], {}
-	if want then
-		for k = 1, table.getn(list) do
-			local look = list[k]
-			if look[2] == want[2] and look[3] == want[3] and look[4] == want[4] and look[5] == want[5] and look[6] == want[6] then
-				table.insert(out, k)
-			end
+	local k = M.FindLook(race, gender, f, values[pos], from)
+	local changed = {}
+	for g = 1, 6 do
+		if g ~= f and list[k][LOOK_FIELDS[g]] ~= cur[LOOK_FIELDS[g]] then
+			table.insert(changed, g)
 		end
 	end
-	return out
+	return k, pos, n, changed
 end
 
 -- Item lookup -------------------------------------------------------------------

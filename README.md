@@ -21,16 +21,17 @@ Pick any creature, race or item, see it on your character straight away, and sav
 **What it does**
 
 - 🐉 **Every creature model in the client:** 16,000+ entries covering all 13,423 usable display IDs, including the **2,894 models OctoWoW added** (named after their Turtle WoW creatures where there is one).
-- 🖼️ **3D previews**, eight to a page, or a list that previews the row under your mouse. Filter **Bosses, Rare creatures, Mounts** or OctoWoW's new models, search by name or ID, sort **A-Z or by ID**.
+- 🖼️ **3D previews**, eight to a page, or a list that previews the row under your mouse. Filter **Bosses** (560+, every dungeon and raid boss), **Rare creatures, Mounts** (every mount spell's model and every model built to be ridden) or OctoWoW's new models, search by name or ID, sort **A-Z or by ID**.
 - 🐎 **Mount skins:** give your mount any model's look, for all your mounts or one of them. It only shows while you ride, so you mount and dismount with your keys as usual. A **Your skin** box shows the one you have on, turning, and the ▲ ▼ arrows go to the previous or next model.
 - ⭐ **Favourites:** right-click any model (Models tab) or mount skin (Mounts tab) to star it, then pick it from the Favourites tab every time you log in.
-- 🎭 **Races and looks:** pick a race portrait to keep your own face, or step through skin colour, face, hair style, hair colour and facial hair from the game's NPC looks (8,068 of them): each click changes only the row you click. Or roll the dice.
+- 🎭 **Races and looks:** pick a race portrait to keep your own face, or step through skin colour, face, hair style, hair colour, facial hair and outfit from the game's NPC looks (8,068 of them): every click moves its row to the next one the game has. Or roll the dice.
 - ⚔️ **12,000+ weapons and armour pieces:** everything in 1.12 plus Turtle WoW's and OctoWoW's, from the Tower of Karazhan sets and the tier variants to the Warglaives of Azzinoth. Filter by quality (**Rare, Epic, Legendary** ...).
 - 🛡️ **352 item sets:** wear a whole set in one click.
 - 👗 **Wardrobe:** save outfits and put them back on with one click. Shared by all your characters.
 - 👥 **See each other's morphs:** players with DMorph see each other's model, item morphs and mount skins (friendly players). Switch either side off under **Sharing**.
 - 💬 **DMorph's chat commands:** `.morph`, `.race`, `.gender`, `.item`, `.mount`, `.demorph`, `.outfit`.
 - 🔁 **Your look stays** after `/reload`, loading screens and logging in. The window resizes and remembers how you left it.
+- ✅ **Only what works:** one command on your PC checks every model and item against your game's own files and hides the ones that can't show (see below).
 
 ## Screenshots
 
@@ -62,6 +63,21 @@ Optional: [ClassicAPI](https://github.com/brues-code/ClassicAPI) (`ClassicAPI.dl
 Without it the Models tab is a plain list and everything else works the same.
 Not using OctoLauncher? Put `VanillaHelpers.dll` (v1.1.0+, [releases](https://github.com/isfir/VanillaHelpers/releases)) in the game folder and add it to `dlls.txt`.
 
+### Check the lists against your game
+
+Run this once after installing, and again after OctoWoW updates. Close the game first, then in the `DmorphOcto` folder run:
+
+```
+powershell -ExecutionPolicy Bypass -File tools\update_from_game.ps1
+```
+
+It reads your game's own files, lists every model and item set in them, and hides every model and item that can't show in your client:
+
+- **Models:** not in the game at all, 3D file missing, empty or in a format 1.12 can't load, or skin texture missing (it would show white).
+- **Items:** nothing to draw (no model or texture files).
+
+It prints what it found. If a check would hide a suspicious share of everything, it switches that check off and says so, rather than empty your lists. Then `/reload` in game.
+
 ---
 
 ## The window at a glance
@@ -79,7 +95,7 @@ Not using OctoLauncher? Put `VanillaHelpers.dll` (v1.1.0+, [releases](https://gi
 | **Mounts** tab | **Skin for:** all your mounts, or one you've ridden. Click a mount model to use it as the skin, right-click to star it, **Remove skin** takes it off. The skin you have on is ticked in the list and shown in the **Your skin** box; ▲ ▼ put on the previous / next model. The line at the top says which mount you're riding and what it shows as. The skin shows only while you ride. |
 | Models: **Display ID** | Type any ID and press Morph, or step through every ID with < and >. |
 | **Favourites** tab | Your starred models and mounts, shared by all your characters. Click to wear, right-click to unstar, hover for a 3D preview. Filter models / mounts, sort A-Z or ID. |
-| **Races** tab | A portrait = that race with your own face, skin and hair (your item morphs show). The < > rows step through the game's NPC looks of that race, and each click changes only that row. "2 of 5" means five choices with your other features; grey means no NPC has another (change another row first, or roll the dice). Dice = random look, **My own look** goes back, **Favourite** stars the look. |
+| **Races** tab | A portrait = that race with your own face, skin and hair (your item morphs show). The < > rows step through the game's NPC looks of that race: every click moves its row to the next value an NPC of that race has ("2 of 5" = the second of five skin colours). If no NPC has it with your other choices, the closest look is used and the status line says which rows changed with it. Dice = random look, **My own look** goes back, **Favourite** stars the look. |
 | **Items** tab | Click the slot name for any slot. Items are coloured by quality; the filter picks all / 1.12 / new and a quality. **Item ID** + **Apply** takes any item. |
 | **Sets** tab | Every item set. Hover to see the pieces, click to wear them all. Same filters as Items. |
 | **Wardrobe** tab | Save, load and delete outfits (your mount skin included). Loading puts on the whole outfit. |
@@ -108,8 +124,9 @@ Slots: `1` head, `3` shoulder, `4` shirt, `5` chest, `6` waist, `7` legs, `8` fe
 
 - **Who sees your morph:** you, and other players running DMorph with VanillaHelpers. Everyone else, and the server, sees your real character.
 - **Sharing works on friendly players.** VanillaHelpers can't morph the other faction. A DMorph user's morph shows once your game has a handle on them: when you target or mouse over them (or they're your target's target), when you're grouped, or straight away if you run SuperWoW. When a player leaves your sight and comes back, the game rebuilds them, and DMorph puts their look straight back on (within a fifth of a second). `.share` tells you whether SuperWoW GUIDs work on your client. Mount skins show on group members (and with SuperWoW), because DMorph has to take them off the moment that player dismounts. DMorph keeps its talk quiet: group, raid, battleground and guild mates get hidden addon messages, and only players outside those hear it on its own chat channel, *DmorphShare*, which no chat window ever shows. A changed look goes out once it has stood still for a second (a whole outfit in one message), and only when DMorph users are around you; mounting and dismounting go out at once. Looks are remembered between sessions, so players you've met show straight away, and DMorph only checks with them whether anything changed. `.share` shows how many messages went out. DMorph 1.8 can't see 1.7 users' morphs (and the other way round): everyone needs 1.8.
-- **Invisible after a morph?** That display ID has no model in the game. Press **Reset model**. The lists only have IDs whose model exists.
-- **NPC looks are fixed combinations.** No DLL can change your own character's skin, face or hair, so the < > rows morph you into the game's dressed NPCs of that race. Each click changes only the feature you picked, among the NPCs that share all your other choices, so some rows have only one choice until you change another row. Item morphs don't show on an NPC look: for your own face with gear, use a portrait. Only the customisations in this 1.12 client exist, not later expansions'.
+- **Invisible after a morph?** That display ID can't show in your game. Press **Reset model**, and run `tools\update_from_game.ps1` (above) so the lists leave out everything that can't.
+- **NPC looks are fixed combinations.** None of the DLLs this client runs can change your own character's skin, face or hair, so the < > rows morph you into the game's dressed NPCs of that race. Every NPC is its own mix of skin, face, hair and clothes: only about 1 click in 25 can change one row and keep all the others, so most clicks bring a different face or hair along (the status line names them) and nearly always other clothes. Item morphs don't show on an NPC look: for your own face with gear, use a portrait.
+- **Later expansions aren't in the game.** Models, mounts, races, items and sets from The Burning Crusade onwards (Draenei, Blood Elf hair, Outland mounts, ...) aren't in the 1.12 client's files, and the server doesn't know their items, so no addon can show them. Everything OctoWoW and Turtle WoW added to the client is in the lists.
 - **Mount skins wait for you to mount.** VanillaHelpers would otherwise keep you on a mount after you dismount, so the skin goes on when you mount (the addon sees your mount's buff) and comes off when that buff goes.
 - **OctoWoW-only items** that no list knows yet are looked up in the background after you log in (with ClassicAPI, a few a second, once per account). The Items and Sets tabs say how many are left. Any item also works by its ID.
 - **Fast clicking is safe:** the game rebuilds your character after each change, so a click within a third of a second of the last one waits its turn instead of mixing two looks' textures.
@@ -132,7 +149,7 @@ DMorph itself is a DLL for WotLK 3.3.5a and can't run on the 1.12 client. This a
 Written for the client's Lua 5.0: no `#`, no `%`, no `string.match`.
 
 - **Tests:** `tests/run_tests.lua` drives the addon (chat, window, previews, filters, races and looks, mount skins, favourites, sets, item lookup, wardrobe, sharing with other users, `/reload`, logins) inside `tests/mock_wow.lua`, a strict mock of the 1.12 UI and of VanillaHelpers. Run `lua tests/run_tests.lua` with Lua 5.0, or on Windows `powershell -ExecutionPolicy Bypass -File tools\run_tests.ps1` (builds `tools/LuaHost`, .NET 8, and uses the Lua runtime OBS Studio installs; `LUA51_DLL` picks another).
-- **Catalogue:** `python3 tools/build_data.py <ClassicDB_1_12_1_*.sql.gz>` rebuilds `Creatures.lua` and `Items.lua`. Then, on Windows with the game installed, `tools\build_models.ps1` rebuilds the model files and `tools\build_items.ps1` the extra items and sets, from the client's MPQs, its item cache, Atlas-CFM's loot tables and `tools/data` (Turtle WoW data exported from [ShellLab](https://github.com/oplancelot/ShellLab)). Run them after a client patch.
+- **Catalogue:** `python3 tools/build_data.py <ClassicDB_1_12_1_*.sql.gz>` rebuilds `Creatures.lua`, `Items.lua`, `ClassicTags.lua` (bosses, rares, mounts) and `tools/data/classic_item_displays.tsv`. Then, on Windows with the game installed, `tools\update_from_game.ps1` runs `tools\build_models.ps1` (model files, NPC looks, tags, `HiddenModels.lua`) and `tools\build_items.ps1` (extra items, sets, `HiddenItems.lua`), from the client's MPQs, its item cache, Atlas-CFM's loot tables and `tools/data` (Turtle WoW data exported from [ShellLab](https://github.com/oplancelot/ShellLab)). Run it after a client patch.
 - **Pictures:** `docs/src` has the banner and gallery as HTML (rendered with headless Edge) and the in-game crops they use.
 
 ## Credits

@@ -5,7 +5,8 @@ param(
   [string]$Creatures = (Join-Path $PSScriptRoot "..\Data\Creatures.lua"),
   [string]$TurtleNames = (Join-Path $PSScriptRoot "data\turtle_creatures.tsv"),
   [string]$TagsFile = (Join-Path $PSScriptRoot "..\Data\ModelTags.lua"),
-  [string]$TagSource = (Join-Path $PSScriptRoot "data\turtle_ranks.tsv")
+  [string]$TagSource = (Join-Path $PSScriptRoot "data\turtle_ranks.tsv"),
+  [string]$HiddenFile = (Join-Path $PSScriptRoot "..\Data\HiddenModels.lua")
 )
 # Builds two files from the client's own DBFilesClient tables (read straight
 # from the MPQs, newest patch first), so everything OctoWoW added is included:
@@ -14,14 +15,18 @@ param(
 #                    1.12.1 world database) doesn't name.
 #   Data/Looks.lua   per race and gender, the dressed-NPC displays: the faces,
 #                    skin colours and hairstyles the look generator goes through.
+#   Data/HiddenModels.lua  the display IDs Data/Creatures.lua names that can't
+#                    show in this client, so the addon leaves them out.
 #
 #   powershell -ExecutionPolicy Bypass -File tools\build_models.ps1 [-GameDir C:\Games\OctoWoW]
 #
 # A display gets the name of a Turtle WoW creature that uses it
 # (tools/data/turtle_creatures.tsv), else its model file's name ("Crystal
 # Spider", plus the skin when several displays share the model), else the race
-# of a dressed NPC ("Human Male NPC"). Displays whose model file is missing
-# from every MPQ are left out: morphing into them would make you invisible.
+# of a dressed NPC ("Human Male NPC"). Displays that can't show in game are
+# left out: no model file in any MPQ, a model file this client can't load (not
+# an M2 of version 256-257) or with nothing in it, or a missing skin texture
+# (the model would draw white). Morphing into them would make you invisible.
 # Runs on Windows PowerShell 5.1, no Python or Lua needed.
 
 $ErrorActionPreference = "Stop"
@@ -44,6 +49,7 @@ foreach ($file in Get-ChildItem $dataDir -Filter *.mpq) {
   try { $mpqs += New-Object Mpq $file.FullName } catch { Write-Output ("skipped {0}: {1}" -f $file.Name, $_.Exception.Message) }
 }
 $mpqs = @($mpqs | Sort-Object @{ Expression = { Get-Priority $_.Name } }, Name)
+$files = New-Object GameFiles (,[Mpq[]]$mpqs)
 
 function Read-Newest([string]$name) {
   for ($i = $mpqs.Count - 1; $i -ge 0; $i--) {
@@ -138,6 +144,86 @@ function Test-ModelFile([string]$path) {
   return $found
 }
 
+# The newest MPQ's copy of a file: its first bytes, or $null.
+function Read-Start([string]$name) {
+  for ($i = $mpqs.Count - 1; $i -ge 0; $i--) {
+    if ($mpqs[$i].Has($name)) {
+      try { return $mpqs[$i].ReadStart($name) } catch { return $null }
+    }
+  }
+  return $null
+}
+
+function Test-AnyMpq([string]$name) { return $files.Has($name) }
+
+# What's wrong with a model file, from its header: "format" (not an M2),
+# "version" (an M2 this client can't load) or "empty" (no vertices or views);
+# $null if it looks fine or can't be read.
+$modelProblems = @{}
+function Get-ModelProblem([string]$path) {
+  if ($modelProblems.ContainsKey($path)) { return $modelProblems[$path] }
+  $head = Read-Start ([IO.Path]::ChangeExtension($path, ".m2"))
+  if (-not $head) { $head = Read-Start $path }
+  $problem = $null
+  if ($head -and $head.Length -ge 0x54) {
+    if (-not ($head[0] -eq 0x4D -and $head[1] -eq 0x44 -and $head[2] -eq 0x32 -and $head[3] -eq 0x30)) {
+      $problem = "format"
+    } else {
+      $version = [BitConverter]::ToUInt32($head, 4)
+      if ($version -lt 256 -or $version -gt 257) { $problem = "version" }
+      elseif ([BitConverter]::ToUInt32($head, 0x44) -eq 0 -or [BitConverter]::ToUInt32($head, 0x4C) -eq 0) { $problem = "empty" }
+    }
+  }
+  $modelProblems[$path] = $problem
+  return $problem
+}
+
+# "skin" if the display's first skin texture (next to the model) is missing.
+function Get-SkinProblem([int]$row, [string]$path) {
+  $skin = $display.Str($row, 6)
+  if (-not $skin) { return $null }
+  $dir = $path.Substring(0, $path.LastIndexOf('\') + 1)
+  if (Test-AnyMpq ($dir + $skin + ".blp")) { return $null }
+  return "skin"
+}
+
+# Every display's problem, if any. A check that flags more than a quarter of
+# what it looks at is switched off instead: that means this script misreads
+# the files, not that so much of the game is broken.
+$problems = @{}; $seenIds = @{}
+$checked = @{ model = 0; skin = 0 }; $flagged = @{ format = 0; version = 0; empty = 0; skin = 0 }
+$paths = @{}
+for ($i = 0; $i -lt $display.Count; $i++) {
+  $id = $display.Int($i, 0)
+  $seenIds[$id] = $true
+  $path = $models[$display.Int($i, 1)]
+  if (-not $path -or -not (Test-ModelFile $path)) { $problems[$id] = "missing"; continue }
+  if (-not $paths.ContainsKey($path)) {
+    $paths[$path] = $true
+    $checked.model++
+    $p = Get-ModelProblem $path
+    if ($p) { $flagged[$p]++ }
+  }
+  $p = Get-ModelProblem $path
+  if (-not $p) {
+    if ($display.Str($i, 6)) { $checked.skin++ }
+    $p = Get-SkinProblem $i $path
+    if ($p) { $flagged.skin++ }
+  }
+  if ($p) { $problems[$id] = $p }
+}
+$off = @{}
+$modelFlags = $flagged.format + $flagged.version + $flagged.empty
+if ($checked.model -gt 0 -and $modelFlags -gt $checked.model / 4) {
+  $off.format = $true; $off.version = $true; $off.empty = $true
+  Write-Output ("warning: the model file check flagged {0} of {1} models, so it's off" -f $modelFlags, $checked.model)
+}
+if ($checked.skin -gt 0 -and $flagged.skin -gt $checked.skin / 4) {
+  $off.skin = $true
+  Write-Output ("warning: the skin texture check flagged {0} of {1} displays, so it's off" -f $flagged.skin, $checked.skin)
+}
+foreach ($id in @($problems.Keys)) { if ($off.ContainsKey($problems[$id])) { $problems.Remove($id) } }
+
 # Sorted like Lua compares strings (byte order), so the addon can merge a
 # list with Creatures.lua in one pass.
 function Sort-ByName($list) {
@@ -156,7 +242,7 @@ for ($i = 0; $i -lt $display.Count; $i++) {
   $id = $display.Int($i, 0)
   $total++
   $path = $models[$display.Int($i, 1)]
-  if (-not $path -or -not (Test-ModelFile $path)) { $missing++; continue }
+  if ($problems.ContainsKey($id)) { $missing++; continue }
   [void]$usable.Add($i)
   if ($named.ContainsKey($id)) { continue }
   $skin = ""
@@ -288,5 +374,28 @@ foreach ($r in $tagRows) { if (-not $r.Contains("]]")) { [void]$sb.Append("$r`n"
 [IO.File]::WriteAllText([IO.Path]::GetFullPath($TagsFile), $sb.ToString(), $utf8)
 foreach ($m in $mpqs) { $m.Close() }
 
-"{0} display IDs in the client: {1} named in Creatures.lua, {2} more in Models.lua ({3} with Turtle WoW names, {4} added by OctoWoW), {5} skipped (model file missing). {6} NPC looks." -f `
+# The display IDs Creatures.lua names that this client can't show: not in its
+# CreatureDisplayInfo.dbc at all, or with one of the problems above. Not
+# written if that would be more than a quarter of them (same reason as above).
+$hidden = New-Object System.Collections.ArrayList
+foreach ($id in ($named.Keys | Sort-Object)) {
+  if (-not $seenIds.ContainsKey($id) -or $problems.ContainsKey($id)) { [void]$hidden.Add($id) }
+}
+if ($named.Count -gt 0 -and $hidden.Count -gt $named.Count / 4) {
+  Write-Output ("warning: {0} of the {1} named displays would be hidden, so none are" -f $hidden.Count, $named.Count)
+  $hidden.Clear()
+}
+$sb = New-Object System.Text.StringBuilder
+[void]$sb.Append("-- Generated by tools/build_models.ps1 from the client's files. Do not edit.`n")
+[void]$sb.Append("-- Display IDs from Data/Creatures.lua that can't show in this client (no such display, model file`n")
+[void]$sb.Append("-- missing, empty or unreadable, skin texture missing), comma-separated. The addon leaves them out.`n")
+[void]$sb.Append("DmorphOcto_HiddenModels = ""$($hidden -join ',')""`n")
+[IO.File]::WriteAllText([IO.Path]::GetFullPath($HiddenFile), $sb.ToString(), $utf8)
+
+$reasons = @{}
+foreach ($id in $problems.Keys) { $reasons[$problems[$id]] = 1 + [int]$reasons[$problems[$id]] }
+"Checked against the game files: {0} named displays hidden; left out: {1} no model file, {2} not a loadable M2, {3} empty, {4} missing skin." -f `
+  $hidden.Count, [int]$reasons["missing"], ([int]$reasons["format"] + [int]$reasons["version"]), [int]$reasons["empty"], [int]$reasons["skin"]
+
+"{0} display IDs in the client: {1} named in Creatures.lua, {2} more in Models.lua ({3} with Turtle WoW names, {4} added by OctoWoW), {5} skipped (can't show in game). {6} NPC looks." -f `
   $total, $named.Count, $entries.Count, $turtleNamed, $added, $missing, $lookCount

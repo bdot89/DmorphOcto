@@ -1,0 +1,225 @@
+"""Builds a fake OctoWoW folder (Data/*.MPQ with DBCs, models, textures) to test
+tools/build_models.ps1 and tools/build_items.ps1. MPQ v1, files stored plain;
+hash and block tables encrypted like Blizzard's, so tools/MpqDbc.cs reads them.
+
+Usage: python3 tests/make_game_fixture.py <out dir> [--mostly-empty]
+Then run tools/build_models.ps1 and tools/build_items.ps1 with -GameDir <out dir>, their
+inputs from <out dir> (Creatures.lua, Items.lua, item_displays.tsv, turtle_items.tsv,
+empty.tsv) and every output path pointed outside Data/ (PowerShell 7 works on Linux).
+Expected: HiddenModels "2029,4528,9999,11121", HiddenItems "2,3,11"; with
+--mostly-empty the model check turns itself off.
+"""
+import os
+import struct
+import sys
+import zlib
+
+
+def crypt_table():
+    seed = 0x00100001
+    table = [0] * 0x500
+    for i1 in range(0x100):
+        i2 = i1
+        for _ in range(5):
+            seed = (seed * 125 + 3) % 0x2AAAAB
+            t1 = (seed & 0xFFFF) << 16
+            seed = (seed * 125 + 3) % 0x2AAAAB
+            t2 = seed & 0xFFFF
+            table[i2] = t1 | t2
+            i2 += 0x100
+    return table
+
+
+CT = crypt_table()
+M32 = 0xFFFFFFFF
+
+
+def hs(s, ht):
+    s1, s2 = 0x7FED7FED, 0xEEEEEEEE
+    for ch in s.upper():
+        c = ord(ch)
+        s1 = (CT[(ht << 8) + c] ^ ((s1 + s2) & M32)) & M32
+        s2 = (c + s1 + s2 + ((s2 << 5) & M32) + 3) & M32
+    return s1
+
+
+def encrypt(data, key):
+    out = bytearray(data)
+    s2 = 0xEEEEEEEE
+    for i in range(len(data) // 4):
+        s2 = (s2 + CT[0x400 + (key & 0xFF)]) & M32
+        v = struct.unpack_from("<I", data, i * 4)[0]
+        e = v ^ ((key + s2) & M32)
+        key = ((((~key) << 0x15) & M32) + 0x11111111 & M32) | (key >> 0x0B)
+        s2 = (v + s2 + ((s2 << 5) & M32) + 3) & M32
+        struct.pack_into("<I", out, i * 4, e)
+    return bytes(out)
+
+
+def write_mpq(path, files, compress=()):
+    """files: {name: bytes}. Names in `compress` are stored zlib-compressed in
+    4096-byte sectors (to test ReadStart on compressed files)."""
+    names = list(files)
+    size = 1
+    while size < len(names) * 2 + 4:
+        size *= 2
+    header = 32
+    data = bytearray()
+    blocks = []
+    for name in names:
+        content = files[name]
+        pos = header + len(data)
+        if name in compress:
+            sectors = [content[i:i + 4096] for i in range(0, len(content), 4096)] or [b""]
+            packed = []
+            for sct in sectors:
+                z = b"\x02" + zlib.compress(sct)
+                packed.append(z if len(z) < len(sct) else sct)
+            table_len = (len(packed) + 1) * 4
+            offsets = [table_len]
+            for p in packed:
+                offsets.append(offsets[-1] + len(p))
+            body = struct.pack("<%dI" % len(offsets), *offsets) + b"".join(packed)
+            data += body
+            blocks.append((pos, len(body), len(content), 0x80000000 | 0x00000200))
+        else:
+            data += content
+            blocks.append((pos, len(content), len(content), 0x80000000))
+    hash_entries = [(M32, M32, M32, M32)] * size
+    hash_entries = list(hash_entries)
+    for index, name in enumerate(names):
+        i = hs(name, 0) % size
+        while hash_entries[i][3] != M32:
+            i = (i + 1) % size
+        hash_entries[i] = (hs(name, 1), hs(name, 2), 0, index)
+    ht = b"".join(struct.pack("<IIII", *e) for e in hash_entries)
+    bt = b"".join(struct.pack("<IIII", *b) for b in blocks)
+    hto = header + len(data)
+    bto = hto + len(ht)
+    archive = len(data) + len(ht) + len(bt) + header
+    head = struct.pack("<4sIIHHIIII", b"MPQ\x1a", header, archive, 0, 3, hto, bto, size, len(blocks))
+    with open(path, "wb") as f:
+        f.write(head + data + encrypt(ht, hs("(hash table)", 3)) + encrypt(bt, hs("(block table)", 3)))
+
+
+def dbc(rows, fields):
+    """rows: lists of ints or str (strings go into the string block)."""
+    strings = bytearray(b"\0")
+    offsets = {}
+
+    def ref(s):
+        if s == "":
+            return 0
+        if s not in offsets:
+            offsets[s] = len(strings)
+            strings.extend(s.encode() + b"\0")
+        return offsets[s]
+
+    body = bytearray()
+    for row in rows:
+        row = list(row) + [0] * (fields - len(row))
+        for v in row:
+            body += struct.pack("<i", ref(v) if isinstance(v, str) else v)
+    return struct.pack("<4sIIII", b"WDBC", len(rows), fields, fields * 4, len(strings)) + bytes(body) + bytes(strings)
+
+
+def m2(version=256, vertices=10, views=1, pad=6000):
+    head = bytearray(0x60)
+    head[0:4] = b"MD20"
+    struct.pack_into("<I", head, 4, version)
+    struct.pack_into("<II", head, 0x44, vertices, 0x60)
+    struct.pack_into("<II", head, 0x4C, views, 0x60)
+    return bytes(head) + b"\x11" * pad
+
+
+def main():
+    out = sys.argv[1]
+    mostly_empty = "--mostly-empty" in sys.argv
+    data = os.path.join(out, "Data")
+    os.makedirs(data, exist_ok=True)
+
+    base, patch = {}, {}
+    # Models: 1 good, 2 empty, 3 missing, 4 WC3 format, 5 human male, 10-39 good.
+    model_rows = [
+        (1, 0, "Creature\\Good\\Good.mdx"), (2, 0, "Creature\\Empty\\Empty.mdx"),
+        (3, 0, "Creature\\Missing\\Missing.mdx"), (4, 0, "Creature\\Old\\Old.mdx"),
+        (5, 0, "Character\\Human\\Male\\HumanMale.mdx"),
+    ]
+    base["Creature\\Good\\Good.m2"] = m2()
+    base["Creature\\Good\\GoodSkin.blp"] = b"BLP2"
+    base["Creature\\Empty\\Empty.m2"] = m2(vertices=0)
+    base["Creature\\Old\\Old.m2"] = b"MDLX" + b"\0" * 200
+    base["Character\\Human\\Male\\HumanMale.m2"] = m2()
+    for k in range(10, 40):
+        model_rows.append((k, 0, "Creature\\Beast%d\\Beast%d.mdx" % (k, k)))
+        empty = mostly_empty and k < 30
+        base["Creature\\Beast%d\\Beast%d.m2" % (k, k)] = m2(vertices=0 if empty else 50)
+        base["Creature\\Beast%d\\Beast%dSkin.blp" % (k, k)] = b"BLP2"
+
+    # Displays: 0 ID, 1 model, 3 extra, 6-8 skins.
+    display_rows = [
+        [4527, 1, 0, 0, 0, 0, "GoodSkin"],    # Thrall: fine
+        [11121, 2],                            # Ragnaros: empty model
+        [2029, 3],                             # VanCleef: no model file
+        [4528, 4],                             # not an M2
+        [60000, 1, 0, 0, 0, 0, "NoSuchSkin"],  # unnamed, skin missing
+        [49, 5],                               # human male, fine
+        [18088, 5, 0, 1],                      # a dressed human (extra 1)
+    ]
+    for k in range(10, 40):
+        display_rows.append([70000 + k, k, 0, 0, 0, 0, "Beast%dSkin" % k])
+    for k in range(10, 16):
+        display_rows.append([80000 + k, k, 0, 0, 0, 0, "Beast%dSkin" % k])
+    extra = [[1, 1, 1, 3, 2, 4, 5, 0] + [0] * 10 + [0, ""]]
+    patch["DBFilesClient\\CreatureModelData.dbc"] = dbc(model_rows, 16)
+    patch["DBFilesClient\\CreatureDisplayInfo.dbc"] = dbc(display_rows, 11)
+    patch["DBFilesClient\\CreatureDisplayInfoExtra.dbc"] = dbc(extra, 20)
+
+    # Items: 100 sword with model, 101 sword without, 102 chest texture, 103
+    # helm (race files), 104 icon only. ItemDisplayInfo: ID, 2 models, 2 model
+    # textures, 2 icons, ..., 8 textures.
+    idi = [
+        [100, "Sword_1H_Good.mdx", "", "", "", "INV_Sword_01"],
+        [101, "Sword_1H_Gone.mdx", "", "", "", "INV_Sword_02"],
+        [102, "", "", "", "", "INV_Chest_Plate01", "", 0, 0, 0, 0, 0, 0, 0, 0, "Plate_Chest_A"],
+        [103, "Helm_Plate_A.mdx", "", "Helm_Plate_A", "", "INV_Helmet_01"],
+        [104, "", "", "", "", "INV_Chest_Cloth_01"],
+    ]
+    patch["DBFilesClient\\ItemDisplayInfo.dbc"] = dbc(idi, 24)
+    patch["DBFilesClient\\ItemSet.dbc"] = dbc([[1, "Test Set", 0, 0, 0, 0, 0, 0, 0, 0, 1, 2]], 27)
+    base["Item\\ObjectComponents\\Weapon\\Sword_1H_Good.m2"] = m2()
+    base["Item\\TextureComponents\\TorsoUpperTexture\\Plate_Chest_A_U.blp"] = b"BLP2"
+    base["Item\\ObjectComponents\\Head\\Helm_Plate_A_OrM.m2"] = m2()
+
+    write_mpq(os.path.join(data, "model.MPQ"), base, compress={"Creature\\Empty\\Empty.m2", "Creature\\Good\\Good.m2"})
+    write_mpq(os.path.join(data, "patch.MPQ"), patch, compress={"DBFilesClient\\CreatureDisplayInfo.dbc"})
+
+    # Inputs that normally come from the repository.
+    named = [(4527, "Thrall"), (11121, "Ragnaros"), (2029, "Edwin VanCleef"), (4528, "Old Thing"), (9999, "Not In Client")]
+    named += [(70000 + k, "Beast %d" % k) for k in range(10, 40)]
+    with open(os.path.join(out, "Creatures.lua"), "w") as f:
+        f.write("DmorphOcto_CreatureData = [[\n")
+        for i, n in sorted(named, key=lambda x: x[1].lower()):
+            f.write("%d\t%s\n" % (i, n))
+        f.write("]]\n")
+    with open(os.path.join(out, "Items.lua"), "w") as f:
+        f.write("DmorphOcto_ItemData = {}\nDmorphOcto_ItemData[1] = [[\n20\t4\tHelm\n]]\n")
+        f.write("DmorphOcto_ItemData[5] = [[\n10\t4\tGood Chest\n11\t1\tNothing Chest\n")
+        for k in range(30, 40):
+            f.write("%d\t2\tChest %d\n" % (k, k))
+        f.write("]]\nDmorphOcto_ItemData[16] = [[\n1\t3\tGood Sword\n2\t3\tGone Sword\n3\t3\tUnknown Display\n")
+        for k in range(40, 52):
+            f.write("%d\t2\tSword %d\n" % (k, k))
+        f.write("]]\n")
+    with open(os.path.join(out, "item_displays.tsv"), "w") as f:
+        rows = [(1, 100), (2, 101), (3, 999), (10, 102), (11, 104), (20, 103)]
+        rows += [(k, 102) for k in range(30, 40)] + [(k, 100) for k in range(40, 52)]
+        for i, d in rows:
+            f.write("%d\t%d\n" % (i, d))
+    with open(os.path.join(out, "turtle_items.tsv"), "w") as f:
+        f.write("# test\n5000\t13\t3\tTurtle Sword\n")
+    with open(os.path.join(out, "empty.tsv"), "w") as f:
+        f.write("# empty\n")
+
+
+main()

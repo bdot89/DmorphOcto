@@ -394,6 +394,15 @@ local _, bosses = DmorphOcto.FilterCatalog(creatures, "", filterNamed("Bosses"))
 local _, mounts = DmorphOcto.FilterCatalog(creatures, "", filterNamed("Mounts"))
 local _, rares = DmorphOcto.FilterCatalog(creatures, "", filterNamed("Rare creatures"))
 check(bosses > 100 and mounts > 300 and rares > 200, "bosses, mounts and rare creatures are tagged")
+-- Dungeon bosses the database ranks as plain elites, and every mount spell's model.
+result, count = DmorphOcto.FilterCatalog(creatures, "edwin vancleef", filterNamed("Bosses"))
+local vancleef = count >= 1 and creatures.ids[result[1]] == 2029
+result, count = DmorphOcto.FilterCatalog(creatures, "baron rivendare", filterNamed("Bosses"))
+check(vancleef and count >= 1, "dungeon bosses are in the Bosses filter")
+result, count = DmorphOcto.FilterCatalog(creatures, "hogger", filterNamed("Bosses"))
+check(count == 0, "a named elite out in the world isn't a boss")
+check(contains(creatures.tags[creatures.byID[2402]] or "", "mount"), "the Black Stallion's model is a mount")
+check(bosses > 500, "bosses come from both the 1.12 database and OctoWoW's ranks")
 result, count = DmorphOcto.FilterCatalog(creatures, "", filterNamed("Mounts"), nil, true)
 local byID = true
 for i = 2, count do
@@ -739,45 +748,88 @@ local function lookOf(display)
 		end
 	end
 end
--- Each < > changes only its own row, or nothing (and says why).
-local onlyThat, moved, stuck = true, 0, 0
-for f = 1, 5 do
+-- Each < > always moves its own row to the next value the race's NPCs have;
+-- other rows change only when no NPC has that value with them, and the
+-- status line names them.
+local FIELDS = { 2, 3, 4, 5, 6, 8 }
+local NAMES = { "skin colour", "face", "hair style", "hair colour", "facial hair", "outfit" }
+local function nextValue(f, value)
+	local values = DmorphOcto.GetLookValues(8, 0, f)
+	for i = 1, table.getn(values) do
+		if values[i] == value then
+			return values[math.mod(i, table.getn(values)) + 1]
+		end
+	end
+end
+local alwaysMoves, namesChanges, quietWhenAlone, clicks = true, true, true, 0
+for f = 1, 6 do
 	for n = 1, 4 do
 		local before = lookOf(vh.display)
 		press(getglobal("DmorphOctoCreatorNext" .. f))
 		local now = lookOf(vh.display)
-		for g = 1, 5 do
-			if g ~= f and now[g + 1] ~= before[g + 1] then
-				onlyThat = false
+		clicks = clicks + 1
+		if now[FIELDS[f]] ~= nextValue(f, before[FIELDS[f]]) then
+			alwaysMoves = false
+		end
+		local others = 0
+		for g = 1, 6 do
+			-- A new face or hair nearly always comes in other clothes, so only
+			-- the face and hair rows are named (all of them for the outfit row).
+			if g ~= f and now[FIELDS[g]] ~= before[FIELDS[g]] and (f == 6 or g ~= 6) then
+				others = others + 1
+				if not contains(DmorphOctoFrameStatus.text, NAMES[g]) then
+					namesChanges = false
+				end
 			end
 		end
-		if now[f + 1] ~= before[f + 1] then
-			moved = moved + 1
-			if not contains(DmorphOctoFrameStatus.text, "nothing else") then
-				onlyThat = false
-			end
-		elseif contains(DmorphOctoFrameStatus.text, "has another") then
-			stuck = stuck + 1
+		if others == 0 and contains(DmorphOctoFrameStatus.text, "changed too") then
+			quietWhenAlone = false
 		end
 	end
 end
-check(onlyThat, "each < > click changes only the feature you clicked")
-check(moved + stuck == 20, "every click either changes its feature or says no NPC has another")
-local values = DmorphOcto.GetLookChoices(8, 0, 3, 1)
-local strict = true
+check(alwaysMoves and clicks == 24, "every > click moves its own row to the next value")
+check(namesChanges, "when another row has to change, the status line names it")
+check(quietWhenAlone, "a click that changes only its row doesn't say anything else changed")
+-- StepLook keeps as much as any NPC look allows: no other look with the new
+-- value keeps a row it dropped without dropping a more important one.
+local WEIGHTS = { 32, 4, 16, 8, 2, 1 }
+local function kept(a, b, f)
+	local score = 0
+	for g = 1, 6 do
+		if g ~= f and a[FIELDS[g]] == b[FIELDS[g]] then
+			score = score + WEIGHTS[g]
+		end
+	end
+	return score
+end
+local closest, stepsOK = true, true
 for k = 1, table.getn(trollLooks) do
-	for f = 1, 5 do
-		local to = DmorphOcto.StepLook(8, 0, f, k, 1)
+	for f = 1, 6 do
+		local to, pos, count, changed = DmorphOcto.StepLook(8, 0, f, k, 1)
 		if to then
-			for g = 1, 5 do
-				if (g == f) == (trollLooks[to][g + 1] == trollLooks[k][g + 1]) then
-					strict = false
+			local want = nextValue(f, trollLooks[k][FIELDS[f]])
+			if trollLooks[to][FIELDS[f]] ~= want or pos < 1 or pos > count then
+				stepsOK = false
+			end
+			local best = kept(trollLooks[to], trollLooks[k], f)
+			for j = 1, table.getn(trollLooks) do
+				if trollLooks[j][FIELDS[f]] == want and kept(trollLooks[j], trollLooks[k], f) > best then
+					closest = false
+				end
+			end
+			for i = 1, table.getn(changed) do
+				local g = changed[i]
+				if trollLooks[to][FIELDS[g]] == trollLooks[k][FIELDS[g]] then
+					stepsOK = false
 				end
 			end
 		end
 	end
 end
-check(strict and table.getn(values) >= 1, "StepLook only ever changes the one feature, for every Troll look")
+check(stepsOK, "StepLook moves to the next value and reports exactly the rows that changed, for every Troll look")
+check(closest, "StepLook picks the look that keeps the most important other rows")
+local values = DmorphOcto.GetLookChoices(8, 0, 3, 1)
+check(table.getn(values) == table.getn(DmorphOcto.GetLookValues(8, 0, 3)), "every hair style is a choice")
 check(contains(DmorphOctoCreatorValue3.text, " of "), "each row shows how many choices it has")
 press(DmorphOctoCreatorRandom)
 check(lookOf(vh.display) ~= nil, "the dice rolls a random look of that race")
@@ -1333,6 +1385,28 @@ check(DmorphOctoFrame:IsVisible() and contains(DmorphOctoFrameStatus.text, "Vani
 Mock.Type(DmorphOctoModelSearch, "thrall")
 Mock.Click(DmorphOctoModelListRow1)
 check(contains(DmorphOctoFrameStatus.text, "VanillaHelpers"), "clicking a model without the DLL explains")
+
+------------------------------------------------------------------------------
+-- What tools/build_models.ps1 and build_items.ps1 found can't show in this
+-- client (Data/HiddenModels.lua, Data/HiddenItems.lua) is left out everywhere.
+
+newClient(49)
+installMorphAPI()
+Mock.ResetUI()
+Mock.LoadAddon("DmorphOcto.toc")
+DmorphOcto_HiddenModels, DmorphOcto_HiddenItems = "4527,18088", "2955"
+local shown = DmorphOcto.GetCreatureCatalog()
+check(shown.byID[4527] == nil and shown.byID[11121] ~= nil, "hidden models are left out of the model list")
+check(DmorphOcto.GetItemCatalog(1).byID[2955] == nil and DmorphOcto.GetItemCatalog(1).count > 100,
+	"hidden items are left out of the item lists")
+local stillThere = false
+local humanLooks = DmorphOcto.GetLooks(1, 1)
+for i = 1, table.getn(humanLooks) do
+	if humanLooks[i][1] == 18088 then
+		stillThere = true
+	end
+end
+check(not stillThere and table.getn(humanLooks) > 100, "hidden NPC looks are left out of the Races tab")
 
 print(format("%d checks, %d failures", checks, failures))
 if failures > 0 then
