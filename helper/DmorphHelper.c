@@ -19,7 +19,7 @@
 //   DmorphHelper_SetScale(unit, scale)                       (0.1 to 10)
 //   DmorphHelper_GetRace(unit)                               -> race
 //   DmorphHelper_SetRace(unit, race)                         (no rebuild)
-//   DmorphHelper_SetChatRace(race)                           (0 = off; see Race morphs)
+//   DmorphHelper_SetOwnRace(race)                            (0 = off; see Race morphs)
 //   DmorphHelper_Rebuild(unit)
 // unit is a unit token for a player you could help ("player", "target", ...);
 // slot is an inventory slot, 1-19. The functions only write the values: the
@@ -41,7 +41,7 @@
 #define GAME_FASTCALL __attribute__((fastcall))
 #define GAME_THISCALL __attribute__((thiscall))
 
-#define HELPER_VERSION 4
+#define HELPER_VERSION 5
 
 // Game functions, build 5875 (from VanillaHelpers' Offsets.h).
 #define FUN_INVALID_FUNCTION_PTR_CHECK 0x42A320
@@ -54,6 +54,8 @@
 #define FUN_CGUNIT_C_UPDATE_DISPLAY_INFO 0x60ABE0
 // The handler the game registers (0x5AB650) for SMSG_MESSAGECHAT (0x96).
 #define FUN_CHAT_MESSAGE_HANDLER 0x49D560
+// CGUnit_C::UnitReaction(other), thiscall: friendly or hostile, through reputation.
+#define FUN_CGUNIT_C_UNIT_REACTION 0x6061E0
 #define LUA_IS_NUMBER 0x6F34D0
 #define LUA_TO_NUMBER 0x6F3620
 #define LUA_PUSH_NUMBER 0x6F3810
@@ -263,12 +265,16 @@ static int GAME_FASTCALL Script_SetScale(void *L) {
 // the game also reads it to decide which languages you understand, and
 // garbles your own and your faction's chat when it thinks you're another
 // race. So the byte keeps the morph's race, and only while the game handles
-// an incoming chat message (SMSG_MESSAGECHAT) does it hold your own race
-// (DmorphHelper_SetChatRace). The addon swaps it the same way, without a
-// rebuild, while the flight map or spellbook is open (DmorphHelper_SetRace).
+// an incoming chat message (SMSG_MESSAGECHAT), or works out how you and
+// another unit feel about each other (Reaction_h), does it hold your own
+// race (DmorphHelper_SetOwnRace). The addon swaps it the same way, without a
+// rebuild, while the flight map, spellbook or reputation list is open
+// (DmorphHelper_SetRace).
 typedef int(GAME_FASTCALL *MessageHandler_t)(void *param, uint32_t msgId, uint32_t time, void *msg);
 static MessageHandler_t ChatHandler_o = NULL;
-static uint32_t g_chatRace = 0;
+static uint32_t g_ownRace = 0;
+typedef int(GAME_THISCALL *Reaction_t)(void *unit, void *other);
+static Reaction_t Reaction_o = NULL;
 
 static void *Me(void) {
     uint64_t guid = GetActivePlayer();
@@ -281,12 +287,12 @@ static void WriteRace(void *unit, uint32_t race) {
 }
 
 static int GAME_FASTCALL ChatHandler_h(void *param, uint32_t msgId, uint32_t time, void *msg) {
-    void *me = g_chatRace ? Me() : NULL;
+    void *me = g_ownRace ? Me() : NULL;
     if (!me) {
         return ChatHandler_o(param, msgId, time, msg);
     }
     uint32_t race = Fields(me)[UNIT_FIELD_BYTES_0] & 0xFF;
-    WriteRace(me, g_chatRace);
+    WriteRace(me, g_ownRace);
     int result = ChatHandler_o(param, msgId, time, msg);
     // The handler may have run addons' Lua that changed things: look again.
     me = Me();
@@ -296,9 +302,26 @@ static int GAME_FASTCALL ChatHandler_h(void *param, uint32_t msgId, uint32_t tim
     return result;
 }
 
+// How a unit feels about another (name colours, targeting, talking to NPCs)
+// comes partly from your reputation, whose starting values the game takes
+// from your race: as an Alliance race morph, Horde NPCs turn hostile. So
+// your own race is in the byte while the game works out a reaction with you.
+static int GAME_FASTCALL Reaction_h(void *unit, void *edx, void *other) {
+    (void)edx;
+    void *me = g_ownRace ? Me() : NULL;
+    if (!me || (unit != me && other != me)) {
+        return Reaction_o(unit, other);
+    }
+    uint32_t race = Fields(me)[UNIT_FIELD_BYTES_0] & 0xFF;
+    WriteRace(me, g_ownRace);
+    int result = Reaction_o(unit, other);
+    WriteRace(me, race);
+    return result;
+}
+
 static const char *RACE_USAGE = "Usage: DmorphHelper_GetRace(unit)";
 static const char *SET_RACE_USAGE = "Usage: DmorphHelper_SetRace(unit, race 1-20)";
-static const char *CHAT_RACE_USAGE = "Usage: DmorphHelper_SetChatRace(race 0-20)";
+static const char *OWN_RACE_USAGE = "Usage: DmorphHelper_SetOwnRace(race 0-20)";
 static const char *REBUILD_USAGE = "Usage: DmorphHelper_Rebuild(unit)";
 
 static int GAME_FASTCALL Script_GetRace(void *L) {
@@ -314,14 +337,14 @@ static int GAME_FASTCALL Script_SetRace(void *L) {
     return 0;
 }
 
-// Your own race, for reading chat during a race morph; 0 turns it off.
-static int GAME_FASTCALL Script_SetChatRace(void *L) {
-    uint32_t race = NumberArg(L, 1, 0, 20, CHAT_RACE_USAGE);
-    if (!ChatHandler_o) {
-        LuaError(L, "DmorphHelper couldn't hook the chat handler.");
+// Your own race, for chat and reactions during a race morph; 0 turns it off.
+static int GAME_FASTCALL Script_SetOwnRace(void *L) {
+    uint32_t race = NumberArg(L, 1, 0, 20, OWN_RACE_USAGE);
+    if (!ChatHandler_o || !Reaction_o) {
+        LuaError(L, "DmorphHelper couldn't hook the game's chat or reaction code.");
         return 0;
     }
-    g_chatRace = race;
+    g_ownRace = race;
     return 0;
 }
 
@@ -342,7 +365,7 @@ static void GAME_FASTCALL LoadScriptFunctions_h(void) {
     RegisterFunction("DmorphHelper_SetScale", (uintptr_t)&Script_SetScale);
     RegisterFunction("DmorphHelper_GetRace", (uintptr_t)&Script_GetRace);
     RegisterFunction("DmorphHelper_SetRace", (uintptr_t)&Script_SetRace);
-    RegisterFunction("DmorphHelper_SetChatRace", (uintptr_t)&Script_SetChatRace);
+    RegisterFunction("DmorphHelper_SetOwnRace", (uintptr_t)&Script_SetOwnRace);
     RegisterFunction("DmorphHelper_Rebuild", (uintptr_t)&Script_Rebuild);
 }
 
@@ -376,11 +399,16 @@ static void InstallHook(void) {
                       (LPVOID *)&LoadScriptFunctions_o) == MH_OK) {
         MH_EnableHook((LPVOID)FUN_LOAD_SCRIPT_FUNCTIONS);
     }
-    // Without it DmorphHelper_SetChatRace says so; everything else still works.
+    // Without them DmorphHelper_SetOwnRace says so; everything else still works.
     if (MH_CreateHook((LPVOID)FUN_CHAT_MESSAGE_HANDLER, (LPVOID)&ChatHandler_h,
                       (LPVOID *)&ChatHandler_o) != MH_OK ||
         MH_EnableHook((LPVOID)FUN_CHAT_MESSAGE_HANDLER) != MH_OK) {
         ChatHandler_o = NULL;
+    }
+    if (MH_CreateHook((LPVOID)FUN_CGUNIT_C_UNIT_REACTION, (LPVOID)&Reaction_h,
+                      (LPVOID *)&Reaction_o) != MH_OK ||
+        MH_EnableHook((LPVOID)FUN_CGUNIT_C_UNIT_REACTION) != MH_OK) {
+        Reaction_o = NULL;
     }
 }
 

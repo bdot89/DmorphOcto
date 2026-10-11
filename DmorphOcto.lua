@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.7.0"
+local VERSION = "2.8.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1268,9 +1268,10 @@ end
 -- A race morph's race stays in the game's race byte (the game textures your
 -- model from it, so it has to). With DmorphHelper v4 your own race is only
 -- put in while the game reads an incoming chat message (so it understands
--- your languages) and, below, while the flight map or spellbook is open:
+-- your languages) or works out who is friendly (reputation starts from your
+-- race, so NPCs of your faction would turn hostile) and, below, while the flight map or spellbook is open:
 -- the byte alone, no rebuild, so your model doesn't change. raceKept: your
--- own race as DmorphHelper reads chat with it (0: off).
+-- own race as DmorphHelper uses it for chat and reactions (0: off).
 local raceKept = 0
 local raceSwapped = {} -- reasons the byte holds your own race (HoldRace)
 
@@ -1282,11 +1283,11 @@ local function MorphRace()
 end
 
 local function KeepRace()
-	if type(DmorphHelper_SetChatRace) ~= "function" then
+	if type(DmorphHelper_SetOwnRace) ~= "function" then
 		return
 	end
 	local want = MorphRace() and nativeRace or 0
-	if want ~= raceKept and pcall(DmorphHelper_SetChatRace, want) then
+	if want ~= raceKept and pcall(DmorphHelper_SetOwnRace, want) then
 		raceKept = want
 	end
 end
@@ -1556,7 +1557,7 @@ local MISSING_HELPER = "DmorphHelper.dll isn't loaded, so weapon glows, your siz
 M.MISSING_HELPER = MISSING_HELPER
 -- The DmorphHelper_Version() the DLL in helper\ reports. An older one in the
 -- game folder (DMorph was updated, the DLL wasn't copied again) is flagged.
-local HELPER_VERSION = 4
+local HELPER_VERSION = 5
 -- Rows 1-5 of the Races tab, in DmorphHelper_GetLook's order.
 local OWN_LOOK_NPC = { "npcSkin", "npcFace", "npcHairStyle", "npcHairColour" }
 
@@ -2819,10 +2820,31 @@ frame:SetScript("OnUpdate", function()
 	end
 end)
 
--- Your own race while the flight map or the spellbook is open (see HoldRace).
--- Blizzard's TaxiFrame handles TAXIMAP_OPENED before us, so once the race is
--- back it draws the flight paths again; the spellbook is held before it
--- reads its spells.
+-- Your own race while the flight map, spellbook or reputation list is open
+-- (see HoldRace). Blizzard's TaxiFrame handles TAXIMAP_OPENED before us, so
+-- once the race is back it draws the flight paths again; the spellbook and
+-- reputation list are held before they read their spells and standings.
+local held = {}
+local function HoldWhileShown(frame, reason)
+	if not frame or held[reason] then
+		return
+	end
+	held[reason] = true
+	local onShow, onHide = frame:GetScript("OnShow"), frame:GetScript("OnHide")
+	frame:SetScript("OnShow", function()
+		M.HoldRace(reason, true)
+		if onShow then
+			onShow()
+		end
+	end)
+	frame:SetScript("OnHide", function()
+		if onHide then
+			onHide()
+		end
+		M.HoldRace(reason, false)
+	end)
+end
+
 local raceFrame = CreateFrame("Frame")
 raceFrame:RegisterEvent("TAXIMAP_OPENED")
 raceFrame:RegisterEvent("TAXIMAP_CLOSED")
@@ -2837,21 +2859,9 @@ raceFrame:SetScript("OnEvent", function()
 		end
 	elseif event == "TAXIMAP_CLOSED" then
 		M.HoldRace("taxi", false)
-	elseif event == "PLAYER_LOGIN" and SpellBookFrame and not M.spellBookHooked then
-		M.spellBookHooked = true
-		local onShow, onHide = SpellBookFrame:GetScript("OnShow"), SpellBookFrame:GetScript("OnHide")
-		SpellBookFrame:SetScript("OnShow", function()
-			M.HoldRace("spellbook", true)
-			if onShow then
-				onShow()
-			end
-		end)
-		SpellBookFrame:SetScript("OnHide", function()
-			if onHide then
-				onHide()
-			end
-			M.HoldRace("spellbook", false)
-		end)
+	elseif event == "PLAYER_LOGIN" then
+		HoldWhileShown(SpellBookFrame, "spellbook")
+		HoldWhileShown(ReputationFrame, "reputation")
 	end
 end)
 
