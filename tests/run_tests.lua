@@ -1813,7 +1813,7 @@ local function installHelper(look)
 		return type(v) == "number" and v >= 0 and v <= max and v == math.floor(v)
 	end
 	function DmorphHelper_Version()
-		return 5
+		return 6
 	end
 	-- The race byte: VanillaHelpers writes the morph's race there (tests set
 	-- game.race); DmorphHelper_SetRace writes it without a rebuild, and
@@ -1940,16 +1940,16 @@ DmorphOctoDB, DmorphOctoAccount = nil, nil
 loadWithHelper()
 Mock.Tick(1.1)
 slash("dmorph status")
-check(contains(allChat(), "DmorphHelper v5 is loaded"), "status shows the helper's version")
+check(contains(allChat(), "DmorphHelper v6 is loaded"), "status shows the helper's version")
 slash("dmorph check")
 check(contains(allChat(), "DmorphHelper: |cff33ff99OK"), "the check says the helper runs")
-check(contains(allChat(), "Running v5 (this DMorph comes with v5)"), "and which version runs")
+check(contains(allChat(), "Running v6 (this DMorph comes with v6)"), "and which version runs")
 local openedForSetup = not (DmorphOctoFrame and DmorphOctoFrame:IsVisible())
 if openedForSetup then
 	slash("")
 end
 Mock.Click(DmorphOctoSetupButton)
-check(contains(DmorphOctoSetupButton.text, "Helper v5") and contains(DmorphOctoSetupText2.text, "Running v5"),
+check(contains(DmorphOctoSetupButton.text, "Helper v6") and contains(DmorphOctoSetupText2.text, "Running v6"),
 	"the Setup button and panel show the helper version")
 Mock.Click(DmorphOctoSetupClose)
 local currentVersion = DmorphHelper_Version
@@ -2098,12 +2098,12 @@ SpellBookFrame:Hide()
 ReputationFrame = CreateFrame("Frame", "ReputationFrame")
 ReputationFrame:Hide()
 Mock.Fire("PLAYER_LOGIN")
--- DmorphHelper v5: the race byte keeps the morph's race (the game textures
+-- DmorphHelper v6: the race byte keeps the morph's race (the game textures
 -- your model from it), and your own race is used while the game reads chat
 -- and while the spellbook or flight map is open (the byte only, no rebuild).
 game.race = 2 -- VanillaHelpers wrote the Orc race
 Mock.Tick(0.2)
-check(game.ownRace == 1, "during an Orc race morph, chat and NPC reactions use your own race (Human)")
+check(game.ownRace == 1, "during an Orc race morph, chat and reputations use your own race (Human)")
 SpellBookFrame:Show()
 Mock.Tick(1.1)
 check(game.race == 1 and vh.display == 51 and sameLook(game.look, orc),
@@ -2133,7 +2133,7 @@ slash("demorph all")
 Mock.Tick(1.1)
 check(sameLook(game.look, REAL) and game.enchants[16][1] == 803 and game.enchants[18][1] == 0,
 	"resetting everything puts your real look and glows back")
-check(game.ownRace == 0, "without a race morph, chat and reactions need nothing")
+check(game.ownRace == 1, "the helper keeps your own race without a race morph too (loading screens)")
 -- A race with no list (High Elf here) keeps the NPC rows.
 press(DmorphOctoRace10Male)
 check(contains(DmorphOctoRacesHint.text, "an NPC has"), "a race with no look list uses NPC looks")

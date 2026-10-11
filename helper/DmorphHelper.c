@@ -41,7 +41,7 @@
 #define GAME_FASTCALL __attribute__((fastcall))
 #define GAME_THISCALL __attribute__((thiscall))
 
-#define HELPER_VERSION 5
+#define HELPER_VERSION 6
 
 // Game functions, build 5875 (from VanillaHelpers' Offsets.h).
 #define FUN_INVALID_FUNCTION_PTR_CHECK 0x42A320
@@ -54,8 +54,8 @@
 #define FUN_CGUNIT_C_UPDATE_DISPLAY_INFO 0x60ABE0
 // The handler the game registers (0x5AB650) for SMSG_MESSAGECHAT (0x96).
 #define FUN_CHAT_MESSAGE_HANDLER 0x49D560
-// CGUnit_C::UnitReaction(other), thiscall: friendly or hostile, through reputation.
-#define FUN_CGUNIT_C_UNIT_REACTION 0x6061E0
+// Builds every faction's base reputation from your race (no arguments).
+#define FUN_BUILD_BASE_REPUTATION 0x4D5430
 #define LUA_IS_NUMBER 0x6F34D0
 #define LUA_TO_NUMBER 0x6F3620
 #define LUA_PUSH_NUMBER 0x6F3810
@@ -265,16 +265,18 @@ static int GAME_FASTCALL Script_SetScale(void *L) {
 // the game also reads it to decide which languages you understand, and
 // garbles your own and your faction's chat when it thinks you're another
 // race. So the byte keeps the morph's race, and only while the game handles
-// an incoming chat message (SMSG_MESSAGECHAT), or works out how you and
-// another unit feel about each other (Reaction_h), does it hold your own
+// an incoming chat message (SMSG_MESSAGECHAT), or works out your base
+// reputations (BuildReputation_h, below), does it hold your own
 // race (DmorphHelper_SetOwnRace). The addon swaps it the same way, without a
 // rebuild, while the flight map, spellbook or reputation list is open
 // (DmorphHelper_SetRace).
 typedef int(GAME_FASTCALL *MessageHandler_t)(void *param, uint32_t msgId, uint32_t time, void *msg);
 static MessageHandler_t ChatHandler_o = NULL;
 static uint32_t g_ownRace = 0;
-typedef int(GAME_THISCALL *Reaction_t)(void *unit, void *other);
-static Reaction_t Reaction_o = NULL;
+static uint64_t g_ownGuid = 0; // the character g_ownRace is for
+typedef void (*BuildReputation_t)(void);
+static BuildReputation_t BuildReputation_o = NULL;
+static uint32_t g_builtRace = 0; // the race the base reputations were built with
 
 static void *Me(void) {
     uint64_t guid = GetActivePlayer();
@@ -286,13 +288,20 @@ static void WriteRace(void *unit, uint32_t race) {
     f[UNIT_FIELD_BYTES_0] = (f[UNIT_FIELD_BYTES_0] & 0xFFFFFF00u) | race;
 }
 
+// Your own race, if the addon has said it for the character you're on now
+// (after logging on to another one it says it again).
+static uint32_t OwnRace(void) {
+    return g_ownRace && GetActivePlayer() == g_ownGuid ? g_ownRace : 0;
+}
+
 static int GAME_FASTCALL ChatHandler_h(void *param, uint32_t msgId, uint32_t time, void *msg) {
-    void *me = g_ownRace ? Me() : NULL;
+    uint32_t own = OwnRace();
+    void *me = own ? Me() : NULL;
     if (!me) {
         return ChatHandler_o(param, msgId, time, msg);
     }
     uint32_t race = Fields(me)[UNIT_FIELD_BYTES_0] & 0xFF;
-    WriteRace(me, g_ownRace);
+    WriteRace(me, own);
     int result = ChatHandler_o(param, msgId, time, msg);
     // The handler may have run addons' Lua that changed things: look again.
     me = Me();
@@ -302,21 +311,32 @@ static int GAME_FASTCALL ChatHandler_h(void *param, uint32_t msgId, uint32_t tim
     return result;
 }
 
-// How a unit feels about another (name colours, targeting, talking to NPCs)
-// comes partly from your reputation, whose starting values the game takes
-// from your race: as an Alliance race morph, Horde NPCs turn hostile. So
-// your own race is in the byte while the game works out a reaction with you.
-static int GAME_FASTCALL Reaction_h(void *unit, void *edx, void *other) {
-    (void)edx;
-    void *me = g_ownRace ? Me() : NULL;
-    if (!me || (unit != me && other != me)) {
-        return Reaction_o(unit, other);
+// How an NPC feels about you (name colour, talking to it, the bank) comes
+// from your standing with its faction: what the server sent plus a base
+// value per faction that depends on your race. The game works the base
+// values out from the race byte once (BuildReputation, on entering the world
+// and when the server sends your reputations) and keeps them. Built with an
+// Alliance morph's race, Horde NPCs stay hostile until the next build. So
+// every build uses your own race, and DmorphHelper_SetOwnRace builds again
+// when the last one used another race.
+static void BuildReputation_h(void) {
+    void *me = Me();
+    if (!me) {
+        BuildReputation_o();
+        return;
     }
     uint32_t race = Fields(me)[UNIT_FIELD_BYTES_0] & 0xFF;
-    WriteRace(me, g_ownRace);
-    int result = Reaction_o(unit, other);
-    WriteRace(me, race);
-    return result;
+    uint32_t own = OwnRace();
+    if (!own) {
+        own = race;
+    }
+    WriteRace(me, own);
+    BuildReputation_o();
+    me = Me();
+    if (me) {
+        WriteRace(me, race);
+    }
+    g_builtRace = own;
 }
 
 static const char *RACE_USAGE = "Usage: DmorphHelper_GetRace(unit)";
@@ -340,11 +360,15 @@ static int GAME_FASTCALL Script_SetRace(void *L) {
 // Your own race, for chat and reactions during a race morph; 0 turns it off.
 static int GAME_FASTCALL Script_SetOwnRace(void *L) {
     uint32_t race = NumberArg(L, 1, 0, 20, OWN_RACE_USAGE);
-    if (!ChatHandler_o || !Reaction_o) {
-        LuaError(L, "DmorphHelper couldn't hook the game's chat or reaction code.");
+    if (!ChatHandler_o || !BuildReputation_o) {
+        LuaError(L, "DmorphHelper couldn't hook the game's chat or reputation code.");
         return 0;
     }
     g_ownRace = race;
+    g_ownGuid = GetActivePlayer();
+    if (race && race != g_builtRace && Me()) {
+        BuildReputation_h();
+    }
     return 0;
 }
 
@@ -405,10 +429,10 @@ static void InstallHook(void) {
         MH_EnableHook((LPVOID)FUN_CHAT_MESSAGE_HANDLER) != MH_OK) {
         ChatHandler_o = NULL;
     }
-    if (MH_CreateHook((LPVOID)FUN_CGUNIT_C_UNIT_REACTION, (LPVOID)&Reaction_h,
-                      (LPVOID *)&Reaction_o) != MH_OK ||
-        MH_EnableHook((LPVOID)FUN_CGUNIT_C_UNIT_REACTION) != MH_OK) {
-        Reaction_o = NULL;
+    if (MH_CreateHook((LPVOID)FUN_BUILD_BASE_REPUTATION, (LPVOID)&BuildReputation_h,
+                      (LPVOID *)&BuildReputation_o) != MH_OK ||
+        MH_EnableHook((LPVOID)FUN_BUILD_BASE_REPUTATION) != MH_OK) {
+        BuildReputation_o = NULL;
     }
 }
 

@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.8.1"
+local VERSION = "2.8.2"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1266,12 +1266,15 @@ local function DisplayRace(display)
 end
 
 -- A race morph's race stays in the game's race byte (the game textures your
--- model from it, so it has to). With DmorphHelper v4 your own race is only
--- put in while the game reads an incoming chat message (so it understands
--- your languages) or works out who is friendly (reputation starts from your
--- race, so NPCs of your faction would turn hostile) and, below, while the flight map or spellbook is open:
--- the byte alone, no rebuild, so your model doesn't change. raceKept: your
--- own race as DmorphHelper uses it for chat and reactions (0: off).
+-- model from it, so it has to). DmorphHelper (v6) puts your own race in only
+-- while the game reads an incoming chat message (so it understands your
+-- languages) or works out your base reputations (built once from your race:
+-- with another faction's race, NPCs of your own faction turn hostile), and
+-- the addon does below while the flight map, spellbook or reputation list is
+-- open: the byte alone, no rebuild, so your model doesn't change. The helper
+-- is told your own race all the time, not only during a race morph, so a
+-- loading screen during one can't build your reputations with the wrong
+-- race. raceKept: the race it was told (0: none yet).
 local raceKept = 0
 local raceSwapped = {} -- reasons the byte holds your own race (HoldRace)
 
@@ -1286,7 +1289,7 @@ local function KeepRace()
 	if type(DmorphHelper_SetOwnRace) ~= "function" then
 		return
 	end
-	local want = MorphRace() and nativeRace or 0
+	local want = sessionReady and nativeRace or 0
 	if want ~= raceKept and pcall(DmorphHelper_SetOwnRace, want) then
 		raceKept = want
 	end
@@ -1557,7 +1560,7 @@ local MISSING_HELPER = "DmorphHelper.dll isn't loaded, so weapon glows, your siz
 M.MISSING_HELPER = MISSING_HELPER
 -- The DmorphHelper_Version() the DLL in helper\ reports. An older one in the
 -- game folder (DMorph was updated, the DLL wasn't copied again) is flagged.
-local HELPER_VERSION = 5
+local HELPER_VERSION = 6
 -- Rows 1-5 of the Races tab, in DmorphHelper_GetLook's order.
 local OWN_LOOK_NPC = { "npcSkin", "npcFace", "npcHairStyle", "npcHairColour" }
 
