@@ -1537,6 +1537,49 @@ Mock.party = 0
 Mock.guild = nil
 
 ------------------------------------------------------------------------------
+-- Race morphs: the flight map and the spellbook go by your own race.
+
+newClient(49) -- a Human
+DmorphOctoDB = nil
+loadUI()
+local drawnAs, listedAs = {}, nil
+TaxiFrame = CreateFrame("Frame", "TaxiFrame")
+function TaxiFrame_OnEvent(e)
+	table.insert(drawnAs, vh.display)
+end
+SpellBookFrame = CreateFrame("Frame", "SpellBookFrame")
+SpellBookFrame:SetScript("OnShow", function()
+	listedAs = vh.display
+end)
+SpellBookFrame:Hide()
+Mock.Fire("PLAYER_LOGIN")
+say(".race orc")
+check(vh.display == 51, "a race morph to an Orc")
+TaxiFrame_OnEvent("TAXIMAP_OPENED") -- Blizzard's flight map handles it first
+Mock.Fire("TAXIMAP_OPENED")
+check(vh.display == 49 and drawnAs[2] == 49, "the flight map is drawn again with your own race")
+say(".morph 4527")
+check(vh.display == 49, "a morph picked meanwhile waits for the map to close")
+Mock.Fire("TAXIMAP_CLOSED")
+check(vh.display == 4527, "closing the map puts the morph on")
+say(".race orc")
+SpellBookFrame:Show()
+check(listedAs == 49 and vh.display == 49, "the spellbook opens with your own race")
+SpellBookFrame:Hide()
+check(vh.display == 51, "and the race morph comes back when it closes")
+say(".race human")
+say(".gender")
+SpellBookFrame:Show()
+check(vh.display == 50, "your own race in the other gender isn't held")
+SpellBookFrame:Hide()
+say(".morph 4527")
+drawnAs = {}
+Mock.Fire("TAXIMAP_OPENED")
+check(vh.display == 4527 and table.getn(drawnAs) == 0, "nor is a creature morph")
+Mock.Fire("TAXIMAP_CLOSED")
+TaxiFrame, TaxiFrame_OnEvent, SpellBookFrame = nil, nil, nil
+
+------------------------------------------------------------------------------
 -- Chat language: a race morph to the other faction changes the game's
 -- default language to one the character doesn't know.
 
@@ -1864,6 +1907,17 @@ check(sameLook(game.look, mine), "each race keeps its own picked look")
 press(DmorphOctoRace2Male)
 Mock.Tick(0.2)
 check(sameLook(game.look, orc), "and gets it back")
+SpellBookFrame = CreateFrame("Frame", "SpellBookFrame")
+SpellBookFrame:Hide()
+Mock.Fire("PLAYER_LOGIN")
+SpellBookFrame:Show()
+Mock.Tick(1.1)
+check(vh.display == 49 and sameLook(game.look, REAL),
+	"while the spellbook holds your own race, your real look shows (not the Orc one)")
+SpellBookFrame:Hide()
+Mock.Tick(1.1)
+check(vh.display == 51 and sameLook(game.look, orc), "and the Orc morph and look come back when it closes")
+SpellBookFrame = nil
 press(DmorphOctoCreatorRandom)
 check(wearable(game.look, "2:0") and vh.display == 51, "the dice picks a look the race can wear, on your model")
 -- From an NPC look: the rows take you back to your own model with its face.

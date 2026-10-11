@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.3.1"
+local VERSION = "2.4.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1208,9 +1208,61 @@ end
 -- watcher holds off this long, then runs (see Glows and your own look).
 local helperHold, helperWait = 0, 0
 
+-- A race morph makes VanillaHelpers tell the game you are that race (the
+-- model's skin needs it), and two windows go by that race: the flight map (a
+-- Horde character morphed into a Human sees no Horde flight paths) and the
+-- spellbook (spells change places). While one of them is open your own race
+-- is back, and the morph returns when it closes. raceHeld: why ("taxi",
+-- "spellbook").
+local raceHeld = {}
+
+local function DisplayRace(display)
+	for race = 1, table.getn(RACES) do
+		if RACES[race].male == display or RACES[race].female == display then
+			return race
+		end
+	end
+end
+
 local function ApplyBody()
 	helperHold, helperWait = 0.5, 0.5
+	if next(raceHeld) then
+		return true -- it goes on when the flight map or spellbook closes
+	end
 	return Morph(SetUnitDisplayID, "player", BodyDisplayID())
+end
+
+-- Holds (on) or releases your own race for a reason. Returns whether the
+-- race was changed back just now, so the window can redraw.
+function M.HoldRace(reason, on)
+	if on then
+		local held = next(raceHeld) ~= nil
+		if held then
+			raceHeld[reason] = true
+			return false
+		end
+		local race = DisplayRace(BodyDisplayID() or 0)
+		if not (sessionReady and race and race ~= nativeRace and HasMorphAPI()) then
+			return false
+		end
+		raceHeld[reason] = true
+		helperHold = 1000000 -- no picked look on your own race meanwhile
+		if M.HasHelper() and db.lookWritten and db.lookReal then
+			local l = db.lookReal
+			if pcall(DmorphHelper_SetLook, "player", l[1], l[2], l[3], l[4], l[5]) then
+				db.lookWritten = nil
+			end
+		end
+		Morph(SetUnitDisplayID, "player", nil)
+		return true
+	end
+	if raceHeld[reason] then
+		raceHeld[reason] = nil
+		if not next(raceHeld) then
+			ApplyBody()
+		end
+	end
+	return false
 end
 
 local function ApplyItem(slot)
@@ -2544,7 +2596,44 @@ frame:SetScript("OnUpdate", function()
 	pendingApply = pendingApply - arg1
 	if pendingApply <= 0 then
 		frame:Hide()
+		raceHeld = {} -- a loading screen closed the windows that held it
 		ApplySaved()
+	end
+end)
+
+-- Your own race while the flight map or the spellbook is open (see HoldRace).
+-- Blizzard's TaxiFrame handles TAXIMAP_OPENED before us, so once the race is
+-- back it draws the flight paths again; the spellbook is held before it
+-- reads its spells.
+local raceFrame = CreateFrame("Frame")
+raceFrame:RegisterEvent("TAXIMAP_OPENED")
+raceFrame:RegisterEvent("TAXIMAP_CLOSED")
+raceFrame:RegisterEvent("PLAYER_LOGIN")
+raceFrame:SetScript("OnEvent", function()
+	if event == "TAXIMAP_OPENED" then
+		if M.HoldRace("taxi", true) and TaxiFrame and type(TaxiFrame_OnEvent) == "function" then
+			local saved = this
+			this = TaxiFrame
+			pcall(TaxiFrame_OnEvent, "TAXIMAP_OPENED")
+			this = saved
+		end
+	elseif event == "TAXIMAP_CLOSED" then
+		M.HoldRace("taxi", false)
+	elseif event == "PLAYER_LOGIN" and SpellBookFrame and not M.spellBookHooked then
+		M.spellBookHooked = true
+		local onShow, onHide = SpellBookFrame:GetScript("OnShow"), SpellBookFrame:GetScript("OnHide")
+		SpellBookFrame:SetScript("OnShow", function()
+			M.HoldRace("spellbook", true)
+			if onShow then
+				onShow()
+			end
+		end)
+		SpellBookFrame:SetScript("OnHide", function()
+			if onHide then
+				onHide()
+			end
+			M.HoldRace("spellbook", false)
+		end)
 	end
 end)
 

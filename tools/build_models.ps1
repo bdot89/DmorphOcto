@@ -253,6 +253,9 @@ for ($i = 0; $i -lt $display.Count; $i++) {
   if ($perModel.ContainsKey($path)) { $perModel[$path]++ } else { $perModel[$path] = 1 }
 }
 
+# Famous mounts get their name as well (model file -> name), so a search finds them.
+$MOUNT_NAMES = @{ "Creature\Phoenix\Phoenix.mdx" = "Ashes of Al'ar (Phoenix)" }
+
 $rows = New-Object System.Collections.ArrayList
 foreach ($e in $entries) {
   if ($e.custom) { $added++ }
@@ -287,6 +290,14 @@ foreach ($e in $entries) {
     }
   }
   [void]$rows.Add([pscustomobject]@{ id = $e.id; name = $name; named = $false; custom = $e.custom })
+}
+# Famous mounts ($MOUNT_NAMES, below) under their own name too.
+foreach ($e in $entries) {
+  foreach ($key in $MOUNT_NAMES.Keys) {
+    if ($e.path -ieq $key) {
+      [void]$rows.Add([pscustomobject]@{ id = $e.id; name = $MOUNT_NAMES[$key]; named = $true; custom = $e.custom })
+    }
+  }
 }
 
 $utf8 = New-Object System.Text.UTF8Encoding($false)
@@ -362,6 +373,13 @@ if (Test-Path $TagSource) {
 # (Data/ClassicTags.lua), and models whose file or skin is named like a mount
 # (RidingHorse, DrakeMount, SpectralRidingTigerArmored, ... not MountainGiant).
 $MOUNT_NAME = '(?i)riding|mount(?!ain)|packmule|warhorse|mechastrider|hawkstrider|talbuk'
+# Models OctoWoW brought from later expansions that players ride but whose
+# file isn't named like a mount and has no rider point (checked on the
+# 11 Oct 2026 client): Al'ar's phoenix, the winged and celestial horses,
+# Northrend drakes, the victorious steed, armoured raptor, lava and fel
+# horses, Antonidas' horse, nether rays, and the flight masters' wyverns,
+# hippogryphs, ghost gryphon and Turtle WoW's riding turtle.
+$MOUNT_MODEL = '(?i)\\(phoenix\\phoenix|wingedhorse\\|celestialhorse\\|drake\\northrenddrake|warhorse\\victorius|armoredraptor\\|lavahorse\\|felhorse\\felhorseepic|antonidashorse\\|netherray\\|wyvern\\wyvern\.|hippogryph\\hippogryph\.|gryphon\\gryphon_ghost|turtle\\turtle\.)'
 if (Test-Path $ClassicTags) {
   foreach ($line in [IO.File]::ReadAllLines($ClassicTags)) {
     if ($line -match '^(\d+)\tmount\t') { $mountIds[[int]$matches[1]] = $true }
@@ -375,6 +393,7 @@ foreach ($i in $usable) {
   foreach ($n in @([IO.Path]::GetFileNameWithoutExtension($path), $display.Str($i, 6), $display.Str($i, 7), $display.Str($i, 8))) {
     if ($n -and $n -match $MOUNT_NAME) { $mountIds[$id] = $true }
   }
+  if ("\$path" -match $MOUNT_MODEL) { $mountIds[$id] = $true }
 }
 
 # The game's own mount spells (Spell.dbc, Turtle WoW's and OctoWoW's shop

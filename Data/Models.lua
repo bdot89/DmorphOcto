@@ -136,6 +136,7 @@ DmorphOcto_ModelData = [[
 18623	3	Arthasundead (01)
 18089	2	Ash Riding Bear
 17676	2	Ashanya Quel'belore
+18179	2	Ashes of Al'ar (Phoenix)
 20562	2	Astalor Sunsworn
 20588	2	Auctioneer Reilin
 21307	3	Automatonfliermount
