@@ -1,0 +1,44 @@
+DMorph for OctoWoW - HOW TO INSTALL
+===================================
+
+STEP 1: TURN ON VANILLAHELPERS
+  1. Open OctoLauncher.
+  2. In its list of mods, tick "vanillaHelpers".
+
+STEP 2: PUT DMORPH IN YOUR ADDONS FOLDER
+  1. Unzip the download (right-click the ZIP > Extract All > Extract).
+  2. Find the folder "DmorphOcto-main" that has "DmorphOcto.toc" inside it.
+  3. Rename that folder to "DmorphOcto".
+  4. Move it into your game's AddOns folder, so it ends up like this:
+       OctoWoW\Interface\AddOns\DmorphOcto\DmorphOcto.toc
+
+STEP 3: RUN THE INSTALLER (glows, real skin/face/hair, size)
+  1. Close the game completely.
+  2. In this folder, double-click "Install DmorphHelper.bat".
+  3. If Windows warns you:
+       "Windows protected your PC"      -> click More info, then Run anyway
+       "Do you want to run this file?"  -> click Run
+  4. A black window ends with "DmorphHelper is installed". Press any key.
+
+STEP 4: PLAY
+  1. Start the game from OctoLauncher (not WoW.exe).
+  2. Click the polymorph button by the minimap, or type /dmorph
+  3. The "Setup" button at the bottom left of the window:
+       green "Setup OK"        -> you're ready
+       red "Setup: fix me"     -> click it, it tells you what to fix
+
+UPDATING
+  1. Replace this folder with the new download (Step 2).
+  2. Close the game and double-click "Install DmorphHelper.bat" again.
+  3. Start the game from OctoLauncher.
+
+IF SOMETHING GOES WRONG
+  - "VanillaHelpers isn't running": close the game completely, then press
+    Play in OctoLauncher. Make sure vanillaHelpers is ticked.
+  - Setup says DmorphHelper is not running or older: close the game and
+    double-click "Install DmorphHelper.bat".
+  - The game won't start after installing: double-click
+    "Remove DmorphHelper.bat".
+  - You turned invisible: that model can't show. Press "Reset model".
+
+More help and screenshots: https://github.com/bdot89/DmorphOcto
