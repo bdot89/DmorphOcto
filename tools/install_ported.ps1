@@ -91,7 +91,9 @@ if ($Remove) {
 
 # The pack: manifest.txt lists every file with its size and SHA-256.
 $manifestPath = Join-Path $pack "manifest.txt"
-if (-not (Test-Path $manifestPath)) { throw "manifest.txt is missing from $pack. Download the whole pack folder again." }
+if (-not (Test-Path $manifestPath)) {
+  throw "there's no pack in $pack (no manifest.txt). To make one, double-click ""Pack Ported.bat"" in the DmorphOcto folder. To install one, double-click ""Install Ported.bat"" inside the downloaded pack folder (download the whole folder)."
+}
 $bundle = ""; $need = ""
 $files = New-Object System.Collections.ArrayList
 foreach ($line in [IO.File]::ReadAllLines($manifestPath)) {
