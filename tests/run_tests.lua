@@ -2269,7 +2269,7 @@ removeHelper()
 ------------------------------------------------------------------------------
 -- Ported models (Data/Ported.lua, made by the porting tool on one PC).
 Mock.portedData = "60001\tPandaren Yeti Mount (Brown)\tmount\n60011\tTest Ported Thing\t\n"
-Mock.portedItems = "900001\t90001\t207\t647\tWarglaive of Azzinoth\n900002\t90002\t208\t647\tBig Ported Sword\n"
+Mock.portedItems = "900001\t90001\t207\t647\tWarglaive of Azzinoth\t0\t5\n900002\t90002\t208\t647\tBig Ported Sword\n"
 	.. "900003\t90003\t406\t647\tPorted Shield\n"
 	.. "901001\t120001\t404\t647\tPorted Plate Helm\t1\n901002\t120002\t404\t647\tPorted Plate Chest\t5\n"
 Mock.portedSets = "Ported Plate Set\t901001,901002\n"
@@ -2311,6 +2311,19 @@ check(glaive and mh.names[glaive] == "Warglaive of Azzinoth" and mh.kind[glaive]
 check(DmorphOcto.GetItemCatalog(17).byID[900001] and DmorphOcto.GetItemCatalog(17).byID[900003]
 	and not DmorphOcto.GetItemCatalog(17).byID[900002], "one-handers and shields in the off hand, not two-handers")
 check(DmorphOcto.GetItemType(900001) == 207 and DmorphOcto.IsPortedItem(900001), "they know their kind")
+check(mh.quality[glaive] == 5 and mh.quality[mh.byID[900002]] == 4,
+	"a ported item has its Retail quality (slot 0 = by kind), epic without one")
+local legendary = DmorphOcto.FilterCatalog(mh, "", nil, 5)
+local hasGlaive, hasArtifact = false, false
+for i = 1, table.getn(legendary) do
+	if legendary[i] == glaive then
+		hasGlaive = true
+	end
+	if mh.quality[legendary[i]] == 6 then
+		hasArtifact = true
+	end
+end
+check(hasGlaive and hasArtifact, "Legendary lists legendaries and artifacts (quality 6)")
 slash("item 16 900001")
 check(vh.items[16] ~= 900001 and contains(lastChat(), "DmorphHelper v11"), "without DmorphHelper v11 a ported weapon explains")
 installHelper(REAL)

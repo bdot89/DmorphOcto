@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.13.1"
+local VERSION = "2.13.2"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -489,11 +489,16 @@ local portedItems
 local function PortedItems()
 	if not portedItems then
 		portedItems = {}
-		-- virtualID<TAB>display<TAB>kind<TAB>template<TAB>name[<TAB>slot]
-		for id, display, kind, template, name, slot in string.gfind(DmorphOcto_PortedItems or "",
-			"(%d+)\t(%d+)\t(%d+)\t(%d+)\t([^\t\r\n]+)\t?(%d*)") do
+		-- virtualID<TAB>display<TAB>kind<TAB>template<TAB>name[<TAB>slot[<TAB>quality]]
+		-- (slot 0 or none: the slots its kind fits; quality none: epic).
+		for id, display, kind, template, name, slot, quality in string.gfind(DmorphOcto_PortedItems or "",
+			"(%d+)\t(%d+)\t(%d+)\t(%d+)\t([^\t\r\n]+)\t?(%d*)\t?(%d*)") do
+			slot = tonumber(slot)
+			if slot == 0 then
+				slot = nil
+			end
 			portedItems[tonumber(id)] = { display = tonumber(display), kind = tonumber(kind), template = tonumber(template),
-				name = name, slot = tonumber(slot) }
+				name = name, slot = slot, quality = tonumber(quality) or 4 }
 		end
 		DmorphOcto_PortedItems = nil
 	end
@@ -589,14 +594,14 @@ function M.GetItemCatalog(slot)
 		local learned, k = LearnedItems(slot, seen)
 		local both, count = Merge(base, n, extra, m)
 		local all, total = Merge(both, count, learned, k)
-		-- Ported weapons and armour that fit the slot (shown as epic).
+		-- Ported weapons and armour that fit the slot, with their Retail quality.
 		local ported, p = {}, 0
 		for id, item in pairs(PortedItems()) do
 			local slots = item.slot and { item.slot } or PORTED_SLOTS[item.kind] or {}
 			for i = 1, table.getn(slots) do
 				if slots[i] == slot then
 					p = p + 1
-					ported[p] = { id, item.name, strlower(item.name), 4, M.KIND_PORTED }
+					ported[p] = { id, item.name, strlower(item.name), item.quality, M.KIND_PORTED }
 				end
 			end
 		end
@@ -953,7 +958,8 @@ local function Keep(catalog, i, filter, quality, kind)
 			end
 		end
 	end
-	return not quality or catalog.quality[i] == quality
+	-- Legendary also lists artifacts (quality 6: the Warglaives of Azzinoth).
+	return not quality or catalog.quality[i] == quality or (quality == 5 and catalog.quality[i] == 6)
 end
 
 -- Positions of the catalogue entries matching the text, plus how many there

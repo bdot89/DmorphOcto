@@ -1,6 +1,6 @@
 # DMorph for OctoWoW
 
-Become any creature, ride any mount, wear any item. A morph window for WoW 1.12 (OctoWoW), version 2.13.1.
+Become any creature, ride any mount, wear any item. A morph window for WoW 1.12 (OctoWoW), version 2.13.2.
 
 Morphs only change what you and other DMorph users see. Everyone else, and the server, sees your real character.
 
