@@ -2271,6 +2271,8 @@ removeHelper()
 Mock.portedData = "60001\tPandaren Yeti Mount (Brown)\tmount\n60011\tTest Ported Thing\t\n"
 Mock.portedItems = "900001\t90001\t207\t647\tWarglaive of Azzinoth\n900002\t90002\t208\t647\tBig Ported Sword\n"
 	.. "900003\t90003\t406\t647\tPorted Shield\n"
+	.. "901001\t120001\t404\t647\tPorted Plate Helm\t1\n901002\t120002\t404\t647\tPorted Plate Chest\t5\n"
+Mock.portedSets = "Ported Plate Set\t901001,901002\n"
 loadUI()
 installMorphAPI()
 local pc = DmorphOcto.GetCreatureCatalog()
@@ -2317,9 +2319,27 @@ check(vh.items[16] == 900001 and game.virtual[900001] and game.virtual[900001][1
 	and game.virtual[900001][2] == 90001 and game.virtual[900002], "with it, the weapon is registered and worn")
 local _, sharedItems = DmorphOcto.GetSharedLook()
 check(sharedItems[16] == nil, "and others aren't sent it")
+-- Ported armour names its slot; ported sets come from DmorphOcto_PortedSets.
+local helm = DmorphOcto.GetItemCatalog(1)
+check(helm.byID[901001] and helm.kind[helm.byID[901001]] == DmorphOcto.KIND_PORTED and not helm.byID[901002]
+	and DmorphOcto.GetItemCatalog(5).byID[901002] and not DmorphOcto.GetItemCatalog(16).byID[901001],
+	"ported armour is only in its own slot")
+local sc = DmorphOcto.GetSetCatalog()
+local ps = sc.byID[900001]
+check(ps and sc.names[ps] == "Ported Plate Set" and sc.kind[ps] == DmorphOcto.KIND_PORTED
+	and sc.types[ps] == 404, "a ported set is in the Sets list, as plate")
+local setsSorted = true
+for i = 2, sc.count do
+	if sc.lower[i - 1] > sc.lower[i] then
+		setsSorted = false
+	end
+end
+check(setsSorted, "the sets stay sorted by name")
+local wore = DmorphOcto.WearSet(ps)
+check(wore and vh.items[1] == 901001 and vh.items[5] == 901002, "wearing it puts both pieces on")
 slash("demorph all")
 removeHelper()
-Mock.portedData, Mock.portedItems = nil, nil
+Mock.portedData, Mock.portedItems, Mock.portedSets = nil, nil, nil
 loadUI()
 check(not DmorphOcto.GetCreatureCatalog().byID[60001], "without Data/Ported.lua there are no ported models")
 

@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.12.1"
+local VERSION = "2.13.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -263,6 +263,7 @@ M.SET_FILTERS = {
 	{ text = "All sets" },
 	{ text = "1.12 sets", kinds = { [0] = true } },
 	{ text = "New in OctoWoW", kinds = { [2] = true } },
+	{ text = "Ported (later expansions)", kinds = { [4] = true } },
 }
 -- Item and set quality, as GetItemInfo() numbers it.
 -- Item kinds (class * 100 + subclass, Data/ItemTypes.lua), in the order the
@@ -477,7 +478,7 @@ end
 -- Ported weapons (Data/Ported.lua, DmorphOcto_PortedItems): item IDs only this
 -- PC has. DmorphHelper v10 answers the game's item cache for them with a real
 -- item of the same kind (the template: held and sheathed the same) showing
--- the ported model. Kind -> the slots it fits.
+-- the ported model. Kind -> the slots it fits (armour lines name their slot).
 local PORTED_SLOTS = {
 	[200] = { 16, 17 }, [204] = { 16, 17 }, [207] = { 16, 17 }, [213] = { 16, 17 }, [215] = { 16, 17 },
 	[201] = { 16 }, [205] = { 16 }, [206] = { 16 }, [208] = { 16 }, [210] = { 16 },
@@ -488,10 +489,11 @@ local portedItems
 local function PortedItems()
 	if not portedItems then
 		portedItems = {}
-		for id, display, kind, template, name in string.gfind(DmorphOcto_PortedItems or "",
-			"(%d+)\t(%d+)\t(%d+)\t(%d+)\t([^\r\n]+)") do
+		-- virtualID<TAB>display<TAB>kind<TAB>template<TAB>name[<TAB>slot]
+		for id, display, kind, template, name, slot in string.gfind(DmorphOcto_PortedItems or "",
+			"(%d+)\t(%d+)\t(%d+)\t(%d+)\t([^\t\r\n]+)\t?(%d*)") do
 			portedItems[tonumber(id)] = { display = tonumber(display), kind = tonumber(kind), template = tonumber(template),
-				name = name }
+				name = name, slot = tonumber(slot) }
 		end
 		DmorphOcto_PortedItems = nil
 	end
@@ -587,10 +589,10 @@ function M.GetItemCatalog(slot)
 		local learned, k = LearnedItems(slot, seen)
 		local both, count = Merge(base, n, extra, m)
 		local all, total = Merge(both, count, learned, k)
-		-- Ported weapons that fit the slot (shown as epic).
+		-- Ported weapons and armour that fit the slot (shown as epic).
 		local ported, p = {}, 0
 		for id, item in pairs(PortedItems()) do
-			local slots = PORTED_SLOTS[item.kind] or {}
+			local slots = item.slot and { item.slot } or PORTED_SLOTS[item.kind] or {}
 			for i = 1, table.getn(slots) do
 				if slots[i] == slot then
 					p = p + 1
@@ -652,15 +654,34 @@ function M.GetSetCatalog()
 	if not sets then
 		sets = NewCatalog()
 		sets.pieces = {}
-		for id, kind, name, list in string.gfind(DmorphOcto_SetData or "", "(%d+)\t(%d)\t([^\t\r\n]+)\t([%d,]+)") do
-			AddEntry(sets, tonumber(id), name, nil, tonumber(kind))
+		local list, n = {}, 0
+		local function Pieces(text)
 			local pieces = {}
-			for piece in string.gfind(list, "%d+") do
+			for piece in string.gfind(text, "%d+") do
 				table.insert(pieces, tonumber(piece))
 			end
-			sets.pieces[sets.count] = pieces
+			return pieces
 		end
-		DmorphOcto_SetData = nil
+		for id, kind, name, pieces in string.gfind(DmorphOcto_SetData or "", "(%d+)\t(%d)\t([^\t\r\n]+)\t([%d,]+)") do
+			n = n + 1
+			list[n] = { tonumber(id), name, strlower(name), tonumber(kind), Pieces(pieces) }
+		end
+		-- Data/Ported.lua's sets (DmorphOcto_PortedSets: name<TAB>virtual items),
+		-- only on the PC that has them; numbered after every real set.
+		local p = 0
+		for name, pieces in string.gfind(DmorphOcto_PortedSets or "", "([^\t\r\n]+)\t([%d,]+)") do
+			p = p + 1
+			n = n + 1
+			list[n] = { 900000 + p, name, strlower(name), M.KIND_PORTED, Pieces(pieces) }
+		end
+		DmorphOcto_SetData, DmorphOcto_PortedSets = nil, nil
+		if p > 0 then
+			table.sort(list, Before)
+		end
+		for i = 1, n do
+			AddEntry(sets, list[i][1], list[i][2], nil, list[i][4])
+			sets.pieces[sets.count] = list[i][5]
+		end
 	end
 	if not sets.qualityKnown then
 		sets.qualityKnown = true
