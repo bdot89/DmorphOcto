@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.13.0"
+local VERSION = "2.13.1"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -476,7 +476,7 @@ local function ReadItemTypes()
 end
 
 -- Ported weapons (Data/Ported.lua, DmorphOcto_PortedItems): item IDs only this
--- PC has. DmorphHelper v10 answers the game's item cache for them with a real
+-- PC has. DmorphHelper v10+ answers the game's item cache for them with a real
 -- item of the same kind (the template: held and sheathed the same) showing
 -- the ported model. Kind -> the slots it fits (armour lines name their slot).
 local PORTED_SLOTS = {
@@ -1500,7 +1500,7 @@ local function ApplyItem(slot)
 	local id = db.items[slot]
 	if id and M.IsPortedItem(id) then
 		if not HasVirtualItems() then
-			return false, "Ported weapons need DmorphHelper v10: close the game, double-click \"Install DmorphHelper.bat\" "
+			return false, "Ported items need DmorphHelper v11: close the game, double-click \"Install DmorphHelper.bat\" "
 				.. "in Interface\\AddOns\\DmorphOcto, then start the game from OctoLauncher."
 		end
 		RegisterPortedItems()
@@ -1717,7 +1717,7 @@ local MISSING_HELPER = "DmorphHelper.dll isn't loaded, so weapon glows, your siz
 M.MISSING_HELPER = MISSING_HELPER
 -- The DmorphHelper_Version() the DLL in helper\ reports. An older one in the
 -- game folder (DMorph was updated, the DLL wasn't copied again) is flagged.
-local HELPER_VERSION = 10
+local HELPER_VERSION = 11
 -- Rows 1-5 of the Races tab, in DmorphHelper_GetLook's order.
 local OWN_LOOK_NPC = { "npcSkin", "npcFace", "npcHairStyle", "npcHairColour" }
 

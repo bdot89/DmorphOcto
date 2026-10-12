@@ -1814,7 +1814,7 @@ local function installHelper(look)
 		return type(v) == "number" and v >= 0 and v <= max and v == math.floor(v)
 	end
 	function DmorphHelper_Version()
-		return 10
+		return 11
 	end
 	-- The race byte: VanillaHelpers writes the morph's race there (tests set
 	-- game.race); DmorphHelper_SetRace writes it without a rebuild, and
@@ -1981,16 +1981,16 @@ DmorphOctoDB, DmorphOctoAccount = nil, nil
 loadWithHelper()
 Mock.Tick(1.1)
 slash("dmorph status")
-check(contains(allChat(), "DmorphHelper v10 is loaded"), "status shows the helper's version")
+check(contains(allChat(), "DmorphHelper v11 is loaded"), "status shows the helper's version")
 slash("dmorph check")
 check(contains(allChat(), "DmorphHelper: |cff33ff99OK"), "the check says the helper runs")
-check(contains(allChat(), "Running v10 (this DMorph comes with v10)"), "and which version runs")
+check(contains(allChat(), "Running v11 (this DMorph comes with v11)"), "and which version runs")
 local openedForSetup = not (DmorphOctoFrame and DmorphOctoFrame:IsVisible())
 if openedForSetup then
 	slash("")
 end
 Mock.Click(DmorphOctoSetupButton)
-check(contains(DmorphOctoSetupButton.text, "Helper v10") and contains(DmorphOctoSetupText2.text, "Running v10"),
+check(contains(DmorphOctoSetupButton.text, "Helper v11") and contains(DmorphOctoSetupText2.text, "Running v11"),
 	"the Setup button and panel show the helper version")
 Mock.Click(DmorphOctoSetupClose)
 local currentVersion = DmorphHelper_Version
@@ -2303,7 +2303,7 @@ slash("morph 60001")
 local sharedDisplay, _, sharedMount = DmorphOcto.GetSharedLook()
 check(vh.display == 60001 and sharedDisplay == nil, "you can morph into it, and others aren't sent it")
 slash("demorph all")
--- Ported weapons (DmorphOcto_PortedItems, DmorphHelper v10 virtual items).
+-- Ported weapons (DmorphOcto_PortedItems, DmorphHelper v11 virtual items).
 local mh = DmorphOcto.GetItemCatalog(16)
 local glaive = mh.byID[900001]
 check(glaive and mh.names[glaive] == "Warglaive of Azzinoth" and mh.kind[glaive] == DmorphOcto.KIND_PORTED
@@ -2312,7 +2312,7 @@ check(DmorphOcto.GetItemCatalog(17).byID[900001] and DmorphOcto.GetItemCatalog(1
 	and not DmorphOcto.GetItemCatalog(17).byID[900002], "one-handers and shields in the off hand, not two-handers")
 check(DmorphOcto.GetItemType(900001) == 207 and DmorphOcto.IsPortedItem(900001), "they know their kind")
 slash("item 16 900001")
-check(vh.items[16] ~= 900001 and contains(lastChat(), "DmorphHelper v10"), "without DmorphHelper v10 a ported weapon explains")
+check(vh.items[16] ~= 900001 and contains(lastChat(), "DmorphHelper v11"), "without DmorphHelper v11 a ported weapon explains")
 installHelper(REAL)
 slash("item 16 900001")
 check(vh.items[16] == 900001 and game.virtual[900001] and game.virtual[900001][1] == 647
