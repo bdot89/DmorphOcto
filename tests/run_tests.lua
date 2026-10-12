@@ -2327,6 +2327,19 @@ check(hasGlaive and hasArtifact, "Legendary lists legendaries and artifacts (qua
 slash("item 16 900001")
 check(vh.items[16] ~= 900001 and contains(lastChat(), "DmorphHelper v11"), "without DmorphHelper v11 a ported weapon explains")
 installHelper(REAL)
+local SHIELD = 876   -- a shield in Data/ItemTypes.lua (kind 406)
+-- The template (a real item the record is copied from) must be known to the
+-- game: wearing a ported item without it turned the player white (guns, thrown).
+slash("item 17 900003")
+check(vh.items[17] ~= 900003 and contains(lastChat(), "hasn't loaded an item to copy"),
+	"a ported item whose template the game doesn't know yet isn't worn, and says why")
+Mock.serverItems[SHIELD] = { "Some Shield", 1, "INVTYPE_SHIELD" }
+slash("item 17 900003")
+check(vh.items[17] == 900003 and game.virtual[900003] and game.virtual[900003][1] == SHIELD,
+	"it borrows another item of its kind the game knows")
+slash("item 17 0")
+Mock.serverItems[SHIELD] = nil
+Mock.serverItems[647] = { "Arcanite Reaper", 4, "INVTYPE_2HWEAPON" }
 slash("item 16 900001")
 check(vh.items[16] == 900001 and game.virtual[900001] and game.virtual[900001][1] == 647
 	and game.virtual[900001][2] == 90001 and game.virtual[900002], "with it, the weapon is registered and worn")
@@ -2353,6 +2366,7 @@ check(wore and vh.items[1] == 901001 and vh.items[5] == 901002, "wearing it puts
 slash("demorph all")
 removeHelper()
 Mock.portedData, Mock.portedItems, Mock.portedSets = nil, nil, nil
+Mock.serverItems[647] = nil
 loadUI()
 check(not DmorphOcto.GetCreatureCatalog().byID[60001], "without Data/Ported.lua there are no ported models")
 

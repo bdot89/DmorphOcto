@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.13.2"
+local VERSION = "2.13.3"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1502,6 +1502,40 @@ function M.HoldRace(reason, on)
 	return false
 end
 
+-- A template the game knows for a ported item: its own, else any item of the
+-- same kind the game has cached. Wearing a ported item whose template the
+-- server never sent turned the player white until a relog (guns, thrown).
+local knownTemplate = {}
+local function PortedTemplate(p)
+	local ok, name = pcall(GetItemInfo, p.template)
+	if ok and name then
+		return p.template
+	end
+	local cached = knownTemplate[p.kind]
+	if cached then
+		ok, name = pcall(GetItemInfo, cached)
+		if ok and name then
+			return cached
+		end
+	end
+	if not itemTypes then
+		ReadItemTypes()
+	end
+	for id, kind in pairs(itemTypes) do
+		if kind == p.kind then
+			ok, name = pcall(GetItemInfo, id)
+			if ok and name then
+				knownTemplate[p.kind] = id
+				return id
+			end
+		end
+	end
+	if type(C_Item) == "table" then
+		pcall(C_Item.RequestLoadItemDataByID, p.template)
+	end
+	return nil
+end
+
 local function ApplyItem(slot)
 	local id = db.items[slot]
 	if id and M.IsPortedItem(id) then
@@ -1510,6 +1544,16 @@ local function ApplyItem(slot)
 				.. "in Interface\\AddOns\\DmorphOcto, then start the game from OctoLauncher."
 		end
 		RegisterPortedItems()
+		local p = PortedItems()[id]
+		local template = PortedTemplate(p)
+		if not template then
+			return false, "The game hasn't loaded an item to copy for this ported " .. string.lower(M.ITEM_TYPE_NAMES[p.kind] or "item")
+				.. " yet. Wait a few seconds and pick it again."
+		end
+		if template ~= p.template then
+			p.template = template
+			pcall(DmorphHelper_SetVirtualItem, id, template, p.display)
+		end
 	end
 	return Morph(SetUnitVisibleItemID, "player", slot, id)
 end
