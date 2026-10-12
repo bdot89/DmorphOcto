@@ -114,8 +114,9 @@ function Get-Priority([string]$name) {
 }
 $mpqs = @()
 foreach ($file in Get-ChildItem (Join-Path $GameDir "Data") -Filter *.mpq) {
-  if ($file.Name -ieq "patch-Z.mpq") { continue } # the model porting tool's, only on that PC
-  try { $mpqs += New-Object Mpq $file.FullName } catch { }
+  if ($file.Name -ieq "patch-Z.mpq" -or $file.Name -ieq "patch-Y.mpq") { continue } # the model porting tool's, only on that PC
+  # Archives made by the model porting tool (marked with DmorphPort.txt) are only on that PC.
+  try { $m = New-Object Mpq $file.FullName; if ($m.Has("DmorphPort.txt")) { continue }; $mpqs += $m } catch { }
 }
 $mpqs = @($mpqs | Sort-Object @{ Expression = { Get-Priority $_.Name } }, Name)
 $files = New-Object GameFiles (,[Mpq[]]$mpqs)

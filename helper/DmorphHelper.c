@@ -610,22 +610,43 @@ static int GAME_FASTCALL Script_GetTime(void *L) {
 typedef void *(GAME_THISCALL *GetItemRecord_t)(void *cache, uint32_t id, const uint64_t *guid, void *callback,
                                                void *userData, uint32_t askServer);
 static GetItemRecord_t GetItemRecord_o = NULL;
-#define MAX_VIRTUAL_ITEMS 4096
+#define MAX_VIRTUAL_ITEMS 32768
+#define VIRTUAL_HASH_SIZE 65536                // a power of two, twice the most items
 typedef struct {
     uint32_t id, templateId, displayId;
-    uint8_t *record;                      // our copy, kept for as long as the game runs
+    uint8_t *record;                      // our copy, made when the game first asks; kept
 } VirtualItem;
 static VirtualItem g_virtual[MAX_VIRTUAL_ITEMS];
 static int g_virtualCount = 0;
-static uint32_t g_virtualMin = 0xFFFFFFFF, g_virtualMax = 0; // quick test before searching
+static uint32_t g_virtualMin = 0xFFFFFFFF, g_virtualMax = 0; // quick test before looking up
+static uint16_t g_virtualHash[VIRTUAL_HASH_SIZE];            // item index + 1, 0 = empty
 
 static VirtualItem *FindVirtual(uint32_t id) {
-    for (int i = 0; i < g_virtualCount; i++) {
-        if (g_virtual[i].id == id) {
-            return &g_virtual[i];
+    for (uint32_t h = (id * 2654435761u) & (VIRTUAL_HASH_SIZE - 1);; h = (h + 1) & (VIRTUAL_HASH_SIZE - 1)) {
+        uint16_t slot = g_virtualHash[h];
+        if (slot == 0) {
+            return NULL;
+        }
+        if (g_virtual[slot - 1].id == id) {
+            return &g_virtual[slot - 1];
         }
     }
-    return NULL;
+}
+
+static VirtualItem *AddVirtual(uint32_t id) {
+    if (g_virtualCount >= MAX_VIRTUAL_ITEMS) {
+        return NULL;
+    }
+    uint32_t h = (id * 2654435761u) & (VIRTUAL_HASH_SIZE - 1);
+    while (g_virtualHash[h] != 0) {
+        h = (h + 1) & (VIRTUAL_HASH_SIZE - 1);
+    }
+    VirtualItem *v = &g_virtual[g_virtualCount];
+    v->id = id;
+    g_virtualHash[h] = (uint16_t)(++g_virtualCount);
+    if (id < g_virtualMin) g_virtualMin = id;
+    if (id > g_virtualMax) g_virtualMax = id;
+    return v;
 }
 
 static void *GAME_FASTCALL GetItemRecord_h(void *cache, void *edx, uint32_t id, const uint64_t *guid, void *callback,
@@ -639,6 +660,12 @@ static void *GAME_FASTCALL GetItemRecord_h(void *cache, void *edx, uint32_t id, 
     uint8_t *t = (uint8_t *)GetItemRecord_o(cache, v->templateId, guid, NULL, NULL, askServer);
     if (!t) {
         return NULL;
+    }
+    if (!v->record) {
+        v->record = (uint8_t *)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, 1024);
+        if (!v->record) {
+            return NULL;
+        }
     }
     memcpy(v->record, t, ITEM_STATS_SIZE);
     memcpy(v->record + ITEM_STATS_DISPLAY_ID, &v->displayId, 4);
@@ -658,20 +685,11 @@ static int GAME_FASTCALL Script_SetVirtualItem(void *L) {
     }
     VirtualItem *v = FindVirtual(id);
     if (!v) {
-        if (g_virtualCount >= MAX_VIRTUAL_ITEMS) {
+        v = AddVirtual(id);
+        if (!v) {
             LuaError(L, "DmorphHelper: too many virtual items.");
             return 0;
         }
-        v = &g_virtual[g_virtualCount];
-        v->record = (uint8_t *)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, 1024);
-        if (!v->record) {
-            LuaError(L, "DmorphHelper: out of memory.");
-            return 0;
-        }
-        v->id = id;
-        g_virtualCount++;
-        if (id < g_virtualMin) g_virtualMin = id;
-        if (id > g_virtualMax) g_virtualMax = id;
     }
     v->templateId = templateId;
     v->displayId = displayId;
