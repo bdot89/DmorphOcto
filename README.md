@@ -132,6 +132,17 @@ Item slots: 1 head, 3 shoulder, 4 shirt, 5 chest, 6 waist, 7 legs, 8 feet, 9 wri
 - Models, glows and races from The Burning Crusade onwards aren't in the 1.12 game files, so no addon can show them.
 
 
+## Sharing ported models with friends
+
+If you've made ported models (later-expansion models in extra patch files), you can send the same set to friends:
+
+1. Close the game and double-click **Pack Ported.bat** in the DmorphOcto folder. It copies the ported patches and the list into a **DmorphPorted** folder on your Desktop, with a manifest of every file's checksum.
+2. Upload that whole folder (Google Drive, OneDrive or MEGA) and send the link. It's several GB.
+3. Your friend installs DMorph as above, downloads the folder, closes the game and double-clicks **Install Ported.bat** in it. It checks every file first, never replaces OctoWoW's own patches, removes ported patches from an older pack, and installs DmorphHelper. **Remove Ported.bat** takes them out again.
+
+Pack again after every porting run: friends need exactly the same pack. These are Blizzard's files, so keep packs private, not on GitHub.
+
+
 ## Screenshots
 
 ![DMorph banner](docs/banner.png)

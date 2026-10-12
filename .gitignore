@@ -2,3 +2,4 @@ tools/LuaHost/bin/
 tools/LuaHost/obj/
 # Made by the model porting tool on the PC that has its patch-Z.mpq (Blizzard models, not shared).
 Data/Ported.lua
+__pycache__/

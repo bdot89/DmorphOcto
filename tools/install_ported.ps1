@@ -1,0 +1,190 @@
+param(
+  [string]$GameDir = "",
+  [switch]$Remove
+)
+# Installs a ported models pack made by DMorph's "Pack Ported.bat": this
+# script sits in the pack, next to manifest.txt, the patch-?.MPQ files and
+# Ported.lua. It checks every file against manifest.txt first, then copies
+# the patches into <game>\Data and Ported.lua into DMorph's Data folder, and
+# installs DmorphHelper with DMorph's own installer. A patch file of the same
+# name that isn't a ported one (OctoWoW's own) is never replaced; ported
+# patches from an older pack that this one doesn't have are removed.
+#
+# The easy way: close the game and double-click "Install Ported.bat" in the
+# pack folder. Or:
+#
+#   powershell -ExecutionPolicy Bypass -File install_ported.ps1 [-GameDir C:\path\to\OctoWoW]
+#   powershell -ExecutionPolicy Bypass -File install_ported.ps1 -Remove
+
+$ErrorActionPreference = "Stop"
+trap {
+  Write-Host ""
+  Write-Host ("Not done: " + $_.Exception.Message) -ForegroundColor Red
+  exit 1
+}
+$pack = [IO.Path]::GetFullPath($PSScriptRoot)
+Add-Type -Path (Join-Path $pack "MpqDbc.cs")
+function Test-Ported([string]$path) {
+  $m = $null
+  try { $m = New-Object Mpq $path; return $m.Has("DmorphPort.txt") } catch { return $false } finally { if ($m) { $m.Close() } }
+}
+function Test-Game([string]$dir) {
+  return $dir -and (Test-Path (Join-Path $dir "WoW.exe")) -and (Test-Path (Join-Path $dir "Data"))
+}
+
+# The game folder: -GameDir, a folder above this pack, the running game, or
+# the usual places; asked for when there's no single answer.
+if (-not $GameDir) {
+  $found = New-Object System.Collections.ArrayList
+  $dir = $pack
+  while ($dir) {
+    if (Test-Game $dir) { [void]$found.Add($dir); break }
+    $parent = [IO.Path]::GetDirectoryName($dir)
+    if ($parent -eq $dir) { $dir = $null } else { $dir = $parent }
+  }
+  if ($found.Count -eq 0) {
+    foreach ($p in @(Get-Process -Name "WoW" -ErrorAction SilentlyContinue)) {
+      try { $d = [IO.Path]::GetDirectoryName($p.Path); if ((Test-Game $d) -and -not $found.Contains($d)) { [void]$found.Add($d) } } catch { }
+    }
+    foreach ($drive in [IO.DriveInfo]::GetDrives()) {
+      if ($drive.DriveType -ne "Fixed") { continue }
+      foreach ($sub in @("Games\OctoWoW", "OctoWoW", "Program Files\OctoWoW", "Program Files (x86)\OctoWoW")) {
+        $d = Join-Path $drive.RootDirectory.FullName $sub
+        if ((Test-Game $d) -and -not $found.Contains($d)) { [void]$found.Add($d) }
+      }
+    }
+  }
+  if ($found.Count -eq 1) {
+    $answer = Read-Host ("Install into {0}? (Y/n)" -f $found[0])
+    if ($answer -match '^\s*(y|yes)?\s*$') { $GameDir = $found[0] }
+  }
+  if (-not $GameDir) {
+    $GameDir = (Read-Host "Paste the OctoWoW folder (the one with WoW.exe in it)").Trim().Trim('"')
+  }
+}
+$GameDir = [IO.Path]::GetFullPath($GameDir)
+if (-not (Test-Game $GameDir)) { throw "$GameDir isn't the game folder: it needs WoW.exe and a Data folder." }
+"Game folder: $GameDir"
+$dataDir = Join-Path $GameDir "Data"
+$addon = Join-Path $GameDir "Interface\AddOns\DmorphOcto"
+$listTarget = Join-Path $addon "Data\Ported.lua"
+
+$running = @(Get-Process -Name "WoW" -ErrorAction SilentlyContinue | Where-Object {
+  $path = $null
+  try { $path = $_.Path } catch { }
+  $path -and ([IO.Path]::GetDirectoryName($path) -ieq $GameDir)
+})
+if ($running.Count -gt 0) { throw "The game is running. Close it completely, then run this again." }
+
+$installed = @(Get-ChildItem $dataDir -File | Where-Object { $_.Name -match '^patch-.\.mpq$' -and (Test-Ported $_.FullName) })
+
+if ($Remove) {
+  foreach ($f in $installed) {
+    try { Remove-Item $f.FullName } catch { throw "Couldn't delete $($f.FullName). Close the game first, then run this again." }
+    "Removed Data\$($f.Name)"
+  }
+  if (Test-Path $listTarget) { Remove-Item $listTarget; "Removed DMorph's Data\Ported.lua" }
+  ""
+  "The ported models are removed. DmorphHelper stays (DMorph uses it for glows, looks and size)."
+  return
+}
+
+# The pack: manifest.txt lists every file with its size and SHA-256.
+$manifestPath = Join-Path $pack "manifest.txt"
+if (-not (Test-Path $manifestPath)) { throw "manifest.txt is missing from $pack. Download the whole pack folder again." }
+$bundle = ""; $need = ""
+$files = New-Object System.Collections.ArrayList
+foreach ($line in [IO.File]::ReadAllLines($manifestPath)) {
+  if ($line -match '^#' -or -not $line.Trim()) { continue }
+  $f = $line.Split("`t")
+  if ($f[0] -eq "bundle") { $bundle = $f[1] }
+  elseif ($f[0] -eq "dmorph") { $need = $f[1] }
+  elseif ($f.Count -eq 3) { [void]$files.Add(@{ Name = $f[0]; Size = [int64]$f[1]; Hash = $f[2] }) }
+}
+$patches = @($files | Where-Object { $_.Name -match '^patch-.\.mpq$' })
+if ($patches.Count -eq 0 -or -not ($files | Where-Object { $_.Name -eq "Ported.lua" })) {
+  throw "manifest.txt doesn't list any patches and Ported.lua. Download the whole pack folder again."
+}
+"Pack $bundle"
+
+if (-not (Test-Path (Join-Path $addon "DmorphOcto.toc"))) {
+  throw "DMorph isn't installed in $addon. Install DMorph first (github.com/bdot89/DmorphOcto), then run this again."
+}
+$have = ""
+foreach ($line in [IO.File]::ReadAllLines((Join-Path $addon "DmorphOcto.toc"))) {
+  if ($line -match '^##\s*Version:\s*(\S+)') { $have = $matches[1] }
+}
+if ($need -and $have) {
+  $older = $false
+  try { $older = [version]$have -lt [version]$need } catch { }
+  if ($older) { throw "This pack needs DMorph $need or newer; you have $have. Update DMorph (download it again), then run this again." }
+}
+
+# Every file is checked before anything in the game folder changes.
+"Checking the pack's files (a few minutes for big packs)..."
+$bad = New-Object System.Collections.ArrayList
+$i = 0
+foreach ($f in $files) {
+  $i++
+  $path = Join-Path $pack $f.Name
+  Write-Host ("[{0}/{1}] {2}" -f $i, $files.Count, $f.Name)
+  if (-not (Test-Path $path)) { [void]$bad.Add("$($f.Name) is missing"); continue }
+  if ((Get-Item $path).Length -ne $f.Size) { [void]$bad.Add("$($f.Name) has the wrong size (download not finished?)"); continue }
+  if ((Get-FileHash $path -Algorithm SHA256).Hash -ne $f.Hash) { [void]$bad.Add("$($f.Name) is damaged") }
+}
+if ($bad.Count -gt 0) {
+  foreach ($b in $bad) { Write-Host ("  " + $b) -ForegroundColor Red }
+  throw "the pack isn't complete. Download those files again (nothing was installed)."
+}
+
+# What happens to each patch, worked out before anything is copied.
+$copy = New-Object System.Collections.ArrayList
+$space = [int64]0
+foreach ($f in $patches) {
+  $target = Join-Path $dataDir $f.Name
+  if (Test-Path $target) {
+    $item = Get-Item $target
+    if (-not (Test-Ported $target)) {
+      throw "$target is one of the game's own patches, and the pack has a file with the same name. Nothing was installed. Tell whoever sent the pack (the porting tool must use another letter)."
+    }
+    if ($item.Length -eq $f.Size -and (Get-FileHash $target -Algorithm SHA256).Hash -eq $f.Hash) { "Data\$($f.Name) is already installed."; continue }
+    $space -= $item.Length
+  }
+  [void]$copy.Add($f)
+  $space += $f.Size
+}
+$stale = @($installed | Where-Object { $n = $_.Name; -not ($patches | Where-Object { $_.Name -ieq $n }) })
+foreach ($s in $stale) { $space -= $s.Length }
+$drive = New-Object IO.DriveInfo ([IO.Path]::GetPathRoot($dataDir))
+if ($drive.AvailableFreeSpace -lt $space + 50MB) {
+  throw ("the game's drive needs {0:N1} GB more free space (it has {1:N1} GB). Nothing was installed." -f ($space / 1GB), ($drive.AvailableFreeSpace / 1GB))
+}
+
+# Ported patches from an older pack would mix with this one's list.
+foreach ($s in $stale) {
+  try { Remove-Item $s.FullName } catch { throw "Couldn't delete the old $($s.FullName). Close the game first, then run this again." }
+  "Removed the old Data\$($s.Name) (not in this pack)."
+}
+foreach ($f in $copy) {
+  $target = Join-Path $dataDir $f.Name
+  Write-Host ("Copying {0} ({1:N0} MB)..." -f $f.Name, ($f.Size / 1MB))
+  try { Copy-Item (Join-Path $pack $f.Name) $target -Force } catch { throw "Couldn't copy $($f.Name) into $dataDir. Close the game, then run this again." }
+}
+Copy-Item (Join-Path $pack "Ported.lua") $listTarget -Force
+"Copied Ported.lua into DMorph's Data folder."
+
+# DmorphHelper shows the ported weapons and armour; DMorph's own installer
+# puts it in (or says it's already the newest).
+""
+$helper = Join-Path $addon "tools\install_helper.ps1"
+$helperOk = $false
+if (Test-Path $helper) {
+  & $helper -GameDir $GameDir
+  $helperOk = ($LASTEXITCODE -eq 0 -or $LASTEXITCODE -eq $null)
+}
+if (-not $helperOk) {
+  Write-Host "DmorphHelper isn't installed: double-click ""Install DmorphHelper.bat"" in the DmorphOcto folder (ported weapons and armour need it)." -ForegroundColor Yellow
+}
+""
+"The ported models are installed (pack $bundle). Start the game from OctoLauncher."
+"Friends with the same pack see each other's ported looks. To take it out again, double-click ""Remove Ported.bat"" in the pack folder."
