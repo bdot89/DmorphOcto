@@ -582,8 +582,23 @@ check(DmorphOctoTile1Model.level == 2, "a new preview loads behind its cover")
 Mock.Tick(0.5)
 check(DmorphOctoTile1Model.level == 4, "and comes out once it has loaded")
 Mock.RunScript(DmorphOctoTile3, "OnMouseWheel", 1)
+Mock.Tick(0.7)
 check(DmorphOctoTile1Model.displayInfo == catalog.ids[1] and DmorphOctoPrevPage.disabled,
 	"the mouse wheel turns pages, and the first page can't go back")
+-- Paging fast: a preview that's still loading isn't cleared again (ClearModel
+-- on loading textures crashes the game); it loads only the newest page after.
+Mock.Tick(0.7)
+local pagedLoads = Mock.displayLoads
+Mock.Click(DmorphOctoNextPage)
+Mock.Click(DmorphOctoPrevPage)
+Mock.Click(DmorphOctoNextPage)
+check(Mock.displayLoads == pagedLoads + 8 and DmorphOctoTile1.title.text == catalog.names[9],
+	"paging fast doesn't swap a preview that's still loading")
+Mock.Click(DmorphOctoPrevPage)
+Mock.Tick(0.7)
+check(DmorphOctoTile1Model.displayInfo == catalog.ids[1] and Mock.displayLoads == pagedLoads + 16,
+	"once it has settled, the preview loads the page you ended on, once")
+Mock.Tick(0.7)
 local loads = Mock.displayLoads
 Mock.Click(DmorphOctoTabRaces)
 Mock.Click(DmorphOctoTabModels)
@@ -596,6 +611,7 @@ Mock.RunScript(DmorphOctoTile2, "OnLeave")
 
 local modelSearch = DmorphOctoModelSearch
 Mock.Type(modelSearch, "thrall")
+Mock.Tick(0.7)
 check(DmorphOctoTile1:IsVisible() and DmorphOctoTile1.title.text == "Thrall" and DmorphOctoTile1Model.displayInfo == 4527,
 	"searching shows Thrall first")
 press(DmorphOctoTile1)
@@ -726,6 +742,7 @@ Mock.Click(DmorphOctoTabModels)
 
 -- Favourites: right-click stars a model.
 Mock.Type(modelSearch, "thrall")
+Mock.Tick(0.7)
 Mock.Click(DmorphOctoTile1, "RightButton")
 check(DmorphOcto.IsFavourite(4527) and DmorphOctoTile1.star.shown and contains(DmorphOctoFrameStatus.text, "favourite models"),
 	"right-clicking a model stars it")
@@ -770,11 +787,13 @@ Mock.Click(DmorphOctoModelView)
 check(not DmorphOctoModelGrid:IsVisible() and DmorphOctoModelListRow1:IsVisible(), "list view swaps the grid for a list")
 check(DmorphOctoAccount.ui.list == true, "the view is remembered")
 Mock.RunScript(DmorphOctoModelListRow2, "OnEnter")
+Mock.Tick(0.7)
 check(DmorphOctoPreviewCard:IsVisible() and DmorphOctoPreviewCardModel.displayInfo == catalog.ids[2],
 	"hovering a row previews its model")
 Mock.RunScript(DmorphOctoModelListRow2, "OnLeave")
 check(not DmorphOctoPreviewCard:IsVisible(), "the preview card goes when the mouse does")
 Mock.Type(modelSearch, "thrall")
+Mock.Tick(0.7)
 local firstRow = DmorphOctoModelListRow1
 check(firstRow:IsVisible() and firstRow.text.text == "Thrall" and firstRow.info.text == "4527",
 	"searching the list shows Thrall first")
@@ -789,6 +808,7 @@ check(DmorphOctoModelList.offset == 3, "the mouse wheel over the rows scrolls th
 check(DmorphOctoModelListRow1.text.text == creatures.names[4], "scrolled rows show later entries")
 Mock.RunScript(DmorphOctoModelListRow1, "OnMouseWheel", -2)
 Mock.Click(DmorphOctoModelView)
+Mock.Tick(0.7)
 check(DmorphOctoModelGrid:IsVisible() and DmorphOctoTile1Model.displayInfo == catalog.ids[9],
 	"the grid opens on the page the list was showing")
 

@@ -30,6 +30,8 @@ local TILE_W, TILE_H, TILE_GAP, GRID_COLS = 110, 132, 6, 4
 local PAGE_SIZE = 8
 -- How long a model loads out of sight before it's shown.
 local REVEAL = 0.45
+-- The least time between two model changes in one preview (see LoadView).
+local SETTLE = 0.6
 -- After a morph the game rebuilds your character; a second change before it
 -- has finished can mix the two looks' textures. Clicks closer than this wait.
 local GATE = 0.35
@@ -546,12 +548,10 @@ local function NewView(parent, name, low, high)
 	return { model = model, low = low, high = high, facing = 0 }
 end
 
-local function LoadView(view, displayID)
+local function StartView(view, displayID)
 	local model = view.model
-	view.displayID = displayID
-	view.facing = 0
-	view.wait = REVEAL
-	model:SetFrameLevel(view.low)
+	view.loaded = displayID
+	view.settle = SETTLE
 	-- Drop the old model and its skins first, so none carry over to the new one.
 	pcall(model.ClearModel, model)
 	model:SetDisplayInfo(displayID)
@@ -561,9 +561,42 @@ local function LoadView(view, displayID)
 	model:SetFacing(0)
 end
 
--- Per frame: reveal a loaded model, and turn it slowly while `spin` is set.
+-- Clearing a model whose textures are still loading frees them twice (the
+-- game's Texture.cpp "Memory Invalid Block" crash, from ClearModel, when
+-- hovering or paging fast). So a view changes model at most once per SETTLE;
+-- a newer ID waits, and only the latest one is loaded.
+local function LoadView(view, displayID)
+	view.displayID = displayID
+	view.facing = 0
+	view.wait = REVEAL
+	view.model:SetFrameLevel(view.low)
+	if view.settle then
+		view.pending = displayID
+		return
+	end
+	view.pending = nil
+	StartView(view, displayID)
+end
+
+-- Per frame: start a waiting model once the last one has settled, reveal a
+-- loaded model, and turn it slowly while `spin` is set.
 -- (Plain Model frames turn with SetFacing; SetRotation is PlayerModel's.)
 local function TickView(view, elapsed, spin)
+	if view.settle then
+		view.settle = view.settle - elapsed
+		if view.settle <= 0 then
+			view.settle = nil
+			local pending = view.pending
+			view.pending = nil
+			if pending and pending ~= view.loaded then
+				view.wait = REVEAL
+				StartView(view, pending)
+			end
+		end
+	end
+	if view.settle and view.pending then
+		return
+	end
 	if view.wait then
 		view.wait = view.wait - elapsed
 		if view.wait <= 0 then
