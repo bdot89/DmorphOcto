@@ -1814,7 +1814,7 @@ local function installHelper(look)
 		return type(v) == "number" and v >= 0 and v <= max and v == math.floor(v)
 	end
 	function DmorphHelper_Version()
-		return 9
+		return 10
 	end
 	-- The race byte: VanillaHelpers writes the morph's race there (tests set
 	-- game.race); DmorphHelper_SetRace writes it without a rebuild, and
@@ -1866,6 +1866,14 @@ local function installHelper(look)
 		end
 		return game.realTime, 0, game.realTime
 	end
+	-- Virtual items: item IDs only this PC has (ported weapons).
+	game.virtual = {}
+	function DmorphHelper_SetVirtualItem(id, template, display)
+		if not (whole(id, 2147483647) and whole(template, 2147483647) and whole(display, 2147483647)) then
+			error("Usage: DmorphHelper_SetVirtualItem(itemID, templateItemID, displayID)")
+		end
+		game.virtual[id] = { template, display }
+	end
 	function DmorphHelper_GetScale(unit)
 		return game.scale
 	end
@@ -1910,6 +1918,7 @@ local function removeHelper()
 	DmorphHelper_GetRace, DmorphHelper_SetRace, DmorphHelper_SetOwnRace, DmorphHelper_Rebuild = nil, nil, nil, nil
 	DmorphHelper_SetWeather, DmorphHelper_ClearWeather, DmorphHelper_GetWeather = nil, nil, nil
 	DmorphHelper_SetTime, DmorphHelper_GetTime = nil, nil
+	DmorphHelper_SetVirtualItem = nil
 end
 
 local function sameLook(a, b)
@@ -1972,16 +1981,16 @@ DmorphOctoDB, DmorphOctoAccount = nil, nil
 loadWithHelper()
 Mock.Tick(1.1)
 slash("dmorph status")
-check(contains(allChat(), "DmorphHelper v9 is loaded"), "status shows the helper's version")
+check(contains(allChat(), "DmorphHelper v10 is loaded"), "status shows the helper's version")
 slash("dmorph check")
 check(contains(allChat(), "DmorphHelper: |cff33ff99OK"), "the check says the helper runs")
-check(contains(allChat(), "Running v9 (this DMorph comes with v9)"), "and which version runs")
+check(contains(allChat(), "Running v10 (this DMorph comes with v10)"), "and which version runs")
 local openedForSetup = not (DmorphOctoFrame and DmorphOctoFrame:IsVisible())
 if openedForSetup then
 	slash("")
 end
 Mock.Click(DmorphOctoSetupButton)
-check(contains(DmorphOctoSetupButton.text, "Helper v9") and contains(DmorphOctoSetupText2.text, "Running v9"),
+check(contains(DmorphOctoSetupButton.text, "Helper v10") and contains(DmorphOctoSetupText2.text, "Running v10"),
 	"the Setup button and panel show the helper version")
 Mock.Click(DmorphOctoSetupClose)
 local currentVersion = DmorphHelper_Version
@@ -2260,6 +2269,8 @@ removeHelper()
 ------------------------------------------------------------------------------
 -- Ported models (Data/Ported.lua, made by the porting tool on one PC).
 Mock.portedData = "60001\tPandaren Yeti Mount (Brown)\tmount\n60011\tTest Ported Thing\t\n"
+Mock.portedItems = "900001\t90001\t207\t647\tWarglaive of Azzinoth\n900002\t90002\t208\t647\tBig Ported Sword\n"
+	.. "900003\t90003\t406\t647\tPorted Shield\n"
 loadUI()
 installMorphAPI()
 local pc = DmorphOcto.GetCreatureCatalog()
@@ -2290,7 +2301,25 @@ slash("morph 60001")
 local sharedDisplay, _, sharedMount = DmorphOcto.GetSharedLook()
 check(vh.display == 60001 and sharedDisplay == nil, "you can morph into it, and others aren't sent it")
 slash("demorph all")
-Mock.portedData = nil
+-- Ported weapons (DmorphOcto_PortedItems, DmorphHelper v10 virtual items).
+local mh = DmorphOcto.GetItemCatalog(16)
+local glaive = mh.byID[900001]
+check(glaive and mh.names[glaive] == "Warglaive of Azzinoth" and mh.kind[glaive] == DmorphOcto.KIND_PORTED
+	and mh.byID[900002] and not mh.byID[900003], "ported weapons are in the slots their kind fits")
+check(DmorphOcto.GetItemCatalog(17).byID[900001] and DmorphOcto.GetItemCatalog(17).byID[900003]
+	and not DmorphOcto.GetItemCatalog(17).byID[900002], "one-handers and shields in the off hand, not two-handers")
+check(DmorphOcto.GetItemType(900001) == 207 and DmorphOcto.IsPortedItem(900001), "they know their kind")
+slash("item 16 900001")
+check(vh.items[16] ~= 900001 and contains(lastChat(), "DmorphHelper v10"), "without DmorphHelper v10 a ported weapon explains")
+installHelper(REAL)
+slash("item 16 900001")
+check(vh.items[16] == 900001 and game.virtual[900001] and game.virtual[900001][1] == 647
+	and game.virtual[900001][2] == 90001 and game.virtual[900002], "with it, the weapon is registered and worn")
+local _, sharedItems = DmorphOcto.GetSharedLook()
+check(sharedItems[16] == nil, "and others aren't sent it")
+slash("demorph all")
+removeHelper()
+Mock.portedData, Mock.portedItems = nil, nil
 loadUI()
 check(not DmorphOcto.GetCreatureCatalog().byID[60001], "without Data/Ported.lua there are no ported models")
 

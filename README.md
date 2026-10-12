@@ -1,6 +1,6 @@
 # DMorph for OctoWoW
 
-Become any creature, ride any mount, wear any item. A morph window for WoW 1.12 (OctoWoW), version 2.11.1.
+Become any creature, ride any mount, wear any item. A morph window for WoW 1.12 (OctoWoW), version 2.12.0.
 
 Morphs only change what you and other DMorph users see. Everyone else, and the server, sees your real character.
 
@@ -43,7 +43,7 @@ You can skip this step: everything else still works, just without glows, real lo
 1. Start the game from **OctoLauncher** (not WoW.exe).
 2. Click the polymorph button by the minimap, or type **/dmorph**
 3. Check the **Setup** button at the bottom left of the window:
-   - Green "Setup OK": you're ready. It also shows which DmorphHelper version is running (for example "Helper v9").
+   - Green "Setup OK": you're ready. It also shows which DmorphHelper version is running (for example "Helper v10").
    - Yellow "Old helper": close the game and run Install DmorphHelper.bat again.
    - Red "Setup: fix me": click it. It tells you what isn't working and how to fix it.
 

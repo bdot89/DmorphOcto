@@ -26,6 +26,8 @@
 //   DmorphHelper_GetWeather()                                -> type, intensity, yours (1/0), server type, intensity
 //   DmorphHelper_SetTime(minutes)                            (0-1439 after midnight; -1: the real time)
 //   DmorphHelper_GetTime()                                   -> minutes shown, yours (1/0), real minutes
+//   DmorphHelper_SetVirtualItem(itemID, templateItemID, displayID) (an item only this PC has)
+//   DmorphHelper_GetVirtualItem(itemID)                       -> templateItemID, displayID
 // unit is a unit token for a player you could help ("player", "target", ...);
 // slot is an inventory slot, 1-19. The functions only write the values: the
 // addon keeps what it wants and puts it back after the server resends them.
@@ -46,7 +48,7 @@
 #define GAME_FASTCALL __attribute__((fastcall))
 #define GAME_THISCALL __attribute__((thiscall))
 
-#define HELPER_VERSION 9
+#define HELPER_VERSION 10
 
 // Game functions, build 5875 (from VanillaHelpers' Offsets.h).
 #define FUN_INVALID_FUNCTION_PTR_CHECK 0x42A320
@@ -91,6 +93,12 @@
 #define RET_WORLD_LIGHT_MINUTES 0x482BD6
 #define RET_WORLD_LIGHT_PROGRESS 0x482BE2
 #define RET_WORLD_SKY_MINUTES 0x483DE1
+// The item cache's record for an item ID (thiscall: cache, item ID, GUID*,
+// callback, user data, ask the server if missing; ret 0x14): ItemStats_C,
+// whose display ID is at 0x18. VanillaHelpers' GetItemDisplayID uses it.
+#define FUN_DBCACHE_ITEM_STATS_GET_RECORD 0x55BA30
+#define ITEM_STATS_DISPLAY_ID 0x18
+#define ITEM_STATS_SIZE 468
 #define HIGHEST_ADDRESS 0xC962D0
 
 // Descriptor fields, as indexes into a unit's uint32 field array.
@@ -593,6 +601,94 @@ static int GAME_FASTCALL Script_GetTime(void *L) {
     return 3;
 }
 
+// Virtual items. The game shows a worn item by asking its item cache for the
+// item's record (display ID, inventory type, sheath, ...); the server fills
+// the cache. A virtual item is an item ID the server doesn't have, answered
+// here with a copy of a real item's record (same kind of weapon, so it's held
+// and sheathed the same) whose display ID is a model ported to this PC. Only
+// this PC sees them, like every morph.
+typedef void *(GAME_THISCALL *GetItemRecord_t)(void *cache, uint32_t id, const uint64_t *guid, void *callback,
+                                               void *userData, uint32_t askServer);
+static GetItemRecord_t GetItemRecord_o = NULL;
+#define MAX_VIRTUAL_ITEMS 4096
+typedef struct {
+    uint32_t id, templateId, displayId;
+    uint8_t *record;                      // our copy, kept for as long as the game runs
+} VirtualItem;
+static VirtualItem g_virtual[MAX_VIRTUAL_ITEMS];
+static int g_virtualCount = 0;
+static uint32_t g_virtualMin = 0xFFFFFFFF, g_virtualMax = 0; // quick test before searching
+
+static VirtualItem *FindVirtual(uint32_t id) {
+    for (int i = 0; i < g_virtualCount; i++) {
+        if (g_virtual[i].id == id) {
+            return &g_virtual[i];
+        }
+    }
+    return NULL;
+}
+
+static void *GAME_FASTCALL GetItemRecord_h(void *cache, void *edx, uint32_t id, const uint64_t *guid, void *callback,
+                                           void *userData, uint32_t askServer) {
+    (void)edx;
+    VirtualItem *v = id >= g_virtualMin && id <= g_virtualMax ? FindVirtual(id) : NULL;
+    if (!v) {
+        return GetItemRecord_o(cache, id, guid, callback, userData, askServer);
+    }
+    // The template's record (the server is asked for it if it isn't cached yet).
+    uint8_t *t = (uint8_t *)GetItemRecord_o(cache, v->templateId, guid, NULL, NULL, askServer);
+    if (!t) {
+        return NULL;
+    }
+    memcpy(v->record, t, ITEM_STATS_SIZE);
+    memcpy(v->record + ITEM_STATS_DISPLAY_ID, &v->displayId, 4);
+    return v->record;
+}
+
+static const char *VIRTUAL_USAGE = "Usage: DmorphHelper_SetVirtualItem(itemID, templateItemID, displayID)";
+
+// Registers (or changes) a virtual item.
+static int GAME_FASTCALL Script_SetVirtualItem(void *L) {
+    uint32_t id = NumberArg(L, 1, 1, 2147483647.0, VIRTUAL_USAGE);
+    uint32_t templateId = NumberArg(L, 2, 1, 2147483647.0, VIRTUAL_USAGE);
+    uint32_t displayId = NumberArg(L, 3, 1, 2147483647.0, VIRTUAL_USAGE);
+    if (!GetItemRecord_o) {
+        LuaError(L, "DmorphHelper couldn't hook the game's item cache.");
+        return 0;
+    }
+    VirtualItem *v = FindVirtual(id);
+    if (!v) {
+        if (g_virtualCount >= MAX_VIRTUAL_ITEMS) {
+            LuaError(L, "DmorphHelper: too many virtual items.");
+            return 0;
+        }
+        v = &g_virtual[g_virtualCount];
+        v->record = (uint8_t *)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, 1024);
+        if (!v->record) {
+            LuaError(L, "DmorphHelper: out of memory.");
+            return 0;
+        }
+        v->id = id;
+        g_virtualCount++;
+        if (id < g_virtualMin) g_virtualMin = id;
+        if (id > g_virtualMax) g_virtualMax = id;
+    }
+    v->templateId = templateId;
+    v->displayId = displayId;
+    return 0;
+}
+
+// The display ID a virtual item shows, or nothing.
+static int GAME_FASTCALL Script_GetVirtualItem(void *L) {
+    VirtualItem *v = FindVirtual(NumberArg(L, 1, 1, 2147483647.0, "Usage: DmorphHelper_GetVirtualItem(itemID)"));
+    if (!v) {
+        return 0;
+    }
+    LuaPushNumber(L, v->templateId);
+    LuaPushNumber(L, v->displayId);
+    return 2;
+}
+
 // The game lists the map cells a line crosses (the mouse pointer's line into
 // the world, line of sight) in a buffer it sizes once for 2048 cells and
 // never checks. The pointer's line reaches as far as your view distance, so
@@ -629,6 +725,8 @@ static void GAME_FASTCALL LoadScriptFunctions_h(void) {
     RegisterFunction("DmorphHelper_GetWeather", (uintptr_t)&Script_GetWeather);
     RegisterFunction("DmorphHelper_SetTime", (uintptr_t)&Script_SetTime);
     RegisterFunction("DmorphHelper_GetTime", (uintptr_t)&Script_GetTime);
+    RegisterFunction("DmorphHelper_SetVirtualItem", (uintptr_t)&Script_SetVirtualItem);
+    RegisterFunction("DmorphHelper_GetVirtualItem", (uintptr_t)&Script_GetVirtualItem);
 }
 
 // The game's own image must reach every address used here (a 1.12.1 exe).
@@ -692,6 +790,10 @@ static void InstallHook(void) {
     if (MH_CreateHook((LPVOID)FUN_GAME_TIME_DAY_PROGRESS, (LPVOID)&GameTimeProgress_h, (LPVOID *)&GameTimeProgress_o) != MH_OK ||
         MH_EnableHook((LPVOID)FUN_GAME_TIME_DAY_PROGRESS) != MH_OK) {
         GameTimeProgress_o = NULL;
+    }
+    if (MH_CreateHook((LPVOID)FUN_DBCACHE_ITEM_STATS_GET_RECORD, (LPVOID)&GetItemRecord_h, (LPVOID *)&GetItemRecord_o) != MH_OK ||
+        MH_EnableHook((LPVOID)FUN_DBCACHE_ITEM_STATS_GET_RECORD) != MH_OK) {
+        GetItemRecord_o = NULL;
     }
 }
 

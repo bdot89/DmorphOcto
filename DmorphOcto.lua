@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.11.1"
+local VERSION = "2.12.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -257,6 +257,7 @@ M.ITEM_FILTERS = {
 	{ text = "All items" },
 	{ text = "1.12 items", kinds = { [0] = true } },
 	{ text = "New in OctoWoW", kinds = { [2] = true } },
+	{ text = "Ported (later expansions)", kinds = { [4] = true } },
 }
 M.SET_FILTERS = {
 	{ text = "All sets" },
@@ -473,9 +474,68 @@ local function ReadItemTypes()
 	DmorphOcto_ItemTypeData, DmorphOcto_ItemTypeExtra = nil, nil
 end
 
+-- Ported weapons (Data/Ported.lua, DmorphOcto_PortedItems): item IDs only this
+-- PC has. DmorphHelper v10 answers the game's item cache for them with a real
+-- item of the same kind (the template: held and sheathed the same) showing
+-- the ported model. Kind -> the slots it fits.
+local PORTED_SLOTS = {
+	[200] = { 16, 17 }, [204] = { 16, 17 }, [207] = { 16, 17 }, [213] = { 16, 17 }, [215] = { 16, 17 },
+	[201] = { 16 }, [205] = { 16 }, [206] = { 16 }, [208] = { 16 }, [210] = { 16 },
+	[202] = { 18 }, [203] = { 18 }, [216] = { 18 }, [218] = { 18 }, [219] = { 18 },
+	[214] = { 17 }, [406] = { 17 },
+}
+local portedItems
+local function PortedItems()
+	if not portedItems then
+		portedItems = {}
+		for id, display, kind, template, name in string.gfind(DmorphOcto_PortedItems or "",
+			"(%d+)\t(%d+)\t(%d+)\t(%d+)\t([^\r\n]+)") do
+			portedItems[tonumber(id)] = { display = tonumber(display), kind = tonumber(kind), template = tonumber(template),
+				name = name }
+		end
+		DmorphOcto_PortedItems = nil
+	end
+	return portedItems
+end
+
+function M.IsPortedItem(itemID)
+	return PortedItems()[tonumber(itemID or 0)] ~= nil
+end
+
+local function HasVirtualItems()
+	return type(DmorphHelper_SetVirtualItem) == "function"
+end
+M.HasVirtualItems = HasVirtualItems
+
+-- Tells DmorphHelper about every ported weapon, and asks the server for the
+-- template items the game hasn't seen (their records are copied).
+local portedRegistered
+local function RegisterPortedItems()
+	if portedRegistered or not HasVirtualItems() or not next(PortedItems()) then
+		return
+	end
+	portedRegistered = true
+	local asked = {}
+	for id, p in pairs(PortedItems()) do
+		pcall(DmorphHelper_SetVirtualItem, id, p.template, p.display)
+		if not asked[p.template] then
+			asked[p.template] = true
+			local ok, name = pcall(GetItemInfo, p.template)
+			if not (ok and name) and type(C_Item) == "table" then
+				pcall(C_Item.RequestLoadItemDataByID, p.template)
+			end
+		end
+	end
+end
+M.RegisterPortedItems = RegisterPortedItems
+
 -- An item's kind (401 cloth, 215 dagger, ...: M.ITEM_TYPES), or nil. Items no
 -- data file knows are asked from the game, which knows the ones it has seen.
 function M.GetItemType(itemID)
+	local ported = PortedItems()[itemID]
+	if ported then
+		return ported.kind
+	end
 	if not itemTypes then
 		ReadItemTypes()
 	end
@@ -526,7 +586,20 @@ function M.GetItemCatalog(slot)
 		end
 		local learned, k = LearnedItems(slot, seen)
 		local both, count = Merge(base, n, extra, m)
-		local catalog = Fill(NewCatalog(), Merge(both, count, learned, k))
+		local all, total = Merge(both, count, learned, k)
+		-- Ported weapons that fit the slot (shown as epic).
+		local ported, p = {}, 0
+		for id, item in pairs(PortedItems()) do
+			local slots = PORTED_SLOTS[item.kind] or {}
+			for i = 1, table.getn(slots) do
+				if slots[i] == slot then
+					p = p + 1
+					ported[p] = { id, item.name, strlower(item.name), 4, M.KIND_PORTED }
+				end
+			end
+		end
+		table.sort(ported, Before)
+		local catalog = Fill(NewCatalog(), Merge(all, total, ported, p))
 		catalog.types = {}
 		for i = 1, catalog.count do
 			catalog.types[i] = M.GetItemType(catalog.ids[i])
@@ -1260,6 +1333,7 @@ local function EnsureSession()
 		Morph(SetUnitMountDisplayID, "player", nil)
 	end
 	CaptureNative()
+	RegisterPortedItems()
 	sessionReady = true
 end
 
@@ -1402,7 +1476,15 @@ function M.HoldRace(reason, on)
 end
 
 local function ApplyItem(slot)
-	return Morph(SetUnitVisibleItemID, "player", slot, db.items[slot])
+	local id = db.items[slot]
+	if id and M.IsPortedItem(id) then
+		if not HasVirtualItems() then
+			return false, "Ported weapons need DmorphHelper v10: close the game, double-click \"Install DmorphHelper.bat\" "
+				.. "in Interface\\AddOns\\DmorphOcto, then start the game from OctoLauncher."
+		end
+		RegisterPortedItems()
+	end
+	return Morph(SetUnitVisibleItemID, "player", slot, id)
 end
 
 -- Mount morphs need VanillaHelpers' SetUnitMountDisplayID (v1.1.0 has it).
@@ -1586,7 +1668,13 @@ function M.GetSharedLook()
 	if mount and M.IsPorted(mount) then
 		mount = nil
 	end
-	return display, db.items, mount
+	local items = {}
+	for slot, id in pairs(db.items) do
+		if not M.IsPortedItem(id) then
+			items[slot] = id
+		end
+	end
+	return display, items, mount
 end
 
 -- Glows and your own look (DmorphHelper.dll) ----------------------------------
@@ -1608,7 +1696,7 @@ local MISSING_HELPER = "DmorphHelper.dll isn't loaded, so weapon glows, your siz
 M.MISSING_HELPER = MISSING_HELPER
 -- The DmorphHelper_Version() the DLL in helper\ reports. An older one in the
 -- game folder (DMorph was updated, the DLL wasn't copied again) is flagged.
-local HELPER_VERSION = 9
+local HELPER_VERSION = 10
 -- Rows 1-5 of the Races tab, in DmorphHelper_GetLook's order.
 local OWN_LOOK_NPC = { "npcSkin", "npcFace", "npcHairStyle", "npcHairColour" }
 
