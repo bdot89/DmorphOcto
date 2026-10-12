@@ -2345,6 +2345,48 @@ check(vh.items[16] == 900001 and game.virtual[900001] and game.virtual[900001][1
 	and game.virtual[900001][2] == 90001 and game.virtual[900002], "with it, the weapon is registered and worn")
 local _, sharedItems = DmorphOcto.GetSharedLook()
 check(sharedItems[16] == nil, "and others aren't sent it")
+-- Ported looks go to DMorph users with the same pack, as a fourth look part
+-- ("P<pack>_<display>_<mount>_<items>") that older DMorph ignores.
+local function b36(n)
+	local digits, text = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", ""
+	while n > 0 do
+		text = string.sub(digits, math.mod(n, 36) + 1, math.mod(n, 36) + 1) .. text
+		n = math.floor(n / 36)
+	end
+	return text
+end
+local pack = DmorphOcto.GetPortedPack()
+check(pack and string.find(pack, "^L%d+x%d+x%d+$"), "the ported pack is named from Ported.lua's lists")
+wait(6)
+quiet()
+local pally = "0x00000000000A0002"
+Mock.units.target = { name = "Porter", guid = pally, friendly = true, display = 50 }
+hear("Porter", "Q Tester")
+wait(4)
+local sentLook = channelSays("DMO2 L ")
+local portedPart = "P" .. pack .. "_0_0_p" .. b36(900001)
+check(sentLook and contains(sentLook.msg or sentLook.text, portedPart)
+	and not contains(sentLook.msg or sentLook.text, " p" .. b36(900001)),
+	"your ported weapon goes out as the ported part, not in the look older DMorph reads")
+local base = string.gsub(sentLook.msg or sentLook.text, "^DMO2 L (%S+ %S+ %S+).*$", "%1")
+hear("Porter", "L 0 0 - " .. pally .. " P" .. pack .. "_0_0_p" .. b36(900002))
+wait(0.5)
+check(morphOf(pally).items[16] == 900002, "a DMorph user with the same pack shows their ported weapon")
+hear("Porter", "L 0 0 - " .. pally .. " Pother1_0_0_p" .. b36(900001))
+wait(1.5)
+check(morphOf(pally).items[16] == nil, "with another pack, their ported parts don't go on (their normal look does)")
+hear("Porter", "L 0 0 - " .. pally .. " s150 P" .. pack .. "_0_0_p" .. b36(900002))
+wait(1.5)
+check(morphOf(pally).items[16] == 900002, "the ported part is read after a size too")
+quiet()
+hear("Porter", "Q Tester:" .. fingerprint(base))
+wait(4)
+check(channelSays("DMO2 L ") and not channelSays("DMO2 H "), "a fingerprint without your ported part asks for the whole look")
+quiet()
+hear("Porter", "Q Tester:" .. fingerprint(base .. " " .. portedPart))
+wait(4)
+check(channelSays("DMO2 H ") and not channelSays("DMO2 L "), "one with it is answered with a fingerprint")
+Mock.units.target = nil
 -- Ported armour names its slot; ported sets come from DmorphOcto_PortedSets.
 local helm = DmorphOcto.GetItemCatalog(1)
 check(helm.byID[901001] and helm.kind[helm.byID[901001]] == DmorphOcto.KIND_PORTED and not helm.byID[901002]

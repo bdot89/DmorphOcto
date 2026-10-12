@@ -1,6 +1,6 @@
 # DMorph for OctoWoW
 
-Become any creature, ride any mount, wear any item. A morph window for WoW 1.12 (OctoWoW), version 2.13.3.
+Become any creature, ride any mount, wear any item. A morph window for WoW 1.12 (OctoWoW), version 2.14.0.
 
 Morphs only change what you and other DMorph users see. Everyone else, and the server, sees your real character.
 
@@ -140,7 +140,7 @@ If you've made ported models (later-expansion models in extra patch files), you 
 2. Upload that whole folder (Google Drive, OneDrive or MEGA) and send the link. It's several GB.
 3. Your friend installs DMorph as above, downloads the folder, closes the game and double-clicks **Install Ported.bat** in it. It checks every file first, never replaces OctoWoW's own patches, removes ported patches from an older pack, and installs DmorphHelper. **Remove Ported.bat** takes them out again.
 
-Pack again after every porting run: friends need exactly the same pack. These are Blizzard's files, so keep packs private, not on GitHub.
+Pack again after every porting run: friends need exactly the same pack. DMorph users with the same pack see each other's ported models, mounts and items; everyone else sees your normal look. These are Blizzard's files, so keep packs private, not on GitHub.
 
 
 ## Screenshots

@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.13.3"
+local VERSION = "2.14.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -330,9 +330,28 @@ local function HiddenItems()
 	return hiddenItems
 end
 
--- Display IDs from Data/Ported.lua: only this PC has their models, so they
--- are never sent to or taken from other DMorph users.
+-- Display IDs from Data/Ported.lua: only PCs with the same ported pack have
+-- their models. Others see your own model instead (Share.lua sends ported
+-- looks apart, tagged with the pack, to DMorph users who have the same one).
 local portedIDs = {}
+
+-- Which ported pack this PC has: the porting tool's DmorphOcto_PortedPack if
+-- it wrote one, else the sizes of Ported.lua's three lists (read here, as
+-- Ported.lua loads before this file and the lists are dropped once parsed).
+-- Two PCs with the same pack (Pack Ported.bat / Install Ported.bat) match.
+local portedPack
+if type(DmorphOcto_PortedPack) == "string" then
+	portedPack = DmorphOcto_PortedPack
+elseif DmorphOcto_PortedData or DmorphOcto_PortedItems then
+	portedPack = "L" .. strlen(DmorphOcto_PortedData or "") .. "x" .. strlen(DmorphOcto_PortedItems or "")
+		.. "x" .. strlen(DmorphOcto_PortedSets or "")
+end
+if portedPack and not strfind(portedPack, "^%w+$") then
+	portedPack = nil
+end
+function M.GetPortedPack()
+	return portedPack
+end
 function M.IsPorted(displayID)
 	M.GetCreatureCatalog()
 	return portedIDs[tonumber(displayID or 0)] == true
@@ -1536,6 +1555,25 @@ local function PortedTemplate(p)
 	return nil
 end
 
+-- Whether a ported item can go on another player here: DmorphHelper knows
+-- the virtual items and the game knows a template to copy.
+function M.CanShowPortedItem(itemID)
+	local p = PortedItems()[tonumber(itemID or 0)]
+	if not (p and HasVirtualItems()) then
+		return false
+	end
+	RegisterPortedItems()
+	local template = PortedTemplate(p)
+	if not template then
+		return false
+	end
+	if template ~= p.template then
+		p.template = template
+		pcall(DmorphHelper_SetVirtualItem, itemID, template, p.display)
+	end
+	return true
+end
+
 local function ApplyItem(slot)
 	local id = db.items[slot]
 	if id and M.IsPortedItem(id) then
@@ -1742,6 +1780,29 @@ function M.GetSharedLook()
 	local items = {}
 	for slot, id in pairs(db.items) do
 		if not M.IsPortedItem(id) then
+			items[slot] = id
+		end
+	end
+	return display, items, mount
+end
+
+-- The ported parts of your look (display, items, mount), which only DMorph
+-- users with the same ported pack can show; nil where a part isn't ported.
+function M.GetSharedPorted()
+	InitDB()
+	local display, mount = BodyDisplayID(), nil
+	if watch.active then
+		mount = watch.skin
+	end
+	if not (display and M.IsPorted(display)) then
+		display = nil
+	end
+	if not (mount and M.IsPorted(mount)) then
+		mount = nil
+	end
+	local items = {}
+	for slot, id in pairs(db.items) do
+		if M.IsPortedItem(id) then
 			items[slot] = id
 		end
 	end

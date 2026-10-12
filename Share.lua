@@ -31,7 +31,12 @@
 -- Messages (prefix "DMO2"). A look is "<display> <mount> <items>": display and
 -- mount IDs in base 36 (0 = none), items as a slot letter (a = 1 ... s = 19)
 -- and an item ID in base 36 each, or "-".
---   L <look> <guid|->     this is my look
+--   L <look> <guid|-> [s<size>] [<ported>]   this is my look
+-- A look may carry a fourth part for ported models (Data/Ported.lua, only on
+-- PCs that installed the same pack): "P<pack>_<display>_<mount>_<items>".
+-- It goes last in L messages, so older DMorph reads only the first three
+-- parts and keeps showing the normal look; receivers use it only when their
+-- pack is the same (M.GetPortedPack). Fingerprints cover all four parts.
 --   M <mount>             my mount skin changed, the rest didn't
 --   H <fingerprint> <guid|->  my look is still the one with this fingerprint
 --   Q <name>[:<fingerprint>],...  what do these players look like now?
@@ -68,7 +73,7 @@ local audience = {} -- name -> when they last showed they see us
 local inGroup, inGuild = {}, {} -- names
 local replies = {} -- way -> "L" (full look) or "H" (fingerprint)
 local timers = {} -- clock times: join, ready, send, first, mount, reply, replied, query, scan, guild, next
-local sent = { d = "0", m = "0", it = "-", s = "" } -- what the others were last told
+local sent = { d = "0", m = "0", it = "-", s = "", p = "" } -- what the others were last told
 local cache -- DmorphOctoAccount.peerCache for this realm
 local guidWorks -- whether VanillaHelpers took a GUID as a unit token (nil: not tried)
 local counts = { channel = 0, hidden = 0 }
@@ -136,6 +141,34 @@ end
 local function OwnLook()
 	local d, m, it = OwnParts()
 	return d .. " " .. m .. " " .. it
+end
+
+-- The ported part of our look ("P<pack>_<d>_<m>_<items>"), or "".
+local function OwnPorted()
+	local pack = M.GetPortedPack and M.GetPortedPack()
+	if not (pack and Sharing() and M.GetSharedPorted) then
+		return ""
+	end
+	local display, items, mount = M.GetSharedPorted()
+	local parts = {}
+	for slot = 1, 19 do
+		if items[slot] then
+			table.insert(parts, string.char(96 + slot) .. Encode(items[slot]))
+		end
+	end
+	if not display and not mount and table.getn(parts) == 0 then
+		return ""
+	end
+	return "P" .. pack .. "_" .. Encode(display) .. "_" .. Encode(mount) .. "_" .. (table.getn(parts) > 0 and table.concat(parts) or "-")
+end
+
+-- Everything a fingerprint covers: the look and its ported part.
+local function OwnFull()
+	local ported = OwnPorted()
+	if ported ~= "" then
+		return OwnLook() .. " " .. ported
+	end
+	return OwnLook()
 end
 
 -- SuperWoW's UnitExists also returns the unit's GUID.
@@ -383,8 +416,36 @@ local function Display(text)
 	end
 end
 
--- A look from its three parts, or nil if they don't read as one.
-local function MakeLook(d, m, it)
+-- A ported part puts ported models on a look, if this PC has the same pack
+-- and can show them (a model it has, an item DmorphHelper can copy).
+local function Overlay(look, ported)
+	local _, _, pack, pd, pm, pit = strfind(ported or "", "^P(%w+)_([0-9A-Z]+)_([0-9A-Z]+)_([a-s0-9A-Z%-]+)$")
+	if not pack then
+		return false
+	end
+	if pack ~= (M.GetPortedPack and M.GetPortedPack()) then
+		return true
+	end
+	local display, mount = Display(pd), Display(pm)
+	if display then
+		look.display = display
+	end
+	if mount then
+		look.mount = mount
+	end
+	if pit ~= "-" then
+		for letter, id in string.gfind(pit, "([a-s])([0-9A-Z]+)") do
+			local item = Decode(id)
+			if item and M.CanShowPortedItem and M.CanShowPortedItem(item) then
+				look.items[string.byte(letter) - 96] = item
+			end
+		end
+	end
+	return true
+end
+
+-- A look from its three parts (and a ported part), or nil if they don't read as one.
+local function MakeLook(d, m, it, ported)
 	if not (Decode(d) and Decode(m) and it and (it == "-" or strfind(it, "^[a-s][0-9A-Z]+[a-s0-9A-Z]*$"))) then
 		return nil
 	end
@@ -398,6 +459,10 @@ local function MakeLook(d, m, it)
 		end
 	end
 	look.look = d .. " " .. m .. " " .. it
+	if ported and ported ~= "" and Overlay(look, ported) then
+		look.ported = ported
+		look.look = look.look .. " " .. ported
+	end
 	look.print = Fingerprint(look.look)
 	return look
 end
@@ -556,8 +621,8 @@ end
 local function Remembered(name)
 	local entry = Cache()[name]
 	if entry then
-		local _, _, d, m, it = strfind(entry.look, "^(%S+) (%S+) (%S+)$")
-		local look = MakeLook(d, m, it)
+		local _, _, d, m, it, ported = strfind(entry.look, "^(%S+) (%S+) (%S+) ?(%S*)$")
+		local look = MakeLook(d, m, it, ported)
 		if look then
 			return SetPeer(name, look, entry.guid, false)
 		end
@@ -687,8 +752,16 @@ local function SetPeerSize(name, scale)
 end
 
 local function ReadLook(sender, rest)
-	local _, _, d, m, it, guid, size = strfind(rest, "^(%S+) (%S+) (%S+) ?(%S*) ?(%S*)")
-	local look = MakeLook(d, m, it)
+	local _, _, d, m, it, guid, more = strfind(rest, "^(%S+) (%S+) (%S+) ?(%S*) ?(.*)$")
+	local size, ported
+	for token in string.gfind(more or "", "%S+") do
+		if strfind(token, "^s%d+$") then
+			size = token
+		elseif strfind(token, "^P") then
+			ported = token
+		end
+	end
+	local look = MakeLook(d, m, it, ported)
 	if not look then
 		return
 	end
@@ -721,7 +794,7 @@ local function ReadMount(sender, m)
 	if not (peer and peer.confirmed) then
 		return
 	end
-	local look = MakeLook(peer.d, m, peer.it)
+	local look = MakeLook(peer.d, m, peer.it, peer.ported)
 	if look and look.look ~= peer.look then
 		SetPeer(sender, look, nil, true)
 		Scan()
@@ -757,7 +830,7 @@ local function ReadQuestion(sender, rest, way)
 		if name == me then
 			if Sharing() then
 				audience[sender] = clock
-				if print ~= "" and print == Fingerprint(OwnLook()) then
+				if print ~= "" and print == Fingerprint(OwnFull()) then
 					replies[way] = replies[way] or "H"
 				else
 					replies[way] = "L"
@@ -826,6 +899,12 @@ local function OnChange()
 	if OwnSize() ~= sent.s then
 		timers.size = timers.size or clock + SETTLE
 	end
+	if OwnPorted() ~= sent.p then
+		-- A ported mount or model: the whole look goes (old DMorph ignores that part).
+		timers.first = timers.first or clock
+		timers.send = math.min(timers.send or clock, clock)
+		return
+	end
 	if d ~= sent.d or it ~= sent.it then
 		timers.first = timers.first or clock
 		timers.send = math.min(clock + SETTLE, timers.first + MAX_WAIT)
@@ -843,13 +922,19 @@ local function WithSize(text)
 end
 
 local function LookText()
-	return WithSize("L " .. OwnLook() .. " " .. (GUIDOf("player") or "-"))
+	local text = WithSize("L " .. OwnLook() .. " " .. (GUIDOf("player") or "-"))
+	local ported = OwnPorted()
+	if ported ~= "" then
+		text = text .. " " .. ported
+	end
+	return text
 end
 
 -- Tells everyone who needs it; that answers any waiting question too.
 local function SendLook(ways)
 	sent.d, sent.m, sent.it = OwnParts()
 	sent.s = OwnSize()
+	sent.p = OwnPorted()
 	timers.send, timers.first, timers.mount, timers.size = nil, nil, nil, nil
 	local text = LookText()
 	for way in pairs(ways) do
@@ -888,7 +973,7 @@ local function SendNext()
 		end
 	elseif timers.reply and clock >= timers.reply then
 		timers.reply, timers.replied = nil, clock
-		local look = OwnLook()
+		local look = OwnFull()
 		for way, kind in pairs(replies) do
 			replies[way] = nil
 			if kind == "L" then
