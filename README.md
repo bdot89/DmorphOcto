@@ -1,6 +1,6 @@
 # DMorph for OctoWoW
 
-Become any creature, ride any mount, wear any item. A morph window for WoW 1.12 (OctoWoW), version 2.14.0.
+Become any creature, ride any mount, wear any item. A morph window for WoW 1.12 (OctoWoW), version 2.15.2.
 
 Morphs only change what you and other DMorph users see. Everyone else, and the server, sees your real character.
 
@@ -43,7 +43,7 @@ You can skip this step: everything else still works, just without glows, real lo
 1. Start the game from **OctoLauncher** (not WoW.exe).
 2. Click the polymorph button by the minimap, or type **/dmorph**
 3. Check the **Setup** button at the bottom left of the window:
-   - Green "Setup OK": you're ready. It also shows which DmorphHelper version is running (for example "Helper v10").
+   - Green "Setup OK": you're ready. It also shows which DmorphHelper version is running (for example "Helper v12").
    - Yellow "Old helper": close the game and run Install DmorphHelper.bat again.
    - Red "Setup: fix me": click it. It tells you what isn't working and how to fix it.
 
@@ -76,10 +76,11 @@ You can skip this step: everything else still works, just without glows, real lo
 - Weather: clear skies, rain, snow or a sandstorm, from light to heavy, on your screen in every zone.
 - Time of day: dawn, noon, dusk, midnight or any time, for the light, sky, sun and moon on your screen.
 - Weapon glows: Crusader, Fiery, Icy and every other glow in the game.
-- 12,000+ weapons and armour pieces, and 352 item sets in one click.
+- 12,000+ weapons and armour pieces, and 352 item sets in one click. Wearing a set takes the last set's pieces off.
 - Wardrobe of saved outfits and favourites, for all your characters.
 - Other DMorph users see your model, items, mount skin and size, and you see theirs.
-- Your look stays after /reload, loading screens and logging in.
+- Your look stays after /reload, loading screens and logging in. During a race morph you keep your own faction, languages, flight paths and reputation, even when you log in morphed.
+- Optional ported packs: later-expansion creature models and mounts, weapons, armour, item sets and 33 weapon glows from The Burning Crusade to Mists of Pandaria (Mongoose, Berserking, Jade Spirit, Dancing Steel...). DMorph works fully without one; see "Ported packs" below.
 
 
 ## Using DMorph
@@ -93,8 +94,8 @@ Open the window with the minimap button, /dmorph, or a key under Key Bindings > 
 - **Mounts tab:** pick which mount gets the skin, then click a model. The arrows step through the list. Remove skin takes it off.
 - **Favourites tab:** your starred models and mount skins.
 - **Races tab:** click a portrait to become that race with your own face. The arrow rows change skin colour, face, hair and facial hair. The dice picks a random look.
-- **Glows tab:** pick main hand, off hand or ranged, then click a glow.
-- **Items and Sets tabs:** filter by type, quality and source. Hover an item or set to see your character wearing it, then click to wear it.
+- **Glows tab:** pick main hand, off hand or ranged, then click a glow. Glows from a ported pack say "TBC-MoP"; type "ported" in the search box to list only those.
+- **Items and Sets tabs:** filter by type, quality and source (ported items and sets have their own "Ported" filter). Hover an item or set to see your character wearing it, then click to wear it.
 - **Wardrobe tab:** save and load whole outfits.
 - **Weather tab:** pick clear skies or light, normal or heavy rain, snow or sandstorm; the Strength slider fine-tunes it. Time of day: Dawn, Noon, Dusk, Midnight or the Time slider. Server's weather and Real time give the real ones back. Only you see them; weather shows outdoors only.
 - **Setup (bottom left):** shows whether everything works, which DmorphHelper version is running, and how to fix what doesn't.
@@ -129,18 +130,26 @@ Item slots: 1 head, 3 shoulder, 4 shirt, 5 chest, 6 waist, 7 legs, 8 feet, 9 wri
 - Mount skins go on when you mount and come off when you dismount. Flight master birds keep their own look.
 - Glows and picked faces are only on your own screen for now.
 - Shapeshifting shows your morph instead of the form. Reset your model first if you want the form.
-- Models, glows and races from The Burning Crusade onwards aren't in the 1.12 game files, so no addon can show them.
+- Models, glows and races from The Burning Crusade onwards aren't in the 1.12 game files. A ported pack (below) adds many models, items and glows; later races can't be added.
+- A ported item borrows a normal item while it's on you. The first time you wear one after logging in, the game may still be loading that item: click it again a second later.
 
 
-## Sharing ported models with friends
+## Ported packs (optional)
 
-If you've made ported models (later-expansion models in extra patch files), you can send the same set to friends:
+DMorph from this page has no later-expansion models, and doesn't need them. A ported pack adds them: extra patch files with models, mounts, weapons, armour, sets and glows converted from a newer WoW install, plus a list for DMorph (Data\Ported.lua). These are Blizzard's files, so packs are never on GitHub: they're passed between friends privately.
+
+If someone sends you a pack:
+
+1. Update DMorph to the version the pack was made with, or newer.
+2. Close the game and double-click **Install Ported.bat** in the pack folder (not the one in DmorphOcto\tools). It checks every file first, never replaces OctoWoW's own patches, removes ported patches from an older pack, and installs DmorphHelper. **Remove Ported.bat** takes them out again.
+3. Start the game from OctoLauncher.
+
+If you made the pack yourself and want to send it:
 
 1. Close the game and double-click **Pack Ported.bat** in the DmorphOcto folder. It copies the ported patches and the list into a **DmorphPorted** folder on your Desktop, with a manifest of every file's checksum.
-2. Upload that whole folder (Google Drive, OneDrive or MEGA) and send the link. It's several GB.
-3. Your friend installs DMorph as above, downloads the folder, closes the game and double-clicks **Install Ported.bat** in it. It checks every file first, never replaces OctoWoW's own patches, removes ported patches from an older pack, and installs DmorphHelper. **Remove Ported.bat** takes them out again.
+2. Upload that whole folder privately (Google Drive, OneDrive or MEGA) and send the link to your friends. It's several GB.
 
-Pack again after every porting run: friends need exactly the same pack. DMorph users with the same pack see each other's ported models, mounts and items; everyone else sees your normal look. These are Blizzard's files, so keep packs private, not on GitHub.
+Pack again after every porting run: friends need exactly the same pack. DMorph users with the same pack see each other's ported models, mounts and items; everyone else sees your normal look.
 
 
 ## Screenshots
@@ -168,6 +177,7 @@ Project page: https://bdot89.github.io/DmorphOcto/
 - **Tests:** powershell -ExecutionPolicy Bypass -File tools\run_tests.ps1 (or lua tests/run_tests.lua with Lua 5.0).
 - **Rebuilding the lists after an OctoWoW update:** close the game and run powershell -ExecutionPolicy Bypass -File tools\update_from_game.ps1
 - **Building DmorphHelper:** sh helper/build.sh with 32-bit MinGW (on Windows: winlibs i686, from Git Bash).
+- **Ported packs** are made by a separate converter (modern M2 models to 1.12's format, plus the game tables); it isn't published, as it works on Blizzard's files. DMorph only reads Data\Ported.lua if it's there (it's git-ignored), and build_*.ps1 skip the pack's patch files.
 - Written for the game's Lua 5.0: no #, no %, no string.match.
 
 ## Credits
