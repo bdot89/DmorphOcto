@@ -172,7 +172,7 @@ With a ported pack (optional, see above):
 
 ![A ported mount in Orgrimmar](docs/ported-mount.jpg)
 ![Ported armour and weapons](docs/ported-armour.jpg)
-![Crackling Lightning glow](docs/ported-glow.jpg)
+![Crackling Lightning glow on a ported sword](docs/ported-glow.webp)
 ![A ported set and greatsword](docs/ported-pandaria.jpg)
 ![A ported flying machine](docs/ported-owl.jpg)
 ![A ported jet bike](docs/ported-jetbike.jpg)
