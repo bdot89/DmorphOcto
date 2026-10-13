@@ -28,6 +28,8 @@
 //   DmorphHelper_GetTime()                                   -> minutes shown, yours (1/0), real minutes
 //   DmorphHelper_SetVirtualItem(itemID, templateItemID, displayID) (an item only this PC has)
 //   DmorphHelper_GetVirtualItem(itemID)                       -> templateItemID, displayID
+//   DmorphHelper_SetAmmo(itemID)                             (your own ammo field; 0 = none)
+//   DmorphHelper_GetAmmo()                                   -> ammo item ID
 // unit is a unit token for a player you could help ("player", "target", ...);
 // slot is an inventory slot, 1-19. The functions only write the values: the
 // addon keeps what it wants and puts it back after the server resends them.
@@ -48,7 +50,7 @@
 #define GAME_FASTCALL __attribute__((fastcall))
 #define GAME_THISCALL __attribute__((thiscall))
 
-#define HELPER_VERSION 11
+#define HELPER_VERSION 12
 
 // Game functions, build 5875 (from VanillaHelpers' Offsets.h).
 #define FUN_INVALID_FUNCTION_PTR_CHECK 0x42A320
@@ -115,6 +117,8 @@
 #define PLAYER_BYTES_2 0xC2
 #define PLAYER_VISIBLE_ITEM_1_0 0x104 // item ID, then 7 enchant IDs (permanent, temporary, ...)
 #define VISIBLE_ITEM_STRIDE 0xC
+// PLAYER_AMMO_ID (UNIT_END 0xBC + 0x40D), only in your own player's fields.
+#define PLAYER_AMMO_ID 0x4C9
 
 #define TYPEMASK_PLAYER 0x10
 // Any other display: switching to it and back makes the game rebuild the
@@ -200,6 +204,29 @@ static void Reload(void *unit) {
 
 static int GAME_FASTCALL Script_Version(void *L) {
     LuaPushNumber(L, HELPER_VERSION);
+    return 1;
+}
+
+// Ammo. A ranged attack's missile comes from your ammo item (arrows, bullets)
+// for bows, guns and crossbows; a character without ammo (a wand user in a
+// bow morph) fires nothing. The field is only yours: the addon writes the
+// ammo it wants and puts it back when the server resends the real one.
+static void *Me(void);
+
+static int GAME_FASTCALL Script_SetAmmo(void *L) {
+    uint32_t item = NumberArg(L, 1, 0, 2147483647.0, "Usage: DmorphHelper_SetAmmo(itemID or 0)");
+    void *me = Me();
+    if (!me) {
+        LuaError(L, "Unit not found.");
+        return 0;
+    }
+    Fields(me)[PLAYER_AMMO_ID] = item;
+    return 0;
+}
+
+static int GAME_FASTCALL Script_GetAmmo(void *L) {
+    void *me = Me();
+    LuaPushNumber(L, me ? Fields(me)[PLAYER_AMMO_ID] : 0);
     return 1;
 }
 
@@ -745,6 +772,8 @@ static void GAME_FASTCALL LoadScriptFunctions_h(void) {
     RegisterFunction("DmorphHelper_GetTime", (uintptr_t)&Script_GetTime);
     RegisterFunction("DmorphHelper_SetVirtualItem", (uintptr_t)&Script_SetVirtualItem);
     RegisterFunction("DmorphHelper_GetVirtualItem", (uintptr_t)&Script_GetVirtualItem);
+    RegisterFunction("DmorphHelper_SetAmmo", (uintptr_t)&Script_SetAmmo);
+    RegisterFunction("DmorphHelper_GetAmmo", (uintptr_t)&Script_GetAmmo);
 }
 
 // The game's own image must reach every address used here (a 1.12.1 exe).
