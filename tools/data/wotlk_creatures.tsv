@@ -1,0 +1,462 @@
+# display<TAB>creature name, for tools/build_models.ps1 (made by the wowport namecheck command from AzerothCore's creature_template + Retail's Creature table)
+14516	Fiend of Air
+14503	Atsun of the Air
+13490	Unstable Air Elemental
+13629	Cyclothar
+14502	Lightning Sentry
+15538	Kalandrios
+12051	Treebole
+822	Tamable Bear
+1990	Elder Brown Bear
+16156	Restless Skeleton
+3127	Scarlet Land Cannon
+10808	Frostwing Chimaera
+1939	Echo Isle Animal
+834	Amani Crocolisk
+1037	Tamable Crocolisk
+15145	Mangal Crocolisk
+6838	Crypt Fiend
+6532	Razelikh the Defiler's Soul
+15946	Flying Blue Drake
+2717	Emerald Consort
+2718	Ruby Dragon
+14356	Azure Captain
+14359	Wyrmrest Protector
+12891	Charscale Elite
+13971	Power of the Blue Flight
+6686	Illidari Shadowlord
+8612	Pentatharon
+8571	Moonglade Warden
+13673	Ruuan Weald Sister
+2585	Cassa Crimsonwing
+3232	Netherstorm Target
+5771	Furnan Skysoar
+21228	Sky Sergeant Doryn
+69	Earthen Thrall
+1109	Earthen Servant
+14506	Broken Earth Elemental
+11032	Darkclaw Bat
+14780	Riding Bat
+4185	Vampiric Batling
+15227	Whisper
+15298	Felguard Legionnaire
+7972	Wild Fel Stalker
+12109	Simmer
+14508	Acolyte of Fire
+14518	Fel Rager
+16159	Putrid Abomination
+2001	Stillpine Raider
+7616	Shalewing
+547	Pack of Ghouls
+1888	Savage Hill Mystic
+2581	Gnome Citizen
+842	Hardknuckle Forager
+17166	Riding Skeletal Gryphon
+7352	Chomper
+2165	Coldwind Waste Huntress
+15231	Amani Healing Ward
+15505	Sunhawk Rogue
+15510	Faraden Thelryn
+15514	Outrunner Alarion
+15516	Magistrix Erona
+15520	Ranger Sareyn
+15522	Julia Sunstriker
+15525	Marsilla Dawnstar
+15526	Raelis Dawnstar
+15527	Shara Sunwing
+15529	Jainthess Thelryn
+15530	Innkeeper Delaniel
+15907	Arathel Sunforge
+15908	Larianna Riverwind
+15910	Ley-Keeper Velania
+15911	Lieutenant Dawnrunner
+15913	Ranger Jaela
+15919	Apprentice Loralthalis
+15924	Marniel Amberlight
+15930	Apprentice Mirveda
+15933	Apprentice Veya
+16059	Skymistress Gloaming
+16065	Magistrix Landra Dawnstrider
+16069	Ranger Valanna
+16080	Dame Auriferous
+16090	Tranquillien Scout
+16116	Arcanist Janeda
+16117	Advisor Valwyn
+16119	Apprentice Shatharia
+16120	Farstrider Sedina
+16121	Ranger Vynna
+16122	Ranger Lilatha
+16183	Zalene Firstlight
+16193	Farstrider Solanna
+16247	Blood Elf Scout
+16249	Surveyor Candress
+16288	Recovering Pilgrim
+16321	Farstrider Dusking
+16543	Wanton Hostess
+16544	Wanton Hostess
+16545	Wanton Hostess
+16546	Wanton Hostess
+16675	Anathos
+16677	Daestra
+16678	Eralan
+16679	Keeli
+16680	Garridel
+16681	Hannovia
+16683	Kanaria
+16684	Narina
+16686	Quarelestra
+16687	Sheri
+16688	Silanna
+16689	Tannaria
+16690	Vara
+16691	Winaestra
+16694	Feynna
+16695	Ceera
+16696	Elana
+16698	Telia
+16709	Blood Elf Scout
+16713	Sathiel
+16716	Silvermoon Apprentice
+16722	Magistrix Carinda
+16725	Pilgrim Gal'ressa
+16732	Eversong Partygoer
+16733	Eversong Partygoer
+16745	Sedana
+16748	Botanist Nathera
+16749	Razia
+16750	Sylann
+16751	Shalenn
+16752	Galana
+16753	Innkeeper Jovia
+16754	Tandrine
+16763	Celana
+16764	Danwe
+16774	Tyn
+16775	Ileda
+16776	Lynalis
+16779	Gloresse
+16780	Velanni
+16781	Zaedana
+16795	Belestra
+16797	Deynna
+16799	Tynna
+16800	Talionia
+16801	Zalle
+16802	Zandine
+16803	Zaralda
+16804	Zathanna
+16812	Ithene
+16820	Lady Liadrin
+16845	Magistrix Elosai
+16846	Advisor Duskingdawn
+16850	Ambassador Dawnsinger
+16865	Ithania
+16948	Provisioner Valine
+16956	Falcon Watch Ranger
+16957	Falcon Watch Ranger
+17211	Blood Knight Initiate
+17260	Champion Swiftblade
+17265	Eversong Ranger
+17266	Eversong Ranger
+17268	Captured Sunhawk Agent
+17284	Orgrim's Hammer Scout
+17350	Sunhawk Agent
+17351	Sunhawk Agent
+17354	Sunhawk Saboteur
+17355	Sunhawk Saboteur
+17358	Sunhawk Reclaimer
+17359	Sunhawk Reclaimer
+17362	Sunhawk Spy
+17363	Sunhawk Spy
+17366	Sunhawk Defender
+17368	Sunhawk Pyromancer
+17377	Captured Sunhawk Agent Transform
+17475	Sunhawk Defiler
+17476	Dalaran Visitor
+17541	Silvermoon Farstrider
+17551	Initiate Emeline
+17614	Trayanise
+17651	Aresella
+17671	Lyria Skystrider
+17775	Bloodwarder Protector
+17776	Bloodwarder Protector
+17779	Bloodwarder Falconer
+17780	Bloodwarder Falconer
+17785	Terellia
+17813	Bloodwarder Steward
+17819	Sunseeker Botanist
+17820	Sunseeker Botanist
+17843	Sunseeker Researcher
+17878	Magistrix Fyalenn
+17884	Bloodwarder Greenkeeper
+20723	Eclipsion Spellbinder
+15504	Eclipsion Jailor
+15515	Lanthan Perilon
+15521	Jesthenis Sunstriker
+15524	Summoner Teli'Larien
+15528	Arcanist Helion
+15532	Arcanist Ithanas
+15906	Ranger Selron
+15909	Ley-Keeper Caidanis
+15912	Runewarden Deryan
+15914	Whisperwind Villager
+15915	Velendris Whitemorn
+15916	Hathvelion Sungaze
+15936	Eversong Ranger
+16055	Scout Fionna
+16057	Skymaster Sunwing
+16058	Sathren Azuredawn
+16067	Ranger Lethvalin
+16068	Lieutenant Tomathren
+16070	Captain Helios
+16079	Arcanist Vandril
+16088	Tranquillien Scout
+16112	Ambassador Sunsorrow
+16118	Magister Quallestis
+16123	Geranis Whitemorn
+16134	Botanist Tyniarrel
+16192	Ranger Krenn'an
+16207	Apprentice Vor'el
+16248	Blood Elf Scout
+16250	Blood Elf Remains
+16265	Advisor Sorrelon
+16285	Martik Tor'seldori
+16286	Recovering Pilgrim
+16287	Recovering Pilgrim
+16319	Dying Blood Elf
+16469	Silvermoon Apprentice
+16470	Magister Hathris
+16471	Magister Kaendris
+16472	Magister Idonis
+16625	Duelist Larenis
+16626	Sergeant Kan'ren
+16648	Taleris Dawngazer
+16658	Magister Duskwither
+16692	Jenath
+16693	Silvermoon Citizen
+16697	Hatheon
+16699	Amin
+16700	Celoenus
+16701	Innkeeper Kalarin
+16702	Farsil
+16703	Geron
+16706	Ilthuril
+16707	Ponaris
+16708	Sathein
+16710	Blood Elf Scout
+16712	Perascamin
+16714	Smith Daelarin
+16715	Telenus
+16717	Ranger Captain Venn'ren
+16719	Ryathen the Somber
+16720	Arcanist Calesthris Dawnstar
+16734	Eversong Partygoer
+16735	Eversong Partygoer
+16747	Camberon
+16755	Rathin
+16756	Kredis
+16757	Drathen
+16758	Alestus
+16759	Mathaleron
+16762	Bemarrin
+16766	Torian
+16768	Talmar
+16769	Melaris
+16770	Halthenis
+16772	Eriden
+16773	Dolothos
+16787	Alamma
+16788	Aldrae
+16808	Silvermoon Builder
+16809	Inethven
+16810	Irodalmin
+16811	Ithelis
+16813	Ithren
+16815	Osselan
+16816	Oninath
+16817	Lotheolan
+16819	Noraelath
+16821	Paniar
+16823	Quelis
+16824	Quithas
+16827	Welethelon
+16828	Winthren
+16829	Champion Bachi
+16830	Yatheon
+16831	Zanien
+16832	Silvermoon Builder
+16847	Nemeth Hawkeye
+16848	Balandar Brightstar
+16849	Advisor Sarophas
+16852	Advisor Sunsworn
+16918	Keltus Darkleaf
+16954	Falcon Watch Ranger
+16955	Falcon Watch Ranger
+17115	Master Handler Sylvester
+17159	Heron Skygaze
+17168	Matis
+17198	Blood Knight Stillblade
+17199	Knight-Lord Bloodvalor
+17201	Magister Astalor Bloodsworn
+17224	Instructor Antheol
+17257	Master Kelerun Bloodmourn
+17258	Blood Knight Dawnstar
+17259	Champion Lightrend
+17261	Champion Sunstriker
+17264	Eversong Ranger
+17267	Captured Sunhawk Agent
+17278	Blood Elf Magister
+17289	Apprentice Ralen
+17290	Apprentice Meledor
+17348	Sunhawk Agent
+17349	Sunhawk Agent
+17352	Sunhawk Saboteur
+17353	Sunhawk Saboteur
+17356	Sunhawk Reclaimer
+17357	Sunhawk Reclaimer
+17360	Sunhawk Spy
+17361	Sunhawk Spy
+17364	Sunhawk Defender
+17365	Sunhawk Defender
+17367	Sunhawk Pyromancer
+17376	Captured Sunhawk Agent Transform
+17473	Sunhawk Defiler
+17474	Sunhawk Defiler
+17477	Novice Ranger
+17536	Champion Vranesh
+17538	Silvermoon Farstrider
+17539	Silvermoon Farstrider
+17552	Blood Knight Initiate
+17553	Initiate Colin
+17568	Ambassador Kelemar
+17615	Keyanomir
+17672	Silvermoon Magister
+17673	Priest Kath'mar
+17681	Dar'Khan Drathir
+17773	Bloodwarder Protector
+17774	Bloodwarder Protector
+17778	Bloodwarder Falconer
+17816	Bloodwarder Steward
+17817	Bloodwarder Steward
+17874	Conjurer Tyren
+17883	Bloodwarder Greenkeeper
+18211	Silvermoon Citizen
+21264	Master Pyreanor
+21564	Illidari Archon
+21565	Illidari Archon
+1170	Horse
+109	Hillsbrad Citizen
+94	Wendy Darren
+96	Hillsbrad Citizen
+1474	Worried Citizen
+5499	Vana Grey
+6684	Bishop Lazaril
+20659	Spymistress Mehlisah Highcrown
+795	Hillsbrad Citizen
+428	Beggar
+211	Hillsbrad Farmer
+79	Captured Valgarde Child
+103	Mayor Quimby
+15093	Crafticus Jones
+16335	Grizzly Hills Flame Warden
+18111	Shadowy Executioner
+18446	Allerian Horseman
+18689	Shattrath Saul
+127	"Mad" Jonah Sterling
+1214	Spectral Sailor
+226	Hillsbrad Citizen
+105	Hillsbrad Citizen
+18	Aged Dalaran Wizard
+6674	Frigid Lieutenant
+10270	Mangy Hyena
+4636	Tamable Hyena
+10811	Exploding Goblin Chisel
+2160	Wildlord Antelarion
+1231	Infected Kodo Beast
+8470	Tavgren's Kodo
+15963	Monsterous Larva
+8149	Forest Swarmer
+16176	Apothecary Frye
+1090	Greater Spindleweb
+283	Spiderling
+2540	Stabled Hunter Pet
+659	Cavern Crawler
+1089	Giant Plague Lurker
+539	Night Web Spider
+14853	Nerub'ar Spider
+9210	Fiend of Fire
+12233	Molten Colossus
+188	Chillmere Tidehunter
+504	Chillmere Oracle
+664	Winterfin First Responder
+1755	Angry Murloc
+1762	Winterfin Gatherer
+1763	Bilgefin Scavenger
+5306	Old Icefin
+6759	Cruelfin
+369	Freed Greengill Slave
+5028	Wrathscale Marauder
+4764	Murkwater Warrior
+4251	Spectator
+7123	Night Elf Soul
+16157	Walla's Damage Dealer
+2577	Kerna
+21068	Gursha
+1869	Ushtug the Temporary
+16341	Borean Tundra Flame Keeper
+20665	Lower City Healer
+21002	Ja'y Nosliw
+112	Stranger
+14548	Jenny
+14335	Swift Burgundy Wolf
+14336	Kor'kron Riding Wolf
+14333	Snowclaw
+16191	Sandworm Missile Target (DND)
+1339	Stabled Raptor
+1340	Gundrak Raptor
+1338	Stabled Hunter Pet
+15774	Greater Crust Burster
+11347	Ambassador Jerrikar
+11342	Illidari Heartseeker
+11343	Sargeron Hellcaller
+6744	Nazzivus Felsworn
+15433	Scorchshell Pincer
+15221	Terror Totem
+15132	Serpent
+14558	Serpent
+14557	Spitting Cobra
+15135	Serpent
+14702	Phantom Hallucination
+14704	Naxxramas Shade
+1561	Tamable Silithid
+6766	Riplash Sorceress
+14852	Prophet of Quetz'lun
+201	Skeletal Ravager
+1749	Living Plague
+15380	Black Blood of Draenor
+3126	Rat Snake
+4343	Tree Python
+13610	Tiny Snowman
+12824	Guardian Spirit
+5107	Chamber Overseer
+10070	Illidari Temptress
+1041	Stabled Hunter Pet
+2579	Stranger
+2425	Young Murk Thresher
+2031	Cat
+765	Irradiated Trogg
+6530	Forged Iron Trogg
+11631	Field Corpse (Type B)
+4782	Gurubashi Cultist
+13989	Field Corpse (Type B)
+590	Hexxer Corpse
+298	Troll Berserker
+592	Catlord Corpse
+2069	Whirling Waveling
+14509	Acolyte of Water
+6197	Gnome Soul
+10274	Giant Red Wolf
+644	Scruffy
+9287	Giant Red Wolf
+9509	Gar'mak
+4067	Vengeful Husk
