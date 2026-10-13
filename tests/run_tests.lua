@@ -2311,7 +2311,8 @@ Mock.portedData = "60001\tPandaren Yeti Mount (Brown)\tmount\n60011\tTest Ported
 Mock.portedItems = "900001\t90001\t207\t647\tWarglaive of Azzinoth\t0\t5\n900002\t90002\t208\t647\tBig Ported Sword\n"
 	.. "900003\t90003\t406\t647\tPorted Shield\n"
 	.. "901001\t120001\t404\t647\tPorted Plate Helm\t1\n901002\t120002\t404\t647\tPorted Plate Chest\t5\n"
-Mock.portedSets = "Ported Plate Set\t901001,901002\n"
+	.. "901003\t120003\t401\t647\tPorted Robe\t5\n"
+Mock.portedSets = "Ported Plate Set\t901001,901002\nPorted Robe Set\t901003\n"
 loadUI()
 installMorphAPI()
 local pc = DmorphOcto.GetCreatureCatalog()
@@ -2444,6 +2445,14 @@ end
 check(setsSorted, "the sets stay sorted by name")
 local wore = DmorphOcto.WearSet(ps)
 check(wore and vh.items[1] == 901001 and vh.items[5] == 901002, "wearing it puts both pieces on")
+-- Another set takes the last one's pieces off where it has none (user: a helmet stayed on);
+-- items that aren't set pieces stay.
+DmorphOcto.SetItem(16, 900002)
+local robeSet = sc.byID[900002]
+wore = DmorphOcto.WearSet(robeSet)
+check(wore and vh.items[5] == 901003 and vh.items[1] == nil and DmorphOctoDB.items[1] == nil,
+	"the next set takes the last set's helmet off")
+check(vh.items[16] == 900002, "and keeps an item that isn't a set piece")
 slash("demorph all")
 -- Glows from later expansions (DmorphOcto_PortedGlows) come after the game's.
 DmorphOcto_GlowData = GLOWS

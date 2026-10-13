@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.15.0"
+local VERSION = "2.15.1"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -2777,7 +2777,9 @@ function M.SetMount(displayID)
 end
 
 -- Puts on every piece of set `index` (its position in GetSetCatalog) whose
--- slot is known. Slots the set has no piece for keep what they show.
+-- slot is known. A piece of any set (the last one worn, or one picked on its
+-- own) in a slot this set has no piece for comes off first, so sets don't mix
+-- (user, 13 Oct: the last set's helmet stayed on); other items stay.
 function M.WearSet(index)
 	if not Begin() then
 		return false, MissingAPI()
@@ -2787,30 +2789,47 @@ function M.WearSet(index)
 	if not pieces then
 		return false, "Pick a set in the list first."
 	end
-	local used, worn, unknown = {}, 0, 0
-	local ok, err = true, nil
+	if not catalog.isPiece then
+		catalog.isPiece = {}
+		for i = 1, catalog.count do
+			for k = 1, table.getn(catalog.pieces[i]) do
+				catalog.isPiece[catalog.pieces[i][k]] = true
+			end
+		end
+	end
+	local used, slotOf, worn, unknown = {}, {}, 0, 0
 	for i = 1, table.getn(pieces) do
 		local slots = M.GetItemSlots(pieces[i])
-		local slot
 		if slots then
 			-- A second one-hand weapon goes in the off hand.
 			for k = 1, table.getn(slots) do
 				if not used[slots[k]] then
-					slot = slots[k]
+					used[slots[k]], slotOf[i] = true, slots[k]
 					break
 				end
 			end
 		else
 			unknown = unknown + 1
 		end
-		if slot then
-			used[slot] = true
+	end
+	local ok, err = true, nil
+	local function Put(slot, itemID)
+		db.items[slot] = itemID
+		local slotOK, slotErr = ApplyItem(slot)
+		if ok and not slotOK then
+			ok, err = slotOK, slotErr
+		end
+	end
+	for i = 1, table.getn(SLOT_ORDER) do
+		local slot = SLOT_ORDER[i]
+		if not used[slot] and db.items[slot] and catalog.isPiece[db.items[slot]] then
+			Put(slot, nil)
+		end
+	end
+	for i = 1, table.getn(pieces) do
+		if slotOf[i] then
 			worn = worn + 1
-			db.items[slot] = pieces[i]
-			local slotOK, slotErr = ApplyItem(slot)
-			if ok and not slotOK then
-				ok, err = slotOK, slotErr
-			end
+			Put(slotOf[i], pieces[i])
 		end
 	end
 	local later = ""
