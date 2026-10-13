@@ -170,9 +170,11 @@ Pack again after every porting run: friends need exactly the same pack. DMorph u
 
 With a ported pack (optional, see above):
 
-![A ported mount in Orgrimmar](docs/ported-mount.jpg)
+![A ported goblin gunner mount](docs/ported-gunner.jpg)
+![A ported war machine mount in Orgrimmar](docs/ported-mount.jpg)
+![Crackling Lightning glow on a ported sword](docs/ported-glow.jpg)
 ![Ported armour and weapons](docs/ported-armour.jpg)
-![Crackling Lightning glow on a ported sword](docs/ported-glow.webp)
+![Ported winged shoulders and a glowing sword](docs/ported-glow.webp)
 ![A ported set and greatsword](docs/ported-pandaria.jpg)
 ![A ported flying machine](docs/ported-owl.jpg)
 ![A ported jet bike](docs/ported-jetbike.jpg)
