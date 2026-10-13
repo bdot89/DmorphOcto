@@ -1727,6 +1727,25 @@ check(vh.display == 6894 and Mock.lastLanguage == "Orcish" and DmorphOctoDB.lang
 say(".demorph")
 SendChatMessage("hello", "SAY")
 check(Mock.lastLanguage == "Orcish", "unmorphed, your own default is used")
+-- Logging in during a race morph, VanillaHelpers can still show the morph's
+-- race and model when DMorph reads your own (user: hostile NPCs and no flight
+-- paths until a /reload). The race read cleanly before is kept per character.
+check(DmorphOctoDB.ownRace == 8 and DmorphOctoDB.ownGender == 0, "your own race and gender are kept per character")
+say(".race human")
+local realNative = vh.serverNative
+vh.serverNative = 49 -- this login shows the morph's model as your own
+loadUI()
+Mock.Tick(0.6)
+check(DmorphOcto.GetNative() == 8 and DmorphOctoDB.ownRace == 8, "logging in as a Human morph, a Troll is still a Troll")
+SendChatMessage("hello", "SAY")
+check(Mock.lastLanguage == "Orcish" and DmorphOctoDB.languages[2] == "Troll", "and keeps the Troll's languages")
+say(".race orc")
+vh.serverNative = 51
+loadUI()
+Mock.Tick(0.6)
+check(DmorphOcto.GetNative() == 8, "also when the morph is a race of your own faction")
+vh.serverNative = realNative
+say(".demorph")
 Mock.raceLanguages, Mock.faction = nil, nil
 
 ------------------------------------------------------------------------------

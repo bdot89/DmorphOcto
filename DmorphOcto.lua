@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.14.2"
+local VERSION = "2.14.3"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -60,16 +60,16 @@ end
 -- exactly these and rewrites race and gender as well, so your own skin, face
 -- and hair carry over. Race 10 is the High Elf on Turtle-based clients.
 local RACES = {
-	{ name = "Human",     male = 49,    female = 50 },
-	{ name = "Orc",       male = 51,    female = 52 },
-	{ name = "Dwarf",     male = 53,    female = 54 },
-	{ name = "Night Elf", male = 55,    female = 56 },
-	{ name = "Undead",    male = 57,    female = 58 },
-	{ name = "Tauren",    male = 59,    female = 60 },
-	{ name = "Gnome",     male = 1563,  female = 1564 },
-	{ name = "Troll",     male = 1478,  female = 1479 },
-	{ name = "Goblin",    male = 6894,  female = 6895 },
-	{ name = "High Elf",  male = 15476, female = 15475 },
+	{ name = "Human",     male = 49,    female = 50,    faction = "Alliance" },
+	{ name = "Orc",       male = 51,    female = 52,    faction = "Horde" },
+	{ name = "Dwarf",     male = 53,    female = 54,    faction = "Alliance" },
+	{ name = "Night Elf", male = 55,    female = 56,    faction = "Alliance" },
+	{ name = "Undead",    male = 57,    female = 58,    faction = "Horde" },
+	{ name = "Tauren",    male = 59,    female = 60,    faction = "Horde" },
+	{ name = "Gnome",     male = 1563,  female = 1564,  faction = "Alliance" },
+	{ name = "Troll",     male = 1478,  female = 1479,  faction = "Horde" },
+	{ name = "Goblin",    male = 6894,  female = 6895,  faction = "Horde" },
+	{ name = "High Elf",  male = 15476, female = 15475, faction = "Alliance" },
 }
 local RACE_ALIASES = {
 	human = 1, orc = 2, dwarf = 3, nightelf = 4, ne = 4, undead = 5, scourge = 5,
@@ -1225,6 +1225,13 @@ function InitDB()
 	if type(db.defaultLanguage) ~= "string" then
 		db.defaultLanguage = nil
 	end
+	-- Your own race and gender, last read cleanly (CaptureNative).
+	if not (type(db.ownRace) == "number" and RACES[db.ownRace]) then
+		db.ownRace = nil
+	end
+	if db.ownGender ~= 0 and db.ownGender ~= 1 then
+		db.ownGender = nil
+	end
 	local time = tonumber(db.time)
 	db.time = time and time >= 0 and time < 1440 and math.floor(time) or nil
 	local weatherKind = type(db.weather) == "table" and tonumber(db.weather[1])
@@ -1344,6 +1351,39 @@ local function CaptureNative()
 		elseif sex == 2 then
 			nativeGender = 0
 		end
+	end
+	-- Logging in during a race morph, VanillaHelpers can still show the
+	-- morph's race and model here (its overrides outlive a logout), and the
+	-- morph was taken for your own race: NPCs of your faction hostile, no
+	-- flight paths, until a /reload (user, 13 Oct). So your race is kept per
+	-- character (db.ownRace) whenever it's read cleanly, and a read that is
+	-- the saved morph's race, or of the other faction (a race morph doesn't
+	-- change your faction), uses the kept one.
+	local morphRace = db.race
+	if not morphRace and db.display then
+		for race = 1, table.getn(RACES) do
+			if RACES[race].male == db.display or RACES[race].female == db.display then
+				morphRace = race
+			end
+		end
+	end
+	local faction = UnitFactionGroup("player")
+	local suspect = nativeRace and morphRace and nativeRace == morphRace
+	-- Only with a morph on: without one the read is clean, whatever faction
+	-- a server gives a race.
+	local wrongFaction = (db.race or db.display) and nativeRace and RACES[nativeRace] and RACES[nativeRace].faction
+		and faction and RACES[nativeRace].faction ~= faction
+	if suspect or wrongFaction then
+		if db.ownRace and RACES[db.ownRace] and (not faction or RACES[db.ownRace].faction == faction) then
+			nativeRace, nativeGender = db.ownRace, db.ownGender
+		elseif wrongFaction then
+			-- Nothing kept yet: at least a race of your faction.
+			nativeRace = faction == "Horde" and 2 or 1
+		end
+		return -- the languages read now would be the morph's
+	end
+	if nativeRace then
+		db.ownRace, db.ownGender = nativeRace, nativeGender
 	end
 	-- The game lists the languages of the race it thinks you are, and a race
 	-- morph changes that (a Gnome morph lists Common and Gnomish), so the
