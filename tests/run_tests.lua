@@ -2444,6 +2444,11 @@ for i = 2, sc.count do
 	end
 end
 check(setsSorted, "the sets stay sorted by name")
+-- The game answers a ported item with its template's record (name included):
+-- set tooltips and messages use the ported name.
+Mock.serverItems[901001] = { "Hooded Cowl", 1, "INVTYPE_HEAD" }
+check(DmorphOcto.DescribeItem(901001, 1) == "[Ported Plate Helm] (901001)", "a ported piece is named by its own name")
+Mock.serverItems[901001] = nil
 local wore = DmorphOcto.WearSet(ps)
 check(wore and vh.items[1] == 901001 and vh.items[5] == 901002, "wearing it puts both pieces on")
 -- Another set takes the last one's pieces off where it has none (user: a helmet stayed on);

@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.15.2"
+local VERSION = "2.15.3"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1034,6 +1034,12 @@ end
 -- The item's name from the client's cache, or else from the catalogue: the
 -- slot's own list first, then the others (a shirt can be morphed onto the chest).
 function M.DescribeItem(itemID, slot)
+	-- The game answers a ported item with its template's record, name and all
+	-- (the Sets tooltip listed "Layered Tunic"): its own name is in Ported.lua.
+	local ported = PortedItems()[itemID]
+	if ported then
+		return "[" .. ported.name .. "] (" .. itemID .. ")"
+	end
 	local ok, name = pcall(GetItemInfo, itemID)
 	if not (ok and name) then
 		name = nil
