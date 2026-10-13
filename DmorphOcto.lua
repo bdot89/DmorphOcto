@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.14.3"
+local VERSION = "2.15.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1930,20 +1930,30 @@ end
 
 -- Every glow the client can draw (Data/Glows.lua): per glow its visual ID, an
 -- enchant ID that shows it, its name (the shortest enchant name), all the
--- enchant names and its effect models.
+-- enchant names and its effect models. Then the porting tool's glows from
+-- later expansions (Data/Ported.lua's DmorphOcto_PortedGlows, same format;
+-- its patch adds the enchants), marked ported.
 local glows
 function M.GetGlows()
-	local text = DmorphOcto_GlowData or ""
-	if not glows or glows.text ~= text then
-		glows = { text = text, count = 0, visual = {}, enchant = {}, name = {}, names = {}, models = {}, search = {} }
-		for visual, enchant, names, models in string.gfind(text, "(%d+)\t(%d+)\t([^\t\n]*)\t([^\t\n]*)") do
-			local n = glows.count + 1
-			glows.count = n
-			glows.visual[n], glows.enchant[n] = tonumber(visual), tonumber(enchant)
-			local _, _, first = strfind(names, "^([^;]+)")
-			glows.name[n] = first or ("Glow " .. visual)
-			glows.names[n], glows.models[n] = names, models
-			glows.search[n] = strlower(names .. " " .. models .. " " .. visual .. " " .. enchant)
+	local text, portedText = DmorphOcto_GlowData or "", DmorphOcto_PortedGlows or ""
+	if not glows or glows.text ~= text or glows.portedText ~= portedText then
+		glows = { text = text, portedText = portedText, count = 0, visual = {}, enchant = {}, name = {}, names = {},
+			models = {}, search = {}, ported = {} }
+		local sources = { text, portedText }
+		for s = 1, 2 do
+			for visual, enchant, names, models in string.gfind(sources[s], "(%d+)\t(%d+)\t([^\t\n]*)\t([^\t\n]*)") do
+				local n = glows.count + 1
+				glows.count = n
+				glows.visual[n], glows.enchant[n] = tonumber(visual), tonumber(enchant)
+				local _, _, first = strfind(names, "^([^;]+)")
+				glows.name[n] = first or ("Glow " .. visual)
+				glows.names[n], glows.models[n] = names, models
+				glows.search[n] = strlower(names .. " " .. models .. " " .. visual .. " " .. enchant)
+				if s == 2 then
+					glows.ported[n] = true
+					glows.search[n] = glows.search[n] .. " ported"
+				end
+			end
 		end
 	end
 	return glows

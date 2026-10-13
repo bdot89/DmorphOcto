@@ -2445,6 +2445,26 @@ check(setsSorted, "the sets stay sorted by name")
 local wore = DmorphOcto.WearSet(ps)
 check(wore and vh.items[1] == 901001 and vh.items[5] == 901002, "wearing it puts both pieces on")
 slash("demorph all")
+-- Glows from later expansions (DmorphOcto_PortedGlows) come after the game's.
+DmorphOcto_GlowData = GLOWS
+DmorphOcto_PortedGlows = "155\t2673\tMongoose\tMongooseGlow_High\n158\t2671\tSunfire\tSunfireGlow_High\n"
+local gl = DmorphOcto.GetGlows()
+check(gl.count == 6 and gl.name[5] == "Mongoose" and gl.ported[5] and gl.ported[6] and not gl.ported[4],
+	"ported glows are listed after the game's")
+check(DmorphOcto.DescribeGlow(2671) == "Sunfire", "and named")
+local _, portedCount = DmorphOcto.FilterGlows("ported")
+check(portedCount == 2, "searching \"ported\" finds them")
+if not DmorphOctoFrame:IsVisible() then
+	DmorphOcto_ToggleUI()
+end
+Mock.Click(DmorphOctoTabGlows)
+Mock.Type(DmorphOctoGlowSearch, "")
+check(DmorphOctoGlowListRow5.text.text == "Mongoose" and DmorphOctoGlowListRow5.info.text == "TBC-MoP"
+	and DmorphOctoGlowListRow4.info.text == "glow 29", "the Glows tab marks them")
+press(DmorphOctoGlowListRow5)
+check(game.enchants[16][1] == 2673 and DmorphOctoGlowState.text == "Main hand: Mongoose", "clicking one puts its enchant on")
+slash("demorph all")
+DmorphOcto_PortedGlows = nil
 removeHelper()
 Mock.portedData, Mock.portedItems, Mock.portedSets = nil, nil, nil
 Mock.serverItems[647] = nil

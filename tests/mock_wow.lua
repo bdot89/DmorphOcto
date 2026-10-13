@@ -520,6 +520,7 @@ function Mock.LoadAddon(toc)
 				DmorphOcto_PortedData = Mock.portedData
 				DmorphOcto_PortedItems = Mock.portedItems
 				DmorphOcto_PortedSets = Mock.portedSets
+				DmorphOcto_PortedGlows = Mock.portedGlows
 			elseif f then
 				f:close()
 				dofile(path)

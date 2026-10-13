@@ -2193,6 +2193,9 @@ local function GlowTooltip(index, row)
 	if all.models[i] ~= "" then
 		GameTooltip:AddLine("Effect: " .. all.models[i], 0.8, 0.8, 0.8)
 	end
+	if all.ported[i] then
+		GameTooltip:AddLine("From a later expansion: needs the ported pack to show.", 0.75, 0.55, 1)
+	end
 	GameTooltip:AddLine("Glow " .. all.visual[i] .. ", shown with enchant " .. all.enchant[i] .. ".", 0.6, 0.6, 0.6)
 	GameTooltip:AddLine("Click: on your " .. strlower(M.SLOT_NAMES[glowSlot]) .. ".", 0.6, 1, 0.6)
 	GameTooltip:Show()
@@ -2224,7 +2227,11 @@ local function BuildGlowsPage(page)
 		local all = M.GetGlows()
 		local i = ui.glowResult[index]
 		row.text:SetText(all.name[i])
-		row.info:SetText("glow " .. all.visual[i])
+		if all.ported[i] then
+			row.info:SetText("TBC-MoP")
+		else
+			row.info:SetText("glow " .. all.visual[i])
+		end
 		if M.GetGlow(glowSlot) == all.enchant[i] then
 			row.tick:Show()
 		end
