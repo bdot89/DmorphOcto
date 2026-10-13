@@ -136,7 +136,7 @@ Item slots: 1 head, 3 shoulder, 4 shirt, 5 chest, 6 waist, 7 legs, 8 feet, 9 wri
 
 ## Ported packs (optional)
 
-DMorph from this page has no later-expansion models, and doesn't need them. A ported pack adds them: extra patch files with models, mounts, weapons, armour, sets and glows converted from a newer WoW install, plus a list for DMorph (Data\Ported.lua). These are Blizzard's files, so packs are never on GitHub: they're passed between friends privately.
+Want a LOT more models? DMorph from this page has no later-expansion models, and doesn't need them. A ported pack adds them: extra patch files with 6,399 creature looks, 949 mounts, 12,781 weapons, 36,014 armour looks, 915 armour sets and 33 weapon glows converted from a newer WoW install, plus a list for DMorph (Data\Ported.lua). They show in DMorph's lists under "Ported (later expansions)". These are Blizzard's files, so packs are never on GitHub: they're passed between friends privately.
 
 If someone sends you a pack:
 
@@ -157,15 +157,25 @@ Pack again after every porting run: friends need exactly the same pack. DMorph u
 ![DMorph banner](docs/banner.png)
 
 ![Models tab](docs/models.jpg)
-![Mounts tab](docs/mounts.jpg)
 ![Races tab](docs/races.jpg)
 ![Glows tab](docs/glows.jpg)
 ![Items tab](docs/items.jpg)
 ![Sets tab](docs/sets.jpg)
+![Weather tab](docs/weather.jpg)
 ![Wardrobe tab](docs/wardrobe.jpg)
+![Mounts tab](docs/mounts.jpg)
 ![Favourites tab](docs/favourites.jpg)
 ![In the world](docs/world.jpg)
 ![More morphs](docs/morphs.jpg)
+
+With a ported pack (optional, see above):
+
+![A ported mount in Orgrimmar](docs/ported-mount.jpg)
+![Ported armour and weapons](docs/ported-armour.jpg)
+![Crackling Lightning glow](docs/ported-glow.jpg)
+![A ported set and greatsword](docs/ported-pandaria.jpg)
+![A ported flying machine](docs/ported-owl.jpg)
+![A ported jet bike](docs/ported-jetbike.jpg)
 
 Project page: https://bdot89.github.io/DmorphOcto/
 
