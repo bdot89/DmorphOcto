@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.15.1"
+local VERSION = "2.15.2"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1565,26 +1565,56 @@ end
 -- same kind the game has cached. Wearing a ported item whose template the
 -- server never sent turned the player white until a relog (guns, thrown).
 local knownTemplate = {}
+-- Where an armour slot's template may be worn (GetItemInfo's equip location).
+-- The template's record says where the game draws the piece: a ported
+-- shoulder copying a helmet was drawn on the head (user, 13 Oct: purple
+-- pieces hanging off the shoulder with some sets).
+local SLOT_EQUIP = {
+	[1] = { INVTYPE_HEAD = true }, [3] = { INVTYPE_SHOULDER = true }, [4] = { INVTYPE_BODY = true },
+	[5] = { INVTYPE_CHEST = true, INVTYPE_ROBE = true }, [6] = { INVTYPE_WAIST = true }, [7] = { INVTYPE_LEGS = true },
+	[8] = { INVTYPE_FEET = true }, [9] = { INVTYPE_WRIST = true }, [10] = { INVTYPE_HAND = true },
+	[15] = { INVTYPE_CLOAK = true }, [19] = { INVTYPE_TABARD = true },
+}
+
+-- Whether the game knows item id and it can stand in for ported item p:
+-- armour must be worn in p's slot, weapons only need to be known.
+local function TemplateFits(p, id)
+	local ok, name, _, _, _, _, _, _, equip = pcall(GetItemInfo, id)
+	if not (ok and name) then
+		return false
+	end
+	return not p.slot or (SLOT_EQUIP[p.slot] and SLOT_EQUIP[p.slot][equip or ""]) or false
+end
+
+-- The item whose record ported item p copies: its own template if the game
+-- knows it, else a known item worn in the same slot (armour) or of the same
+-- kind (weapons), else nil (and the template is asked for).
 local function PortedTemplate(p)
-	local ok, name = pcall(GetItemInfo, p.template)
-	if ok and name then
+	if TemplateFits(p, p.template) then
 		return p.template
 	end
-	local cached = knownTemplate[p.kind]
-	if cached then
-		ok, name = pcall(GetItemInfo, cached)
-		if ok and name then
-			return cached
+	local key = p.kind
+	if p.slot then
+		key = "slot" .. p.slot
+	end
+	local cached = knownTemplate[key]
+	if cached and TemplateFits(p, cached) then
+		return cached
+	end
+	if p.slot then
+		for id in pairs(M.GetItemCatalog(p.slot).byID) do
+			if not PortedItems()[id] and TemplateFits(p, id) then
+				knownTemplate[key] = id
+				return id
+			end
 		end
-	end
-	if not itemTypes then
-		ReadItemTypes()
-	end
-	for id, kind in pairs(itemTypes) do
-		if kind == p.kind then
-			ok, name = pcall(GetItemInfo, id)
-			if ok and name then
-				knownTemplate[p.kind] = id
+	else
+		if not itemTypes then
+			ReadItemTypes()
+		end
+		for id, kind in pairs(itemTypes) do
+			if kind == p.kind and TemplateFits(p, id) then
+				knownTemplate[key] = id
 				return id
 			end
 		end

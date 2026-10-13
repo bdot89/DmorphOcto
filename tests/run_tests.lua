@@ -2310,8 +2310,9 @@ removeHelper()
 Mock.portedData = "60001\tPandaren Yeti Mount (Brown)\tmount\n60011\tTest Ported Thing\t\n"
 Mock.portedItems = "900001\t90001\t207\t647\tWarglaive of Azzinoth\t0\t5\n900002\t90002\t208\t647\tBig Ported Sword\n"
 	.. "900003\t90003\t406\t647\tPorted Shield\n"
-	.. "901001\t120001\t404\t647\tPorted Plate Helm\t1\n901002\t120002\t404\t647\tPorted Plate Chest\t5\n"
-	.. "901003\t120003\t401\t647\tPorted Robe\t5\n"
+	.. "901001\t120001\t404\t2955\tPorted Plate Helm\t1\n901002\t120002\t404\t16966\tPorted Plate Chest\t5\n"
+	.. "901003\t120003\t401\t16966\tPorted Robe\t5\n901004\t120004\t401\t99999\tPorted Cloth Mantle\t3\n"
+Mock.serverItems[16966] = { "Breastplate of Wrath", 4, "INVTYPE_CHEST" }
 Mock.portedSets = "Ported Plate Set\t901001,901002\nPorted Robe Set\t901003\n"
 loadUI()
 installMorphAPI()
@@ -2453,6 +2454,23 @@ wore = DmorphOcto.WearSet(robeSet)
 check(wore and vh.items[5] == 901003 and vh.items[1] == nil and DmorphOctoDB.items[1] == nil,
 	"the next set takes the last set's helmet off")
 check(vh.items[16] == 900002, "and keeps an item that isn't a set piece")
+-- A ported shoulder whose template the game doesn't know borrows a known
+-- shoulder, never another slot's item of its kind (a cloth hat drew it on the head).
+slash("item 3 901004")
+check(vh.items[3] ~= 901004 and contains(lastChat(), "hasn't loaded an item to copy"),
+	"a known cloth hat doesn't stand in for a cloth shoulder")
+local mantle
+for id in pairs(DmorphOcto.GetItemCatalog(3).byID) do
+	if id < 900000 then
+		mantle = id
+		break
+	end
+end
+Mock.serverItems[mantle] = { "Some Mantle", 2, "INVTYPE_SHOULDER" }
+slash("item 3 901004")
+check(vh.items[3] == 901004 and game.virtual[901004] and game.virtual[901004][1] == mantle,
+	"a known shoulder does")
+Mock.serverItems[mantle] = nil
 slash("demorph all")
 -- Glows from later expansions (DmorphOcto_PortedGlows) come after the game's.
 DmorphOcto_GlowData = GLOWS
@@ -2476,7 +2494,7 @@ slash("demorph all")
 DmorphOcto_PortedGlows = nil
 removeHelper()
 Mock.portedData, Mock.portedItems, Mock.portedSets = nil, nil, nil
-Mock.serverItems[647] = nil
+Mock.serverItems[647], Mock.serverItems[16966] = nil, nil
 loadUI()
 check(not DmorphOcto.GetCreatureCatalog().byID[60001], "without Data/Ported.lua there are no ported models")
 
