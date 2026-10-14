@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.15.6"
+local VERSION = "2.16.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1034,6 +1034,9 @@ end
 -- The item's name from the client's cache, or else from the catalogue: the
 -- slot's own list first, then the others (a shirt can be morphed onto the chest).
 function M.DescribeItem(itemID, slot)
+	if itemID == 0 then
+		return "nothing (your own gear hidden)"
+	end
 	-- The game answers a ported item with its template's record, name and all
 	-- (the Sets tooltip listed "Layered Tunic"): its own name is in Ported.lua.
 	local ported = PortedItems()[itemID]
@@ -1070,8 +1073,10 @@ function M.DescribeOutfit(outfit)
 		look = M.DescribeBody(outfit.race, outfit.gender)
 	end
 	local count = 0
-	for _ in pairs(outfit.items) do
-		count = count + 1
+	for _, id in pairs(outfit.items) do
+		if id ~= 0 then -- 0: a slot a set hid
+			count = count + 1
+		end
 	end
 	local extra = ""
 	if outfit.look then
@@ -1308,6 +1313,7 @@ function InitDB()
 	account.favourites = favourites
 	-- Sharing with other DMorph users (Share.lua): on unless switched off.
 	account.shareOff = account.shareOff == true or nil
+	account.setsKeepOwnGear = account.setsKeepOwnGear == true or nil
 	account.othersOff = account.othersOff == true or nil
 end
 
@@ -2860,10 +2866,32 @@ function M.SetMount(displayID)
 	return M.SetMountSkin(displayID)
 end
 
+-- Your own gear under sets: by default the armour slots a set has no piece
+-- for show nothing (item 0), so your real gear doesn't show through (user,
+-- 14 Oct: their pink robe looked like "a purple filler" under 5-piece sets).
+-- DmorphOctoAccount.setsKeepOwnGear keeps your own gear there instead.
+local HIDE_UNDER_SETS = { 1, 3, 4, 5, 6, 7, 8, 9, 10, 15, 19 }
+
+function M.GetHideGearUnderSets()
+	InitDB()
+	return not account.setsKeepOwnGear
+end
+
+function M.SetHideGearUnderSets(on)
+	InitDB()
+	account.setsKeepOwnGear = not on or nil
+	if on then
+		return true, "Sets hide your own gear in the slots they have no piece for (from the next set you wear)."
+	end
+	return true, "Sets keep your own gear in the slots they have no piece for (from the next set you wear)."
+end
+
 -- Puts on every piece of set `index` (its position in GetSetCatalog) whose
 -- slot is known. A piece of any set (the last one worn, or one picked on its
 -- own) in a slot this set has no piece for comes off first, so sets don't mix
--- (user, 13 Oct: the last set's helmet stayed on); other items stay.
+-- (user, 13 Oct: the last set's helmet stayed on); other items stay. With
+-- M.GetHideGearUnderSets (the default), armour slots the set has no piece for
+-- and that show your own gear then show nothing.
 function M.WearSet(index)
 	if not Begin() then
 		return false, MissingAPI()
@@ -2906,7 +2934,8 @@ function M.WearSet(index)
 	end
 	for i = 1, table.getn(SLOT_ORDER) do
 		local slot = SLOT_ORDER[i]
-		if not used[slot] and db.items[slot] and catalog.isPiece[db.items[slot]] then
+		-- (0 = a slot the last set hid)
+		if not used[slot] and db.items[slot] and (catalog.isPiece[db.items[slot]] or db.items[slot] == 0) then
 			Put(slot, nil)
 		end
 	end
@@ -2914,6 +2943,16 @@ function M.WearSet(index)
 		if slotOf[i] then
 			worn = worn + 1
 			Put(slotOf[i], pieces[i])
+		end
+	end
+	local hidden = 0
+	if worn > 0 and not account.setsKeepOwnGear then
+		for i = 1, table.getn(HIDE_UNDER_SETS) do
+			local slot = HIDE_UNDER_SETS[i]
+			if not used[slot] and not db.items[slot] then
+				Put(slot, 0)
+				hidden = hidden + 1
+			end
 		end
 	end
 	local later = ""
@@ -2927,6 +2966,9 @@ function M.WearSet(index)
 	local count = worn .. " pieces"
 	if worn == 1 then
 		count = "1 piece"
+	end
+	if hidden > 0 then
+		count = count .. ", your own gear hidden in " .. hidden .. " slots"
 	end
 	return Result(ok, err, "Wearing " .. catalog.names[index] .. " (" .. count .. ")." .. later)
 end

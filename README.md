@@ -1,6 +1,6 @@
 # DMorph for OctoWoW
 
-Become any creature, ride any mount, wear any item. A morph window for WoW 1.12 (OctoWoW), version 2.15.6.
+Become any creature, ride any mount, wear any item. A morph window for WoW 1.12 (OctoWoW), version 2.16.0.
 
 Morphs only change what you and other DMorph users see. Everyone else, and the server, sees your real character.
 
@@ -78,7 +78,7 @@ A ported pack (see below) keeps its list in its own folder, Interface\AddOns\DMo
 - Weather: clear skies, rain, snow or a sandstorm, from light to heavy, on your screen in every zone.
 - Time of day: dawn, noon, dusk, midnight or any time, for the light, sky, sun and moon on your screen.
 - Weapon glows: Crusader, Fiery, Icy and every other glow in the game.
-- 12,000+ weapons and armour pieces, and 352 item sets in one click. Wearing a set takes the last set's pieces off.
+- 12,000+ weapons and armour pieces, and 352 item sets in one click. Wearing a set takes the last set's pieces off, and the slots the set has no piece for show nothing, so your own gear doesn't show through (switch it with the "Own gear" button in the Sets tab).
 - Wardrobe of saved outfits and favourites, for all your characters.
 - Other DMorph users see your model, items, mount skin and size, and you see theirs.
 - Your look stays after /reload, loading screens and logging in. During a race morph you keep your own faction, languages, flight paths and reputation, even when you log in morphed.
@@ -97,7 +97,7 @@ Open the window with the minimap button, /dmorph, or a key under Key Bindings > 
 - **Favourites tab:** your starred models and mount skins.
 - **Races tab:** click a portrait to become that race with your own face. The arrow rows change skin colour, face, hair and facial hair. The dice picks a random look.
 - **Glows tab:** pick main hand, off hand or ranged, then click a glow. Glows from a ported pack say "TBC-MoP"; type "ported" in the search box to list only those.
-- **Items and Sets tabs:** filter by type, quality and source (ported items and sets have their own "Ported" filter). Hover an item or set to see your character wearing it, then click to wear it.
+- **Items and Sets tabs:** filter by type, quality and source (ported items and sets have their own "Ported" filter). Hover an item or set to see your character wearing it, then click to wear it. **Own gear: hidden / shown** (Sets tab) picks whether the slots a set has no piece for show nothing (the default) or your own gear.
 - **Wardrobe tab:** save and load whole outfits.
 - **Weather tab:** pick clear skies or light, normal or heavy rain, snow or sandstorm; the Strength slider fine-tunes it. Time of day: Dawn, Noon, Dusk, Midnight or the Time slider. Server's weather and Real time give the real ones back. Only you see them; weather shows outdoors only.
 - **Setup (bottom left):** shows whether everything works, which DmorphHelper version is running, and how to fix what doesn't.

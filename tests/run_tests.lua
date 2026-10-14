@@ -2495,10 +2495,36 @@ check(wore and vh.items[1] == 901001 and vh.items[5] == 901002, "wearing it puts
 -- items that aren't set pieces stay.
 DmorphOcto.SetItem(16, 900002)
 local robeSet = sc.byID[900002]
-wore = DmorphOcto.WearSet(robeSet)
-check(wore and vh.items[5] == 901003 and vh.items[1] == nil and DmorphOctoDB.items[1] == nil,
-	"the next set takes the last set's helmet off")
+local msg
+wore, msg = DmorphOcto.WearSet(robeSet)
+check(wore and vh.items[5] == 901003 and vh.items[1] == 0 and DmorphOctoDB.items[1] == 0,
+	"the next set takes the last set's helmet off (by default the slot then shows nothing)")
 check(vh.items[16] == 900002, "and keeps an item that isn't a set piece")
+-- Your own gear under sets: hidden by default (user: their robe showed through 5-piece sets).
+check(DmorphOcto.GetHideGearUnderSets() and vh.items[7] == 0 and vh.items[8] == 0 and vh.items[19] == 0
+	and contains(msg, "your own gear hidden in"), "slots the set has no piece for show nothing, and it says so")
+check(DmorphOcto.DescribeItem(0, 7) == "nothing (your own gear hidden)", "a hidden slot is described as such")
+DmorphOcto.SetItem(15, 2955) -- a piece picked on its own
+DmorphOcto.SetHideGearUnderSets(false)
+wore = DmorphOcto.WearSet(ps)
+check(wore and vh.items[1] == 901001 and vh.items[7] == nil and vh.items[8] == nil,
+	"with own gear shown, the slots the last set hid show your own gear again")
+check(vh.items[15] == 2955, "an item picked on its own stays either way")
+DmorphOcto.SetHideGearUnderSets(true)
+wore = DmorphOcto.WearSet(ps)
+check(vh.items[7] == 0 and vh.items[15] == 2955, "hiding again hides only slots showing your own gear")
+local wasShown = DmorphOctoFrame:IsVisible()
+if not wasShown then
+	DmorphOcto_ToggleUI()
+end
+Mock.Click(DmorphOctoTabSets)
+check(DmorphOctoSetGear.text == "Own gear: hidden", "the Sets tab shows the setting")
+Mock.Click(DmorphOctoSetGear)
+check(not DmorphOcto.GetHideGearUnderSets() and DmorphOctoSetGear.text == "Own gear: shown", "its button switches it")
+Mock.Tick(0.5)
+Mock.Click(DmorphOctoSetGear)
+check(DmorphOcto.GetHideGearUnderSets(), "and back")
+DmorphOcto.SetItem(15, 0)
 -- A ported shoulder whose template the game doesn't know borrows a known
 -- shoulder, never another slot's item of its kind (a cloth hat drew it on the head).
 slash("item 3 901004")

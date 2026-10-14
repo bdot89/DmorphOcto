@@ -2472,7 +2472,14 @@ local function FilterSets(keep)
 	ui.setList.SetCount(count, keep)
 end
 
+local function RefreshSetGear()
+	if ui.setGearButton then
+		ui.setGearButton:SetText(M.GetHideGearUnderSets() and "Own gear: hidden" or "Own gear: shown")
+	end
+end
+
 local function RefreshSets()
+	RefreshSetGear()
 	ui.setList.Refresh()
 end
 
@@ -2544,6 +2551,22 @@ local function BuildSetsPage(page)
 	end, SetTooltip, nil, 14)
 	ui.setCount = Label(page, "", "GameFontDisableSmall", 10, -318, "DmorphOctoSetCount")
 	ui.setLookup = Label(page, "", "GameFontDisableSmall", 160, -318, "DmorphOctoSetLookup")
+	-- Your own gear in the slots a set has no piece for: hidden (the default) or shown.
+	ui.setGearButton = Button(page, "", 150, 316, -313, function()
+		Morph(M.SetHideGearUnderSets, not M.GetHideGearUnderSets())
+		RefreshSetGear()
+	end, "DmorphOctoSetGear")
+	ui.setGearButton:SetScript("OnEnter", function()
+		GameTooltip:SetOwner(this, "ANCHOR_TOP")
+		GameTooltip:SetText("Your own gear under sets")
+		GameTooltip:AddLine("Hidden: the slots a set has no piece for show nothing,", 1, 1, 1)
+		GameTooltip:AddLine("so your real gear doesn't show through the set.", 1, 1, 1)
+		GameTooltip:AddLine("Shown: those slots keep your own gear.", 1, 1, 1)
+		GameTooltip:AddLine("Click to switch. It applies from the next set you wear.", 0.6, 1, 0.6)
+		GameTooltip:Show()
+	end)
+	ui.setGearButton:SetScript("OnLeave", HideTooltip)
+	RefreshSetGear()
 	Label(page, "Click a set to wear every piece it has. Hover to see the pieces.", "GameFontDisableSmall", 10, -352)
 end
 

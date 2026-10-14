@@ -453,7 +453,8 @@ local function MakeLook(d, m, it, ported)
 	if it ~= "-" then
 		for letter, id in string.gfind(it, "([a-s])([0-9A-Z]+)") do
 			local item = Decode(id)
-			if item and item > 0 and item < 1000000 then
+			-- 0: a slot their set hides (shows nothing); DMorph before 2.16 skips it.
+			if item and item >= 0 and item < 1000000 then
 				look.items[string.byte(letter) - 96] = item
 			end
 		end
