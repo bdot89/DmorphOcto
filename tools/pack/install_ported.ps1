@@ -1,6 +1,7 @@
 param(
   [string]$GameDir = "",
-  [switch]$Remove
+  [switch]$Remove,
+  [string[]]$SearchRoots = @()   # tests: search these instead of every drive
 )
 # Installs a ported models pack made by DMorph's "Pack Ported.bat": this
 # script sits in the pack, next to manifest.txt, the patch-?.MPQ files and
@@ -40,9 +41,18 @@ function Test-Ported([string]$path) {
 function Test-Game([string]$dir) {
   return $dir -and (Test-Path (Join-Path $dir "WoW.exe")) -and (Test-Path (Join-Path $dir "Data"))
 }
+# An answer typed in the window, trimmed; $null when there's no one to ask
+# (Read-Host throws once its input has run out).
+function Ask([string]$prompt) {
+  try { return ([string](Read-Host $prompt)).Trim() } catch { return $null }
+}
 
 # The game folder: -GameDir, a folder above this pack, the running game, or
-# the usual places; asked for when there's no single answer.
+# a search of every fixed drive two folders deep (C:\WOW, D:\Games\OctoWoW...)
+# and the Desktop, Documents and Downloads folders; games with DMorph in them
+# come first. Several: picked by number. None (a friend's C:\WOW wasn't in
+# the old list of usual places, and an empty answer stopped the install):
+# asked for, and asked again for an answer that isn't a game folder.
 if (-not $GameDir) {
   $found = New-Object System.Collections.ArrayList
   $dir = $pack
@@ -55,21 +65,55 @@ if (-not $GameDir) {
     foreach ($p in @(Get-Process -Name "WoW" -ErrorAction SilentlyContinue)) {
       try { $d = [IO.Path]::GetDirectoryName($p.Path); if ((Test-Game $d) -and -not $found.Contains($d)) { [void]$found.Add($d) } } catch { }
     }
-    foreach ($drive in [IO.DriveInfo]::GetDrives()) {
-      if ($drive.DriveType -ne "Fixed") { continue }
-      foreach ($sub in @("Games\OctoWoW", "OctoWoW", "Program Files\OctoWoW", "Program Files (x86)\OctoWoW")) {
-        $d = Join-Path $drive.RootDirectory.FullName $sub
-        if ((Test-Game $d) -and -not $found.Contains($d)) { [void]$found.Add($d) }
+    $roots = @($SearchRoots)
+    if ($roots.Count -eq 0) {
+      $roots = @([IO.DriveInfo]::GetDrives() | Where-Object { $_.DriveType -eq "Fixed" } | ForEach-Object { $_.RootDirectory.FullName })
+      foreach ($special in @([Environment]::GetFolderPath("Desktop"), [Environment]::GetFolderPath("MyDocuments"), (Join-Path $env:USERPROFILE "Downloads"))) {
+        if ($special -and (Test-Path $special)) { $roots += $special }
+      }
+    }
+    $skip = @("Windows", '$Recycle.Bin', "System Volume Information", "ProgramData", "Recovery", "PerfLogs")
+    foreach ($root in $roots) {
+      $level = @(Get-Item -LiteralPath $root -ErrorAction SilentlyContinue)
+      for ($depth = 0; $depth -le 2 -and $level.Count -gt 0; $depth++) {
+        $next = New-Object System.Collections.ArrayList
+        foreach ($d in $level) {
+          if ((Test-Game $d.FullName) -and -not $found.Contains($d.FullName)) { [void]$found.Add($d.FullName); continue }
+          if ($depth -lt 2) {
+            foreach ($c in @(Get-ChildItem -LiteralPath $d.FullName -Directory -ErrorAction SilentlyContinue)) {
+              if ($skip -notcontains $c.Name) { [void]$next.Add($c) }
+            }
+          }
+        }
+        $level = @($next)
       }
     }
   }
+  $withDmorph = @($found | Where-Object { Test-Path (Join-Path $_ "Interface\AddOns\DmorphOcto\DmorphOcto.toc") })
+  if ($withDmorph.Count -gt 0) { $found = $withDmorph }
   if ($found.Count -eq 1) {
-    $answer = Read-Host ("Install into {0}? (Y/n)" -f $found[0])
+    $answer = Ask ("Install into {0}? (Y/n)" -f $found[0])
     if ($answer -match '^\s*(y|yes)?\s*$') { $GameDir = $found[0] }
+  } elseif ($found.Count -gt 1) {
+    "Game folders found:"
+    for ($i = 0; $i -lt $found.Count; $i++) { "  {0}. {1}" -f ($i + 1), $found[$i] }
+    $answer = Ask "Type the number of the one to install into (or press Enter to type another folder)"
+    $n = 0
+    if ([int]::TryParse($answer, [ref]$n) -and $n -ge 1 -and $n -le $found.Count) { $GameDir = $found[$n - 1] }
   }
-  if (-not $GameDir) {
-    $GameDir = (Read-Host "Paste the OctoWoW folder (the one with WoW.exe in it)").Trim().Trim('"')
+  for ($try = 1; -not $GameDir -and $try -le 3; $try++) {
+    $answer = Ask "Type or paste your OctoWoW folder, the one with WoW.exe in it (for example C:\WOW), then press Enter"
+    if ($answer -eq $null) { break }
+    $answer = $answer.Trim('"').Trim()
+    if (-not $answer) {
+      Write-Host "Nothing was typed. Tip: you can also drag the game folder into this window, then press Enter." -ForegroundColor Yellow
+    } elseif (Test-Game $answer) {
+      $GameDir = $answer
+    } else {
+      Write-Host "$answer isn't the game folder: it needs WoW.exe and a Data folder in it. Try again." -ForegroundColor Yellow
+    }
   }
+  if (-not $GameDir) { throw "no game folder was given. Run this again and type the folder with WoW.exe in it (for example C:\WOW)." }
 }
 $GameDir = [IO.Path]::GetFullPath($GameDir)
 if (-not (Test-Game $GameDir)) { throw "$GameDir isn't the game folder: it needs WoW.exe and a Data folder." }
