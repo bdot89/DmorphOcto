@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.15.5"
+local VERSION = "2.15.6"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -2203,14 +2203,41 @@ end
 -- nothing while it still holds the morph. DmorphHelper v13 also returns the
 -- item a slot shows: a morphed slot showing another item gets its morph again
 -- (VanillaHelpers then writes it, as the value differs).
+-- Each repair reloads your model. A slot the game puts back again and again
+-- would reload it every second, which can leave you running on the spot
+-- (user, 14 Oct): after 5 repairs of one slot in 10 seconds that slot is left
+-- alone for a minute, with a note. /dmorph itemcheck off|on|log; /dmorph
+-- status counts the repairs.
+local itemCheck = { on = true, log = false, clock = 0, count = {}, recent = {}, pausedUntil = {} }
+M.itemCheck = itemCheck
 local function CheckItems()
-	if not (sessionReady and HasHelper()) then
+	if not (sessionReady and HasHelper()) or not itemCheck.on then
 		return
 	end
+	local now = itemCheck.clock
 	for slot, item in pairs(db.items) do
 		local ok, _, _, shown = pcall(DmorphHelper_GetItemEnchants, "player", slot)
-		if ok and type(shown) == "number" and shown ~= item then
-			ApplyItem(slot)
+		if ok and type(shown) == "number" and shown ~= item and (itemCheck.pausedUntil[slot] or -1) <= now then
+			local recent, kept = itemCheck.recent[slot] or {}, {}
+			for i = 1, table.getn(recent) do
+				if now - recent[i] < 10 then
+					table.insert(kept, recent[i])
+				end
+			end
+			if table.getn(kept) >= 5 then
+				itemCheck.pausedUntil[slot] = now + 60
+				itemCheck.recent[slot] = {}
+				Print((SLOT_NAMES[slot] or ("Slot " .. slot)) .. ": the game keeps switching it back (it shows item " .. shown
+					.. "), so DMorph leaves it alone for a minute rather than reload your model nonstop.")
+			else
+				table.insert(kept, now)
+				itemCheck.recent[slot] = kept
+				itemCheck.count[slot] = (itemCheck.count[slot] or 0) + 1
+				if itemCheck.log then
+					Print((SLOT_NAMES[slot] or ("Slot " .. slot)) .. " showed item " .. shown .. ": put " .. item .. " back.")
+				end
+				ApplyItem(slot)
+			end
 		end
 	end
 end
@@ -3130,6 +3157,18 @@ local function ShowStatus()
 	if db.time then
 		Print("Time of day: " .. M.DescribeTime(db.time) .. ".")
 	end
+	local repaired = {}
+	for i = 1, table.getn(SLOT_ORDER) do
+		local slot = SLOT_ORDER[i]
+		if itemCheck.count[slot] then
+			table.insert(repaired, SLOT_NAMES[slot] .. " " .. itemCheck.count[slot])
+		end
+	end
+	if not itemCheck.on then
+		Print("Item check: off (/dmorph itemcheck on).")
+	elseif table.getn(repaired) > 0 then
+		Print("Item morphs the game switched back and DMorph put back this session: " .. table.concat(repaired, ", ") .. ".")
+	end
 	for real, skin in pairs(db.mountSkins) do
 		Print("Skin for " .. M.DescribeDisplay(real) .. ": " .. M.DescribeDisplay(skin) .. ".")
 	end
@@ -3302,6 +3341,20 @@ function commands.dmorph(args)
 		return ShowStatus()
 	elseif action == "check" then
 		return ShowCheck()
+	elseif action == "itemcheck" then
+		local what = strlower(args[2] or "")
+		if what == "off" then
+			itemCheck.on = false
+			return Print("Item check off: DMorph no longer puts item morphs back that the game switched back (until /reload or /dmorph itemcheck on).")
+		elseif what == "on" then
+			itemCheck.on, itemCheck.log = true, false
+			itemCheck.pausedUntil = {}
+			return Print("Item check on.")
+		elseif what == "log" then
+			itemCheck.on, itemCheck.log = true, true
+			return Print("Item check on, and every item morph it puts back is named in chat.")
+		end
+		return Print("Usage: /dmorph itemcheck on | off | log")
 	elseif action == "" and M.ToggleUI then
 		return M.ToggleUI()
 	end
@@ -3584,6 +3637,7 @@ end)
 local helperFrame = CreateFrame("Frame")
 helperFrame:SetScript("OnUpdate", function()
 	helperHold = helperHold - arg1
+	itemCheck.clock = itemCheck.clock + arg1
 	helperWait = helperWait - arg1
 	if helperWait <= 0 then
 		helperWait = 1

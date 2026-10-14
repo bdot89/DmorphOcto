@@ -2212,6 +2212,31 @@ check(vh.items[1] == 2955, "and the watcher catches it within a second without a
 slash("item 1 0")
 Mock.Tick(1.1)
 check(vh.items[1] == nil, "a slot without a morph is left alone")
+-- Each repair reloads the model: a slot the game keeps switching back is left
+-- alone for a minute after 5 repairs in 10 seconds (user: running on the spot).
+Mock.Tick(11)
+slash("item 1 2955")
+for i = 1, 5 do
+	vh.items[1] = 4321
+	Mock.Fire("UPDATE_INVENTORY_DURABILITY")
+end
+check(vh.items[1] == 2955, "five quick repairs still happen")
+vh.items[1] = 4321
+Mock.Fire("UPDATE_INVENTORY_DURABILITY")
+check(vh.items[1] == 4321 and contains(lastChat(), "keeps switching it back"),
+	"the sixth within 10 seconds pauses that slot's repairs, and says so")
+Mock.Tick(61)
+check(vh.items[1] == 2955, "a minute later it's put back again")
+slash("dmorph status")
+check(contains(allChat(), "put back this session: Head"), "status counts the repairs")
+slash("dmorph itemcheck off")
+vh.items[1] = 4321
+Mock.Tick(1.1)
+check(vh.items[1] == 4321, "/dmorph itemcheck off stops the repairs")
+slash("dmorph itemcheck on")
+Mock.Tick(1.1)
+check(vh.items[1] == 2955, "and on starts them again")
+slash("item 1 0")
 
 -- Your own skin, face and hair (Races tab).
 slash("")
