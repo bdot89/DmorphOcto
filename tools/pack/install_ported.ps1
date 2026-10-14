@@ -27,6 +27,11 @@ trap {
   exit 1
 }
 $pack = [IO.Path]::GetFullPath($PSScriptRoot)
+$manifestPath = Join-Path $pack "manifest.txt"
+# DMorph keeps this installer in tools\pack to put in packs: run from there, it has nothing to install.
+if (-not $Remove -and -not (Test-Path $manifestPath) -and $pack -match '\\DmorphOcto\\tools(\\pack)?$') {
+  throw "this is DMorph's own copy of the installer (it goes into packs), not a pack. Open the pack folder you downloaded (it has manifest.txt, Ported.lua and patch-?.mpq files in it) and double-click ""Install Ported.bat"" there. No pack? Ask whoever made it for the link (download the whole folder)."
+}
 Add-Type -Path (Join-Path $pack "MpqDbc.cs")
 function Test-Ported([string]$path) {
   $m = $null
@@ -97,9 +102,8 @@ if ($Remove) {
 }
 
 # The pack: manifest.txt lists every file with its size and SHA-256.
-$manifestPath = Join-Path $pack "manifest.txt"
 if (-not (Test-Path $manifestPath)) {
-  throw "there's no pack in $pack (no manifest.txt). To make one, double-click ""Pack Ported.bat"" in the DmorphOcto folder. To install one, double-click ""Install Ported.bat"" inside the downloaded pack folder (download the whole folder)."
+  throw "there's no pack in $pack (no manifest.txt). To install one, double-click ""Install Ported.bat"" inside the downloaded pack folder (download the whole folder). To make one (only on the PC that made the models), double-click ""Pack Ported.bat"" in the DmorphOcto folder."
 }
 $bundle = ""; $need = ""
 $files = New-Object System.Collections.ArrayList

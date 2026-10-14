@@ -143,7 +143,7 @@ Want a LOT more models? DMorph from this page has no later-expansion models, and
 If someone sends you a pack:
 
 1. Update DMorph to the version the pack was made with, or newer.
-2. Close the game and double-click **Install Ported.bat** in the pack folder (not the one in DmorphOcto\tools). It checks every file first, never replaces OctoWoW's own patches, removes ported patches from an older pack, puts the list in its own addon folder (DMorph_Ported, which DMorph updates never touch), and installs DmorphHelper. **Remove Ported.bat** takes them out again.
+2. Close the game and double-click **Install Ported.bat** in the pack folder you downloaded, the one with manifest.txt and the patch files in it (DMorph's own copy in DmorphOcto\tools\pack only goes into packs; **Pack Ported.bat** is only for the PC that made the models). It checks every file first, never replaces OctoWoW's own patches, removes ported patches from an older pack, puts the list in its own addon folder (DMorph_Ported, which DMorph updates never touch), and installs DmorphHelper. **Remove Ported.bat** takes them out again.
 3. Start the game from OctoLauncher.
 
 If you made the pack yourself and want to send it:

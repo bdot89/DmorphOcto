@@ -48,13 +48,15 @@ function Test-Ported([string]$path) {
 }
 
 $patches = @(Get-ChildItem $dataDir -File | Where-Object { $_.Name -match '^patch-.\.mpq$' -and (Test-Ported $_.FullName) } | Sort-Object Name)
+# Packing is for the PC that made the models; a friend who was sent a pack installs it instead.
+$sentAPack = "Pack Ported.bat is only for the PC that made the ported models. Were you sent a pack? Then open the pack folder you downloaded and double-click ""Install Ported.bat"" in it instead."
 if ($patches.Count -eq 0) {
-  throw "No ported patches in $dataDir (patch-?.MPQ files with DmorphPort.txt inside). Run the porting tool first."
+  throw "No ported patches in $dataDir (patch-?.MPQ files with DmorphPort.txt inside). $sentAPack"
 }
 # The list: the DMorph_Ported addon (where packs install it), else DMorph's Data folder.
 $list = Join-Path ([IO.Path]::GetDirectoryName($addon)) "DMorph_Ported\Ported.lua"
 if (-not (Test-Path $list)) { $list = Join-Path $addon "Data\Ported.lua" }
-if (-not (Test-Path $list)) { throw "Ported.lua is missing (Interface\AddOns\DMorph_Ported or DmorphOcto\Data). Run the porting tool first (it writes Ported.lua)." }
+if (-not (Test-Path $list)) { throw "Ported.lua is missing (Interface\AddOns\DMorph_Ported or DmorphOcto\Data). $sentAPack" }
 
 $version = ""
 foreach ($line in [IO.File]::ReadAllLines((Join-Path $addon "DmorphOcto.toc"))) {
@@ -114,10 +116,11 @@ $manifest = @(
   ("made`t" + (Get-Date -Format "yyyy-MM-dd HH:mm"))
 ) + $entries
 [IO.File]::WriteAllLines((Join-Path $Out "manifest.txt"), [string[]]$manifest)
-Copy-Item (Join-Path $PSScriptRoot "install_ported.ps1") $Out
+Copy-Item (Join-Path $PSScriptRoot "pack\install_ported.ps1") $Out
 Copy-Item (Join-Path $PSScriptRoot "MpqDbc.cs") $Out
-Copy-Item (Join-Path $PSScriptRoot "Install Ported.bat") $Out
-Copy-Item (Join-Path $PSScriptRoot "Remove Ported.bat") $Out
+# The pack's double-click files live in tools\pack, so nobody runs them from DMorph's own folder.
+Copy-Item (Join-Path $PSScriptRoot "pack\Install Ported.bat") $Out
+Copy-Item (Join-Path $PSScriptRoot "pack\Remove Ported.bat") $Out
 
 ""
 "Packed {0} patches + Ported.lua, {1:N1} GB, into:" -f $patches.Count, ($total / 1GB)
