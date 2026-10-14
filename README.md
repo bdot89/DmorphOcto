@@ -1,6 +1,6 @@
 # DMorph for OctoWoW
 
-Become any creature, ride any mount, wear any item. A morph window for WoW 1.12 (OctoWoW), version 2.15.4.
+Become any creature, ride any mount, wear any item. A morph window for WoW 1.12 (OctoWoW), version 2.15.5.
 
 Morphs only change what you and other DMorph users see. Everyone else, and the server, sees your real character.
 
@@ -53,6 +53,8 @@ You can skip this step: everything else still works, just without glows, real lo
 1. Download the ZIP again and replace your DmorphOcto folder with the new one (Step 2).
 2. Close the game and double-click **Install DmorphHelper.bat** again (Step 3).
 3. Start the game from OctoLauncher.
+
+A ported pack (see below) keeps its list in its own folder, Interface\AddOns\DMorph_Ported, so replacing DmorphOcto doesn't remove it. Packs installed before DMorph 2.15.5 kept the list inside DmorphOcto: if your ported models are gone after an update, close the game and double-click **Install Ported.bat** in your pack folder once more.
 
 
 ## If something goes wrong
@@ -141,7 +143,7 @@ Want a LOT more models? DMorph from this page has no later-expansion models, and
 If someone sends you a pack:
 
 1. Update DMorph to the version the pack was made with, or newer.
-2. Close the game and double-click **Install Ported.bat** in the pack folder (not the one in DmorphOcto\tools). It checks every file first, never replaces OctoWoW's own patches, removes ported patches from an older pack, and installs DmorphHelper. **Remove Ported.bat** takes them out again.
+2. Close the game and double-click **Install Ported.bat** in the pack folder (not the one in DmorphOcto\tools). It checks every file first, never replaces OctoWoW's own patches, removes ported patches from an older pack, puts the list in its own addon folder (DMorph_Ported, which DMorph updates never touch), and installs DmorphHelper. **Remove Ported.bat** takes them out again.
 3. Start the game from OctoLauncher.
 
 If you made the pack yourself and want to send it:
@@ -189,7 +191,7 @@ Project page: https://bdot89.github.io/DmorphOcto/
 - **Tests:** powershell -ExecutionPolicy Bypass -File tools\run_tests.ps1 (or lua tests/run_tests.lua with Lua 5.0).
 - **Rebuilding the lists after an OctoWoW update:** close the game and run powershell -ExecutionPolicy Bypass -File tools\update_from_game.ps1
 - **Building DmorphHelper:** sh helper/build.sh with 32-bit MinGW (on Windows: winlibs i686, from Git Bash).
-- **Ported packs** are made by a separate converter (modern M2 models to 1.12's format, plus the game tables); it isn't published, as it works on Blizzard's files. DMorph only reads Data\Ported.lua if it's there (it's git-ignored), and build_*.ps1 skip the pack's patch files.
+- **Ported packs** are made by a separate converter (modern M2 models to 1.12's format, plus the game tables); it isn't published, as it works on Blizzard's files. The pack's list (Ported.lua) is a separate addon, DMorph_Ported, that DmorphOcto.toc names in OptionalDeps so it loads first; DmorphOcto still reads an older Data\Ported.lua (git-ignored) if there is one. build_*.ps1 skip the pack's patch files.
 - Written for the game's Lua 5.0: no #, no %, no string.match.
 
 ## Credits

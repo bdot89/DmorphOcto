@@ -5,10 +5,14 @@ param(
 # Installs a ported models pack made by DMorph's "Pack Ported.bat": this
 # script sits in the pack, next to manifest.txt, the patch-?.MPQ files and
 # Ported.lua. It checks every file against manifest.txt first, then copies
-# the patches into <game>\Data and Ported.lua into DMorph's Data folder, and
-# installs DmorphHelper with DMorph's own installer. A patch file of the same
-# name that isn't a ported one (OctoWoW's own) is never replaced; ported
-# patches from an older pack that this one doesn't have are removed.
+# the patches into <game>\Data and Ported.lua into its own small addon,
+# Interface\AddOns\DMorph_Ported (DMorph loads it first: OptionalDeps), and
+# installs DmorphHelper with DMorph's own installer. The list used to go in
+# DmorphOcto\Data, where replacing the DmorphOcto folder to update DMorph
+# deleted it (a friend's pack "had gone"); an old copy there is removed. A
+# patch file of the same name that isn't a ported one (OctoWoW's own) is
+# never replaced; ported patches from an older pack that this one doesn't
+# have are removed.
 #
 # The easy way: close the game and double-click "Install Ported.bat" in the
 # pack folder. Or:
@@ -67,7 +71,9 @@ if (-not (Test-Game $GameDir)) { throw "$GameDir isn't the game folder: it needs
 "Game folder: $GameDir"
 $dataDir = Join-Path $GameDir "Data"
 $addon = Join-Path $GameDir "Interface\AddOns\DmorphOcto"
-$listTarget = Join-Path $addon "Data\Ported.lua"
+$listDir = Join-Path $GameDir "Interface\AddOns\DMorph_Ported"
+$listTarget = Join-Path $listDir "Ported.lua"
+$oldList = Join-Path $addon "Data\Ported.lua"
 
 $running = @(Get-Process -Name "WoW" -ErrorAction SilentlyContinue | Where-Object {
   $path = $null
@@ -83,7 +89,8 @@ if ($Remove) {
     try { Remove-Item $f.FullName } catch { throw "Couldn't delete $($f.FullName). Close the game first, then run this again." }
     "Removed Data\$($f.Name)"
   }
-  if (Test-Path $listTarget) { Remove-Item $listTarget; "Removed DMorph's Data\Ported.lua" }
+  if (Test-Path (Join-Path $listDir "DMorph_Ported.toc")) { Remove-Item $listDir -Recurse; "Removed the DMorph_Ported addon (the pack's list)" }
+  if (Test-Path $oldList) { Remove-Item $oldList; "Removed DMorph's Data\Ported.lua" }
   ""
   "The ported models are removed. DmorphHelper stays (DMorph uses it for glows, looks and size)."
   return
@@ -172,8 +179,21 @@ foreach ($f in $copy) {
   Write-Host ("Copying {0} ({1:N0} MB)..." -f $f.Name, ($f.Size / 1MB))
   try { Copy-Item (Join-Path $pack $f.Name) $target -Force } catch { throw "Couldn't copy $($f.Name) into $dataDir. Close the game, then run this again." }
 }
+# The list goes in its own addon, so updating DMorph (replacing its folder)
+# can't delete it; a copy in DmorphOcto\Data would load after it and win.
+if (-not (Test-Path $listDir)) { New-Item -ItemType Directory $listDir | Out-Null }
 Copy-Item (Join-Path $pack "Ported.lua") $listTarget -Force
-"Copied Ported.lua into DMorph's Data folder."
+$toc = @(
+  "## Interface: 11200",
+  "## Title: DMorph |cffb46bffported pack|r",
+  "## Notes: The list of later-expansion looks in your ported pack (its patch files are in the game's Data folder). Put in by the pack's Install Ported.bat; DMorph updates don't touch it.",
+  "## Author: bdot89",
+  "## Version: $bundle",
+  "Ported.lua"
+)
+[IO.File]::WriteAllLines((Join-Path $listDir "DMorph_Ported.toc"), [string[]]$toc, (New-Object System.Text.UTF8Encoding $false))
+if (Test-Path $oldList) { Remove-Item $oldList }
+"Put Ported.lua in Interface\AddOns\DMorph_Ported (DMorph updates don't touch it)."
 
 # DmorphHelper shows the ported weapons and armour; DMorph's own installer
 # puts it in (or says it's already the newest).

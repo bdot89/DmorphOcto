@@ -51,8 +51,10 @@ $patches = @(Get-ChildItem $dataDir -File | Where-Object { $_.Name -match '^patc
 if ($patches.Count -eq 0) {
   throw "No ported patches in $dataDir (patch-?.MPQ files with DmorphPort.txt inside). Run the porting tool first."
 }
-$list = Join-Path $addon "Data\Ported.lua"
-if (-not (Test-Path $list)) { throw "$list is missing. Run the porting tool first (it writes Ported.lua)." }
+# The list: the DMorph_Ported addon (where packs install it), else DMorph's Data folder.
+$list = Join-Path ([IO.Path]::GetDirectoryName($addon)) "DMorph_Ported\Ported.lua"
+if (-not (Test-Path $list)) { $list = Join-Path $addon "Data\Ported.lua" }
+if (-not (Test-Path $list)) { throw "Ported.lua is missing (Interface\AddOns\DMorph_Ported or DmorphOcto\Data). Run the porting tool first (it writes Ported.lua)." }
 
 $version = ""
 foreach ($line in [IO.File]::ReadAllLines((Join-Path $addon "DmorphOcto.toc"))) {
