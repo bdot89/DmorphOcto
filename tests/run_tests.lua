@@ -1848,12 +1848,13 @@ local game
 local function installHelper(look)
 	game = { look = look, real = look, enchants = { [16] = { 803, 0 }, [17] = { 0, 0 }, [18] = { 0, 0 } }, lookWrites = 0,
 		scale = 1, race = 1, ownRace = 0, rebuilds = 0,
-		weather = { 0, 0 }, serverWeather = { 1, 0.3 }, weatherOn = false, inWorld = true, time = -1, realTime = 600 }
+		weather = { 0, 0 }, serverWeather = { 1, 0.3 }, weatherOn = false, inWorld = true, time = -1, realTime = 600,
+		realItems = {} }
 	local function whole(v, max)
 		return type(v) == "number" and v >= 0 and v <= max and v == math.floor(v)
 	end
 	function DmorphHelper_Version()
-		return 12
+		return 13
 	end
 	-- The race byte: VanillaHelpers writes the morph's race there (tests set
 	-- game.race); DmorphHelper_SetRace writes it without a rebuild, and
@@ -1927,7 +1928,8 @@ local function installHelper(look)
 			error("Usage: DmorphHelper_GetItemEnchants(unit, slot 1-19)")
 		end
 		local e = game.enchants[slot] or { 0, 0 }
-		return e[1], e[2]
+		-- v13: the item the slot shows (VanillaHelpers' morph, else the real one).
+		return e[1], e[2], vh.items[slot] or game.realItems[slot] or 0
 	end
 	function DmorphHelper_SetItemEnchants(unit, slot, permanent, temporary)
 		if unit ~= "player" or not whole(slot, 19) or not whole(permanent, 1000000) or not whole(temporary, 1000000) then
@@ -2020,16 +2022,16 @@ DmorphOctoDB, DmorphOctoAccount = nil, nil
 loadWithHelper()
 Mock.Tick(1.1)
 slash("dmorph status")
-check(contains(allChat(), "DmorphHelper v12 is loaded"), "status shows the helper's version")
+check(contains(allChat(), "DmorphHelper v13 is loaded"), "status shows the helper's version")
 slash("dmorph check")
 check(contains(allChat(), "DmorphHelper: |cff33ff99OK"), "the check says the helper runs")
-check(contains(allChat(), "Running v12 (this DMorph comes with v12)"), "and which version runs")
+check(contains(allChat(), "Running v13 (this DMorph comes with v13)"), "and which version runs")
 local openedForSetup = not (DmorphOctoFrame and DmorphOctoFrame:IsVisible())
 if openedForSetup then
 	slash("")
 end
 Mock.Click(DmorphOctoSetupButton)
-check(contains(DmorphOctoSetupButton.text, "Helper v12") and contains(DmorphOctoSetupText2.text, "Running v12"),
+check(contains(DmorphOctoSetupButton.text, "Helper v13") and contains(DmorphOctoSetupText2.text, "Running v13"),
 	"the Setup button and panel show the helper version")
 Mock.Click(DmorphOctoSetupClose)
 local currentVersion = DmorphHelper_Version
@@ -2197,6 +2199,19 @@ Mock.Tick(1.1)
 check(game.enchants[16][1] == 803, "and the watcher leaves it alone afterwards")
 slash("dmorph status")
 check(contains(allChat(), "Glow, ranged: Glow 29"), "status lists the glows")
+-- Item morphs the game put back (in combat, user report) go on again: the
+-- helper says what a slot shows.
+slash("item 1 2955")
+check(vh.items[1] == 2955, "the head is morphed")
+vh.items[1] = 4321 -- armour lost durability, the slot shows the real helmet again
+Mock.Fire("UPDATE_INVENTORY_DURABILITY")
+check(vh.items[1] == 2955, "a morph the game put back goes on again at once")
+vh.items[1] = 4321
+Mock.Tick(1.1)
+check(vh.items[1] == 2955, "and the watcher catches it within a second without an event")
+slash("item 1 0")
+Mock.Tick(1.1)
+check(vh.items[1] == nil, "a slot without a morph is left alone")
 
 -- Your own skin, face and hair (Races tab).
 slash("")

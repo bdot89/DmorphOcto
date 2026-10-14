@@ -11,7 +11,7 @@
 //
 // Lua functions (registered when the game loads its own):
 //   DmorphHelper_Version()                                   -> version
-//   DmorphHelper_GetItemEnchants(unit, slot)                 -> permanent, temporary
+//   DmorphHelper_GetItemEnchants(unit, slot)                 -> permanent, temporary, item shown (v13)
 //   DmorphHelper_SetItemEnchants(unit, slot, permanent, temporary)
 //   DmorphHelper_GetLook(unit)                               -> skin, face, hairStyle, hairColour, facialHair
 //   DmorphHelper_SetLook(unit, skin, face, hairStyle, hairColour, facialHair)
@@ -50,7 +50,7 @@
 #define GAME_FASTCALL __attribute__((fastcall))
 #define GAME_THISCALL __attribute__((thiscall))
 
-#define HELPER_VERSION 12
+#define HELPER_VERSION 13
 
 // Game functions, build 5875 (from VanillaHelpers' Offsets.h).
 #define FUN_INVALID_FUNCTION_PTR_CHECK 0x42A320
@@ -233,13 +233,20 @@ static int GAME_FASTCALL Script_GetAmmo(void *L) {
 static const char *ENCHANTS_USAGE = "Usage: DmorphHelper_GetItemEnchants(unit, slot 1-19)";
 static const char *SET_ENCHANTS_USAGE = "Usage: DmorphHelper_SetItemEnchants(unit, slot 1-19, permanent, temporary)";
 
+// v13 also returns the item the slot shows (PLAYER_VISIBLE_ITEM_<slot>_0): the
+// addon checks its item morphs against it. VanillaHelpers keeps a morph against
+// the server's writes (its CGObject_C::SetBlock hook), but some slots went back
+// to the real item in combat (user report: head, waist, legs, feet, hands while
+// tanking), and asking VanillaHelpers again changes nothing while it thinks
+// the morph is still on.
 static int GAME_FASTCALL Script_GetItemEnchants(void *L) {
     void *unit = PlayerArg(L, 1, ENCHANTS_USAGE);
     uint32_t slot = NumberArg(L, 2, 1, 19, ENCHANTS_USAGE);
     uint32_t *f = Fields(unit) + PLAYER_VISIBLE_ITEM_1_0 + (slot - 1) * VISIBLE_ITEM_STRIDE;
     LuaPushNumber(L, f[1]);
     LuaPushNumber(L, f[2]);
-    return 2;
+    LuaPushNumber(L, f[0]);
+    return 3;
 }
 
 static int GAME_FASTCALL Script_SetItemEnchants(void *L) {

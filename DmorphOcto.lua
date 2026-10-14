@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.15.3"
+local VERSION = "2.15.4"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1904,7 +1904,7 @@ local MISSING_HELPER = "DmorphHelper.dll isn't loaded, so weapon glows, your siz
 M.MISSING_HELPER = MISSING_HELPER
 -- The DmorphHelper_Version() the DLL in helper\ reports. An older one in the
 -- game folder (DMorph was updated, the DLL wasn't copied again) is flagged.
-local HELPER_VERSION = 12
+local HELPER_VERSION = 13
 -- Rows 1-5 of the Races tab, in DmorphHelper_GetLook's order.
 local OWN_LOOK_NPC = { "npcSkin", "npcFace", "npcHairStyle", "npcHairColour" }
 
@@ -2196,10 +2196,31 @@ end
 
 -- Puts the picked glows and look on, and puts the real ones back where
 -- nothing is picked any more.
+-- Item morphs the game put back. VanillaHelpers keeps an item morph against
+-- the server's writes, but in combat some slots showed the real item again
+-- (user report, 14 Oct: head, waist, legs, feet, sometimes hands while
+-- tanking; shoulders, chest and weapons stayed), and asking it again changes
+-- nothing while it still holds the morph. DmorphHelper v13 also returns the
+-- item a slot shows: a morphed slot showing another item gets its morph again
+-- (VanillaHelpers then writes it, as the value differs).
+local function CheckItems()
+	if not (sessionReady and HasHelper()) then
+		return
+	end
+	for slot, item in pairs(db.items) do
+		local ok, _, _, shown = pcall(DmorphHelper_GetItemEnchants, "player", slot)
+		if ok and type(shown) == "number" and shown ~= item then
+			ApplyItem(slot)
+		end
+	end
+end
+M.CheckItems = CheckItems
+
 local function WatchHelper()
 	if not (sessionReady and HasHelper()) or helperHold > 0 then
 		return
 	end
+	CheckItems()
 	WatchScale()
 	local current = ReadLook()
 	if current then
@@ -3532,6 +3553,29 @@ mountFrame:SetScript("OnEvent", function()
 		StopSkin()
 		watch.real = nil
 		Notify()
+	end
+end)
+
+-- Your gear changing (armour losing durability while you're hit, an item
+-- swapped): item morphs are checked at once and a quarter second later, so a
+-- slot the game put back doesn't show your real item for up to a second.
+local itemFrame = CreateFrame("Frame")
+itemFrame:RegisterEvent("UNIT_INVENTORY_CHANGED")
+itemFrame:RegisterEvent("UPDATE_INVENTORY_DURABILITY")
+itemFrame:SetScript("OnEvent", function()
+	if event == "UNIT_INVENTORY_CHANGED" and arg1 ~= "player" then
+		return
+	end
+	CheckItems()
+	this.wait = 0.25
+end)
+itemFrame:SetScript("OnUpdate", function()
+	if this.wait then
+		this.wait = this.wait - arg1
+		if this.wait <= 0 then
+			this.wait = nil
+			CheckItems()
+		end
 	end
 end)
 
