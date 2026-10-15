@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.16.0"
+local VERSION = "2.16.1"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -2249,6 +2249,33 @@ local function CheckItems()
 end
 M.CheckItems = CheckItems
 
+-- Your gear's durability changing (hits taken, a death, a repair) makes the
+-- game redraw those body parts from your real items although the morphs are
+-- still on, so CheckItems sees nothing wrong (users, 14-15 Oct: "every time
+-- the durability on the items changes the original skin is visible again";
+-- head, waist, legs, feet, hands while tanking). The model is rebuilt from the
+-- morphs then, as VanillaHelpers does when a morph goes on: at most once a
+-- second, and gear events right after our own rebuild are ignored (no loop).
+local function RebuildForItems()
+	if not (itemCheck.on and sessionReady and HasHelper() and type(DmorphHelper_Rebuild) == "function") or not next(db.items) then
+		itemCheck.rebuildPending = nil
+		return
+	end
+	if itemCheck.clock - (itemCheck.lastRebuild or -100) < 1 then
+		itemCheck.rebuildPending = true
+		return
+	end
+	itemCheck.rebuildPending = nil
+	itemCheck.lastRebuild = itemCheck.clock
+	itemCheck.ignoreUntil = itemCheck.clock + 0.5
+	if pcall(DmorphHelper_Rebuild, "player") then
+		itemCheck.rebuilds = (itemCheck.rebuilds or 0) + 1
+		if itemCheck.log then
+			Print("Your gear changed: your model was rebuilt with your item morphs.")
+		end
+	end
+end
+
 local function WatchHelper()
 	if not (sessionReady and HasHelper()) or helperHold > 0 then
 		return
@@ -3652,8 +3679,8 @@ mountFrame:SetScript("OnEvent", function()
 end)
 
 -- Your gear changing (armour losing durability while you're hit, an item
--- swapped): item morphs are checked at once and a quarter second later, so a
--- slot the game put back doesn't show your real item for up to a second.
+-- swapped): item morphs are checked at once, and a fifth of a second later
+-- checked again and the model rebuilt with them (RebuildForItems).
 local itemFrame = CreateFrame("Frame")
 itemFrame:RegisterEvent("UNIT_INVENTORY_CHANGED")
 itemFrame:RegisterEvent("UPDATE_INVENTORY_DURABILITY")
@@ -3661,8 +3688,11 @@ itemFrame:SetScript("OnEvent", function()
 	if event == "UNIT_INVENTORY_CHANGED" and arg1 ~= "player" then
 		return
 	end
+	if itemCheck.clock < (itemCheck.ignoreUntil or -1) then
+		return -- our own rebuild
+	end
 	CheckItems()
-	this.wait = 0.25
+	this.wait = 0.2
 end)
 itemFrame:SetScript("OnUpdate", function()
 	if this.wait then
@@ -3670,7 +3700,10 @@ itemFrame:SetScript("OnUpdate", function()
 		if this.wait <= 0 then
 			this.wait = nil
 			CheckItems()
+			RebuildForItems()
 		end
+	elseif itemCheck.rebuildPending then
+		RebuildForItems()
 	end
 end)
 

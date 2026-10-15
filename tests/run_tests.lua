@@ -2236,6 +2236,32 @@ check(vh.items[1] == 4321, "/dmorph itemcheck off stops the repairs")
 slash("dmorph itemcheck on")
 Mock.Tick(1.1)
 check(vh.items[1] == 2955, "and on starts them again")
+-- Durability changes make the game redraw body parts from your real items while
+-- the morphs stay on (users: only switching an item or set brought the look back):
+-- the model is rebuilt with the morphs, at most once a second, without looping.
+Mock.Tick(2)
+local rebuilt = game.rebuilds
+Mock.Fire("UPDATE_INVENTORY_DURABILITY")
+Mock.Tick(0.3)
+check(game.rebuilds == rebuilt + 1, "a durability change rebuilds the model with the item morphs")
+Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
+Mock.Tick(0.3)
+check(game.rebuilds == rebuilt + 1, "a gear event right after our own rebuild is ignored (no loop)")
+Mock.Tick(0.3)
+Mock.Fire("UPDATE_INVENTORY_DURABILITY")
+Mock.Tick(0.3)
+check(game.rebuilds == rebuilt + 1, "a second change within a second waits")
+Mock.Tick(0.6)
+check(game.rebuilds == rebuilt + 2, "and is rebuilt once the second is up")
+Mock.Tick(2)
+Mock.Fire("UNIT_INVENTORY_CHANGED", "target")
+Mock.Tick(0.3)
+check(game.rebuilds == rebuilt + 2, "someone else's gear changing doesn't rebuild yours")
+slash("dmorph itemcheck off")
+Mock.Fire("UPDATE_INVENTORY_DURABILITY")
+Mock.Tick(0.3)
+check(game.rebuilds == rebuilt + 2, "/dmorph itemcheck off stops the rebuilds too")
+slash("dmorph itemcheck on")
 slash("item 1 0")
 
 -- Your own skin, face and hair (Races tab).
