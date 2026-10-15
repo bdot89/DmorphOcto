@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.16.1"
+local VERSION = "2.16.2"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -2951,35 +2951,59 @@ function M.WearSet(index)
 			unknown = unknown + 1
 		end
 	end
-	local ok, err = true, nil
-	local function Put(slot, itemID)
-		db.items[slot] = itemID
-		local slotOK, slotErr = ApplyItem(slot)
-		if ok and not slotOK then
-			ok, err = slotOK, slotErr
-		end
-	end
+	-- The look the set makes, worked out for every slot first; then only the
+	-- slots that differ change (each change reloads your model, and clicking
+	-- a set again used to put its hidden slots back and hide them again, so
+	-- pieces seemed to toggle at random: user, 15 Oct). With your own gear
+	-- hidden (the default) every armour slot the set has no piece for shows
+	-- nothing, also an item picked on its own: a set shows only its pieces.
+	-- Shown: set pieces and slots a set hid are cleared, other items stay.
+	-- Weapons the set has no piece for keep what they show.
+	local target = {}
 	for i = 1, table.getn(SLOT_ORDER) do
-		local slot = SLOT_ORDER[i]
-		-- (0 = a slot the last set hid)
-		if not used[slot] and db.items[slot] and (catalog.isPiece[db.items[slot]] or db.items[slot] == 0) then
-			Put(slot, nil)
-		end
+		target[SLOT_ORDER[i]] = db.items[SLOT_ORDER[i]]
 	end
 	for i = 1, table.getn(pieces) do
 		if slotOf[i] then
 			worn = worn + 1
-			Put(slotOf[i], pieces[i])
+			target[slotOf[i]] = pieces[i]
 		end
 	end
-	local hidden = 0
-	if worn > 0 and not account.setsKeepOwnGear then
+	local hide, hidden = not account.setsKeepOwnGear, 0
+	if worn > 0 then
+		local armour = {}
 		for i = 1, table.getn(HIDE_UNDER_SETS) do
-			local slot = HIDE_UNDER_SETS[i]
-			if not used[slot] and not db.items[slot] then
-				Put(slot, 0)
-				hidden = hidden + 1
+			armour[HIDE_UNDER_SETS[i]] = true
+		end
+		for i = 1, table.getn(SLOT_ORDER) do
+			local slot = SLOT_ORDER[i]
+			local current = db.items[slot]
+			if not used[slot] then
+				if hide and armour[slot] then
+					target[slot] = 0
+					hidden = hidden + 1
+				elseif current and (catalog.isPiece[current] or current == 0) then
+					target[slot] = nil -- (0 = a slot the last set hid)
+				end
 			end
+		end
+	end
+	local ok, err, changed = true, nil, 0
+	if worn > 0 then
+		for i = 1, table.getn(SLOT_ORDER) do
+			local slot = SLOT_ORDER[i]
+			if target[slot] ~= db.items[slot] then
+				db.items[slot] = target[slot]
+				changed = changed + 1
+				local slotOK, slotErr = ApplyItem(slot)
+				if ok and not slotOK then
+					ok, err = slotOK, slotErr
+				end
+			end
+		end
+		-- Already wearing it: one rebuild puts back anything the game redrew.
+		if changed == 0 and HasHelper() and type(DmorphHelper_Rebuild) == "function" then
+			pcall(DmorphHelper_Rebuild, "player")
 		end
 	end
 	local later = ""

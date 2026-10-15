@@ -2538,7 +2538,15 @@ check(wore and vh.items[1] == 901001 and vh.items[7] == nil and vh.items[8] == n
 check(vh.items[15] == 2955, "an item picked on its own stays either way")
 DmorphOcto.SetHideGearUnderSets(true)
 wore = DmorphOcto.WearSet(ps)
-check(vh.items[7] == 0 and vh.items[15] == 2955, "hiding again hides only slots showing your own gear")
+check(vh.items[1] == 901001 and vh.items[5] == 901002 and vh.items[7] == 0 and vh.items[15] == 0,
+	"with own gear hidden a set shows only its pieces (an item picked on its own goes too)")
+check(vh.items[16] == 900002, "weapons the set has none for keep what they show")
+-- Clicking the set again changes nothing (each change reloads the model; pieces
+-- seemed to toggle at random: user), but one rebuild puts back what the game redrew.
+local callsBefore, rebuildsBefore = vh.calls, game.rebuilds
+wore = DmorphOcto.WearSet(ps)
+check(wore and vh.calls == callsBefore and game.rebuilds == rebuildsBefore + 1,
+	"clicking the same set again doesn't change any slot, just rebuilds once")
 local wasShown = DmorphOctoFrame:IsVisible()
 if not wasShown then
 	DmorphOcto_ToggleUI()
