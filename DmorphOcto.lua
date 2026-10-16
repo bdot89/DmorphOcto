@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.17.0"
+local VERSION = "2.17.1"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -336,15 +336,22 @@ end
 local portedIDs = {}
 
 -- Which ported pack this PC has: the porting tool's DmorphOcto_PortedPack if
--- it wrote one, else the sizes of Ported.lua's three lists (read here, as
--- Ported.lua loads before this file and the lists are dropped once parsed).
--- Two PCs with the same pack (Pack Ported.bat / Install Ported.bat) match.
+-- it wrote one, else how many models, items and sets Ported.lua's three lists
+-- have (read here, as Ported.lua loads before this file and the lists are
+-- dropped once parsed). Two PCs with the same pack (Pack Ported.bat /
+-- Install Ported.bat) match. Rows, not the lists' sizes (before 2.17.1): a
+-- fix to the names or tags (mount names, rider poses) changed the size and
+-- stopped two PCs with the same models seeing each other's ported looks.
+local function Rows(text)
+	local _, n = string.gsub(text or "", "\n", "\n")
+	return n
+end
 local portedPack
 if type(DmorphOcto_PortedPack) == "string" then
 	portedPack = DmorphOcto_PortedPack
 elseif DmorphOcto_PortedData or DmorphOcto_PortedItems then
-	portedPack = "L" .. strlen(DmorphOcto_PortedData or "") .. "x" .. strlen(DmorphOcto_PortedItems or "")
-		.. "x" .. strlen(DmorphOcto_PortedSets or "")
+	portedPack = "P" .. Rows(DmorphOcto_PortedData) .. "x" .. Rows(DmorphOcto_PortedItems)
+		.. "x" .. Rows(DmorphOcto_PortedSets)
 end
 if portedPack and not strfind(portedPack, "^%w+$") then
 	portedPack = nil

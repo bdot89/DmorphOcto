@@ -2502,7 +2502,7 @@ local function b36(n)
 	return text
 end
 local pack = DmorphOcto.GetPortedPack()
-check(pack and string.find(pack, "^L%d+x%d+x%d+$"), "the ported pack is named from Ported.lua's lists")
+check(pack and string.find(pack, "^P%d+x%d+x%d+$"), "the ported pack is named from how many rows Ported.lua's lists have")
 wait(6)
 quiet()
 local pally = "0x00000000000A0002"
@@ -2710,6 +2710,17 @@ for _, r in ipairs(DmorphOcto.GetSetupReport()) do
 	poseReport = poseReport .. r.text
 end
 check(contains(poseReport, "couldn't change the riding pose"), "and says so when the helper couldn't patch the game")
+-- The pack ID counts rows: a list with fixed names or tags (these rider poses,
+-- 16 Oct) still matches friends with the same models.
+local packBefore = DmorphOcto.GetPortedPack()
+Mock.portedData = "60001\tArchmage's Prismatic Disc\tmount\n60002\tSurf Jelly (renamed)\tmount rider97\n"
+	.. "60003\tSkyrider2 Test\t\n60004\tRider 7\tmount\n"
+loadUI()
+check(packBefore == "P4x0x0" and DmorphOcto.GetPortedPack() == packBefore,
+	"renamed or retagged rows keep the pack ID")
+Mock.portedData = Mock.portedData .. "60005\tOne More\t\n"
+loadUI()
+check(DmorphOcto.GetPortedPack() == "P5x0x0", "another model makes another pack")
 end
 removeHelper()
 Mock.portedData = nil
