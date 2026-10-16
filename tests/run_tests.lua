@@ -2324,6 +2324,26 @@ Mock.Fire("UPDATE_INVENTORY_DURABILITY")
 Mock.Tick(0.3)
 check(game.rebuilds == rebuilt + 4, "/dmorph itemcheck off stops the rebuilds too")
 slash("dmorph itemcheck on")
+-- After a loading screen the game may have built your model before it had the
+-- items your morphs show (invisible, white in previews: user, 16 Oct): rebuilt
+-- once, when every morphed item is in.
+do
+Mock.Tick(2)
+local beforeLogin = game.rebuilds
+DmorphOcto.SetItem(3, 2504)
+Mock.Fire("PLAYER_ENTERING_WORLD")
+Mock.Tick(1)
+Mock.Tick(1)
+local waiting = game.rebuilds
+Mock.serverItems[2504] = { "Worn Shortbow", 1, "INVTYPE_RANGED" }
+Mock.Tick(0.3)
+local loaded = game.rebuilds
+Mock.Tick(1.1)
+check(waiting == beforeLogin and loaded == beforeLogin + 1 and game.rebuilds == loaded,
+	"after a loading screen the model is rebuilt once, when the morphed items are in")
+Mock.serverItems[2504] = nil
+DmorphOcto.SetItem(3, 0)
+end
 slash("item 1 0")
 
 -- Your own skin, face and hair (Races tab).

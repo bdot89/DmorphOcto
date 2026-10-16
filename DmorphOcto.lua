@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.17.2"
+local VERSION = "2.17.3"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -3758,6 +3758,18 @@ mountFrame:SetScript("OnEvent", function()
 	end
 end)
 
+-- Whether the game can describe every item your morphs show (a ported one
+-- through its template), so a model built now has them all.
+local LOGIN_WAIT = 12
+local function MorphedItemsLoaded()
+	for _, id in pairs(db.items) do
+		if id > 0 and not GetItemInfo(id) then
+			return false
+		end
+	end
+	return true
+end
+
 -- What you have on: the item in each slot (1-19), and how much ammo and how
 -- many thrown weapons are left. A shot changes only the counts.
 local function GearState()
@@ -3780,6 +3792,11 @@ itemFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 itemFrame:SetScript("OnEvent", function()
 	if event == "PLAYER_ENTERING_WORLD" then
 		itemCheck.links, itemCheck.counts = GearState()
+		-- The game can build your model before it has the items your morphs
+		-- show (a ported piece needs its template from the server): you stayed
+		-- invisible, white in previews, after logging in (user, 16 Oct). Rebuilt
+		-- once they're all in (or after LOGIN_WAIT seconds), see below.
+		itemCheck.loginWait = 0
 		return
 	end
 	if event == "UNIT_INVENTORY_CHANGED" then
@@ -3800,6 +3817,13 @@ itemFrame:SetScript("OnEvent", function()
 	this.wait = 0.2
 end)
 itemFrame:SetScript("OnUpdate", function()
+	if itemCheck.loginWait then
+		itemCheck.loginWait = itemCheck.loginWait + arg1
+		if itemCheck.loginWait >= 1.5 and sessionReady and (MorphedItemsLoaded() or itemCheck.loginWait >= LOGIN_WAIT) then
+			itemCheck.loginWait = nil
+			RebuildForItems()
+		end
+	end
 	if this.wait then
 		this.wait = this.wait - arg1
 		if this.wait <= 0 then
