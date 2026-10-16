@@ -2702,6 +2702,11 @@ Mock.serverItems[mantle] = { "Some Mantle", 2, "INVTYPE_SHOULDER" }
 slash("item 3 901004")
 check(vh.items[3] == 901004 and game.virtual[901004] and game.virtual[901004][1] == mantle,
 	"a known shoulder does")
+-- A ported piece only goes in its own slot: outfits saved before the pack was
+-- renumbered put a belt on the head..., which left the character invisible (user, 16 Oct).
+slash("item 1 901002")
+check(vh.items[1] ~= 901002 and DmorphOctoDB.items[1] == nil and contains(lastChat(), "is a Chest piece"),
+	"a ported chest piece isn't put on the head, and it says why")
 Mock.serverItems[mantle] = nil
 slash("demorph all")
 -- Glows from later expansions (DmorphOcto_PortedGlows) come after the game's.

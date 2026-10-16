@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.17.3"
+local VERSION = "2.17.4"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1706,6 +1706,18 @@ end
 local function ApplyItem(slot)
 	local id = db.items[slot]
 	if id and M.IsPortedItem(id) then
+		-- A ported armour piece goes in its own slot only. Outfits saved before
+		-- the pack renumbered its pieces (13 Oct) put a belt on the head, gloves
+		-- on the shoulders...; the game draws each piece where its record says,
+		-- and the clash left the character invisible, white in previews (user, 16 Oct).
+		local piece = PortedItems()[id]
+		if piece.slot and piece.slot ~= slot then
+			db.items[slot] = nil
+			Morph(SetUnitVisibleItemID, "player", slot, nil)
+			return false, (SLOT_NAMES[slot] or ("Slot " .. slot)) .. ": \"" .. piece.name .. "\" is a "
+				.. (SLOT_NAMES[piece.slot] or "other") .. " piece (from an outfit saved with an older ported pack?), "
+				.. "so your own gear shows there."
+		end
 		if not HasVirtualItems() then
 			return false, "Ported items need DmorphHelper v11: close the game, double-click \"Install DmorphHelper.bat\" "
 				.. "in Interface\\AddOns\\DmorphOcto, then start the game from OctoLauncher."
