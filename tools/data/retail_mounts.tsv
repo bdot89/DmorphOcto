@@ -1,0 +1,503 @@
+# display<TAB>look|model<TAB>Retail mount name, for tools/build_models.ps1 (made by the wowport mountbase command: OctoWoW displays whose model and skin files a Retail mount (Mount, MountXDisplay) shows: look; or whose model a Retail mount uses with other skins: model)
+207	look	Black Wolf
+247	look	Timber Wolf
+1166	look	Winter Wolf
+2320	look	Gray Wolf
+2326	look	Red Wolf
+2327	look	Dire Wolf
+2328	look	Brown Wolf
+2346	look	Felsteed
+2402	look	Black Stallion
+2404	look	Brown Horse
+2405	look	Chestnut Mare
+2408	look	Palomino
+2409	look	Pinto
+2410	look	White Stallion
+2736	look	Gray Ram
+2784	look	Black Ram
+2785	look	Brown Ram
+2786	look	White Ram
+2787	look	Frost Ram
+2830	look	Felsteed
+2833	model	
+4805	model	
+4806	look	Emerald Raptor
+5050	look	Risen Mare
+5228	look	Skeletal Horse
+6079	look	Ancient Frostsaber
+6080	look	Striped Frostsaber
+6442	model	
+6443	look	Tiger
+6444	look	Spotted Frostsaber
+6447	model	
+6448	look	Striped Nightsaber
+6469	look	Mottled Red Raptor
+6470	model	
+6471	look	Ivory Raptor
+6472	look	Turquoise Raptor
+6473	look	Violet Raptor
+6544	model	
+6569	look	Blue Mechanostrider
+8469	look	Warhorse
+9473	look	Red Mechanostrider
+9474	look	White Mechanostrider Mod B
+9475	look	Green Mechanostrider
+9476	look	Unpainted Mechanostrider
+9695	look	Ancient Frostsaber
+9714	model	
+9952	look	Tiger
+9991	look	Black Nightsaber
+10426	look	Winterspring Frostsaber
+10661	look	Green Mechanostrider
+10662	model	
+10664	model	
+10666	look	Icy Blue Mechanostrider Mod A
+10667	model	
+10670	look	Red Skeletal Horse
+10671	look	Blue Skeletal Horse
+10672	look	Brown Skeletal Horse
+10673	model	
+10718	look	Rivendare's Deathcharger
+10719	look	Red Skeletal Warhorse
+10720	look	Green Skeletal Warhorse
+10721	look	Purple Skeletal Warhorse
+11641	model	
+12240	model	
+12241	model	
+12242	model	
+12244	model	
+12245	model	
+12246	model	
+12247	model	
+14329	model	
+14330	look	Black War Tiger
+14331	look	Swift Frostsaber
+14332	look	Swift Mistsaber
+14333	model	
+14334	look	Black War Wolf
+14335	model	
+14336	model	
+14337	look	Black War Steed
+14338	look	Swift White Steed
+14339	model	
+14340	model	
+14341	model	
+14342	look	Swift Orange Raptor
+14343	model	
+14344	look	Swift Olive Raptor
+14345	model	
+14346	look	Swift White Ram
+14347	look	Swift Brown Ram
+14348	look	Black War Kodo
+14349	look	Great White Kodo
+14372	look	Black Battlestrider
+14373	model	
+14374	look	Swift Green Mechanostrider
+14375	look	Turbostrider
+14376	look	Swift White Mechanostrider
+14377	look	Swift Yellow Mechanostrider
+14388	look	Black War Raptor
+14552	look	Dreadsteed
+14553	model	
+14554	look	Dreadsteed
+14573	look	Swift Brown Wolf
+14574	look	Swift Gray Wolf
+14575	look	Swift Timber Wolf
+14576	look	Swift Gray Ram
+14577	look	Black War Ram
+14578	look	Great Brown Kodo
+14579	look	Great Gray Kodo
+14581	model	
+14582	look	Swift Palomino
+14583	look	Swift Brown Steed
+14584	model	
+14590	model	
+14632	look	Swift Stormsaber
+14776	look	Frostwolf Howler
+14777	look	Stormpike Battle Charger
+15271	look	Swift Orange Raptor
+15289	look	Swift Razzashi Raptor
+15290	look	Swift Zulian Tiger
+15677	look	Black Qiraji Battle Tank
+15678	look	Blue Qiraji Battle Tank
+15679	look	Green Qiraji Battle Tank
+15680	look	Yellow Qiraji Battle Tank
+15681	look	Red Qiraji Battle Tank
+16937	look	Rivendare's Deathcharger
+16938	look	Green Skeletal Warhorse
+16939	look	Purple Skeletal Warhorse
+17158	look	Riding Turtle
+18085	model	
+18089	model	
+18090	model	
+18091	model	
+18092	model	
+18093	model	
+18094	look	Magic Rooster
+18142	model	
+18143	model	
+18167	look	Thalassian Warhorse
+18168	look	Argent Warhorse
+18169	look	Thalassian Charger
+18170	model	
+18180	look	Raven Lord
+18228	model	
+18231	model	
+18232	model	
+18233	model	
+18234	model	
+18240	look	Quel'dorei Steed
+18241	model	
+18242	model	
+18243	look	Swift Zhevra
+18252	look	Brewfest Ram
+18253	look	Swift Brewfest Ram
+18254	look	Ironforge Ram
+18255	look	Striped Dawnsaber
+18256	look	Darnassian Nightsaber
+18257	look	Swift Horde Wolf
+18258	model	
+18259	look	Swift Alliance Steed
+18260	model	
+18261	model	
+18262	look	Ochre Skeletal Warhorse
+18263	look	Forsaken Warhorse
+18264	look	Thunder Bluff Kodo
+18265	model	
+18266	look	Gnomeregan Mechanostrider
+18267	model	
+18268	model	
+18269	model	
+18270	model	
+18271	model	
+18272	look	Ebon Gryphon
+18273	look	Snowy Gryphon
+18274	look	Remembered Golden Gryphon
+18275	model	
+18276	look	Experiment 12-B
+18277	look	Black Drake
+18278	look	Blue Drake
+18279	look	Bronze Drake
+18280	look	Emerald Drake
+18281	look	Red Drake
+18282	look	Albino Drake
+18283	model	
+18284	model	
+18285	model	
+18286	look	Azure Drake
+18287	look	Twilight Drake
+18288	look	Broodling of Sinestra
+18289	look	Twilight Avenger
+18290	look	Swift Green Gryphon
+18291	look	Swift Blue Gryphon
+18292	look	Armored Snowy Gryphon
+18293	model	
+18294	model	
+18295	look	Long-Forgotten Hippogryph
+18297	look	Argent Hippogryph
+18298	look	Frayfeather Hippogryph
+18299	look	Cenarion War Hippogryph
+18300	look	Silver Covenant Hippogryph
+18309	model	
+18422	look	Black Skeletal Horse
+18423	model	
+18424	model	
+18435	model	
+18436	model	
+18472	look	Red Dragonhawk
+18473	model	
+18474	look	Amani Dragonhawk
+18475	look	Eclipse Dragonhawk
+18476	look	Blue Dragonhawk
+18477	model	
+18478	look	Illidari Doomhawk
+18479	model	
+18480	look	Sunreaver Dragonhawk
+18481	model	
+18482	model	
+18483	model	
+18484	model	
+18485	model	
+18486	model	
+18487	model	
+18488	model	
+18489	model	
+18490	model	
+18491	model	
+18492	model	
+18510	look	Turbo-Charged Flying Machine
+18512	look	Sea Turtle
+18513	model	
+18530	model	
+18531	model	
+18532	look	Valiance
+18533	look	White Skeletal Warhorse
+18534	model	
+18535	model	
+18536	model	
+18537	model	
+18538	model	
+18539	model	
+18540	model	
+18542	model	
+18771	model	
+18772	model	
+18814	model	
+18815	model	
+18816	look	Dark Riding Talbuk
+18817	look	Cobalt Riding Talbuk
+18818	look	Tan Riding Talbuk
+18819	look	Silver Riding Talbuk
+18820	model	
+18821	model	
+18822	look	Dark War Talbuk
+18823	look	Cobalt War Talbuk
+18824	look	Tan War Talbuk
+18825	look	Silver War Talbuk
+18826	model	
+18920	model	
+18921	model	
+18929	model	
+20417	model	
+20418	model	
+20419	model	
+20420	model	
+20421	model	
+20422	model	
+20423	model	
+20424	model	
+20425	model	
+20426	model	
+20441	model	
+20649	model	
+20784	model	
+20804	model	
+20807	model	
+20832	look	Heart of the Aspects
+20833	model	
+20834	look	Bonesteed of Oblivion
+20835	look	Bonesteed of Plague
+20836	look	Midnight
+20837	look	Bonesteed of Bloodshed
+20838	model	
+20839	look	Onyx Cloud Serpent
+20840	look	Azure Cloud Serpent
+20841	look	Jade Cloud Serpent
+20842	model	
+20843	model	
+20844	look	Golden Cloud Serpent
+20845	model	
+20846	model	
+20847	model	
+20848	model	
+20849	model	
+20850	model	
+20851	look	Flametalon of Alysrazor
+20852	look	Voidtalon of the Dark Star
+20853	model	
+20854	model	
+20855	model	
+20856	model	
+20857	model	
+20858	model	
+20859	look	Heavenly Onyx Cloud Serpent
+20860	look	Heavenly Azure Cloud Serpent
+20861	look	Yu'lei, Daughter of Jade
+20862	look	Heavenly Crimson Cloud Serpent
+20863	look	Heavenly Golden Cloud Serpent
+20864	model	
+20865	model	
+20866	model	
+20868	look	Felblaze Infernal
+20869	model	
+20874	model	
+20875	look	Black Drake
+20876	look	Leaping Veinseeker
+20877	model	
+20878	model	
+20879	model	
+20880	model	
+20882	model	
+20883	model	
+20884	model	
+20885	model	
+20886	model	
+20887	model	
+20888	look	Vicious War Lion
+20893	model	
+20894	model	
+20895	model	
+20896	look	Vicious War Wolf
+20897	model	
+20898	model	
+20899	model	
+20900	model	
+20904	look	Wandering Ancient
+20905	model	
+20907	model	
+20908	model	
+20909	look	Bloodgorged Crawg
+20910	model	
+20911	look	Underrot Crawg
+20912	model	
+20913	model	
+20914	look	G.M.O.D.
+20915	look	Ratstallion
+20916	look	Crusty Crawler
+20917	look	Snapback Scuttler
+20918	look	Tomb Stalker
+20919	look	Gilded Ravasaur
+20920	look	Hogrus, Swine of Good Fortune
+20921	model	
+20922	model	
+20923	model	
+20924	model	
+20925	model	
+20926	model	
+20927	look	Azure Riding Crane
+20928	model	
+20929	model	
+20930	look	Gilded Riding Crane
+20931	look	Jungle Riding Crane
+20932	model	
+20933	look	Pale Riding Crane
+20934	model	
+20935	model	
+20936	look	Darkmoon Dirigible
+20937	look	Liberated Slyvern
+20938	look	Temperamental Skyclaw
+20939	model	
+20940	model	
+20941	model	
+20942	look	Black Serpent of N'Zoth
+20943	look	Awakened Mindborer
+20944	look	Wriggling Parasite
+20945	look	Mail Muncher
+20946	look	Hand of Salaranga
+20947	look	Hand of Hrestimorak
+20948	look	Hand of Nilganihmaht
+20949	model	
+20950	look	Hand of Bahmethra
+20951	look	Hand of Reshkigaal
+20952	look	Shu-Zen, the Divine Sentinel
+20953	look	Vulpine Familiar
+20954	model	
+20955	look	Sarge's Tale
+20956	model	
+20957	look	Honeyback Harvester
+20958	look	Honeyback Hivemother
+20959	model	
+20960	model	
+21049	look	Red Hawkstrider
+21050	look	Black Hawkstrider
+21051	look	Blue Hawkstrider
+21052	look	Elusive Emerald Hawkstrider
+21053	look	Purple Hawkstrider
+21054	model	
+21055	model	
+21056	look	Brown Elekk
+21057	look	Gray Elekk
+21058	look	Purple Elekk
+21059	look	Blue Riding Nether Ray
+21060	look	Green Riding Nether Ray
+21061	look	Purple Riding Nether Ray
+21062	look	Silver Riding Nether Ray
+21063	look	Red Riding Nether Ray
+21064	look	Blue Wind Rider
+21065	look	Remembered Wind Rider
+21066	look	Green Wind Rider
+21093	model	
+21140	model	
+21159	model	
+21232	model	
+21278	look	Spring Harvesthog
+21279	look	Summer Harvesthog
+21280	look	Winter Harvesthog
+21281	look	Autumn Harvesthog
+21282	model	
+21283	model	
+21284	model	
+21285	model	
+21286	model	
+21287	model	
+21288	model	
+21289	model	
+21290	model	
+21291	model	
+21292	model	
+21293	look	Fossilized Raptor
+21294	model	
+21295	look	Obsidian Worldbreaker
+21296	model	
+21297	look	Amalgam of Rage
+21298	model	
+21299	model	
+21300	model	
+21301	model	
+21302	look	Salatrancer
+21303	look	Ancient Salamanther
+21304	model	
+21305	look	Coralscale Salamanther
+21306	model	
+21307	look	Elysian Aquilon
+21308	look	Battle-Hardened Aquilon
+21309	look	Forsworn Aquilon
+21310	look	Ascendant's Aquilon
+21311	look	Mekgineer's Chopper
+21312	look	Tamed Skitterfly
+21313	look	Azure Skitterfly
+21314	look	Verdant Skitterfly
+21315	look	Amber Skitterfly
+21316	look	Bestowed Sandskimmer
+21317	model	
+21318	model	
+21319	model	
+21320	model	
+21321	model	
+21322	model	
+21323	model	
+21324	model	
+21325	model	
+21326	look	Elusive Quickhoof
+21327	look	Mollie
+21328	look	Pattie
+21329	model	
+21330	look	Springfur Alpaca
+21331	look	Brinedeep Bottom-Feeder
+21332	model	
+21333	look	Lunar Launcher
+21334	model	
+21335	look	Squawks
+21336	model	
+21337	model	
+21338	look	Iskaara Trader's Ottuk
+21339	look	Delugen
+21340	look	Brown Scouting Ottuk
+21341	look	Ivory Trader's Ottuk
+21342	look	Yellow Scouting Ottuk
+21343	model	
+21344	model	
+21345	model	
+21346	model	
+21347	model	
+21348	look	Taivan
+21349	model	
+21350	model	
+21351	look	Ashenvale Chimaera
+21352	look	Tangled Dreamweaver
+21353	model	
+21354	model	
+21355	model	
+21356	model	
+21357	model	
+21358	model	
+21359	look	Flarendo the Furious
+21360	model	
+21362	model	
+21609	model	
+21610	model	
+21611	model	
+21612	look	Cerulean Sporeglider
+21613	model	
+21614	model	
+21615	model	

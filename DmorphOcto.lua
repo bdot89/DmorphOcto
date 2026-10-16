@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.16.2"
+local VERSION = "2.16.3"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -397,12 +397,17 @@ function M.GetCreatureCatalog()
 	creatures = Fill(NewCatalog(), Merge(all, count, ported, p))
 	-- Tags for the filters: bosses and rares by display and name, mounts by
 	-- display. Data/ModelTags.lua (OctoWoW's client and Turtle WoW's ranks) and
-	-- Data/ClassicTags.lua (the 1.12.1 database); a boss stays a boss.
-	local byName, mounts = {}, {}
+	-- Data/ClassicTags.lua (the 1.12.1 database); a boss stays a boss. A mount
+	-- with its own name (Blizzard's) is listed under that name only, not under
+	-- every creature that shares the display.
+	local byName, mounts, mountTitles, titled = {}, {}, {}, {}
 	for _, text in ipairs({ DmorphOcto_TagData or "", DmorphOcto_ClassicTagData or "" }) do
 		for id, tag, name in string.gfind(text, "(%d+)\t(%a+)\t([^\r\n]*)") do
 			if tag == "mount" then
 				mounts[tonumber(id)] = true
+				if name ~= "" then
+					mountTitles[id .. "\t" .. strlower(name)] = true
+				end
 			else
 				local key = id .. "\t" .. strlower(name)
 				if byName[key] ~= "boss" then
@@ -415,10 +420,18 @@ function M.GetCreatureCatalog()
 	for id in pairs(portedMounts) do
 		mounts[id] = true
 	end
+	-- Displays with an entry under the mount's own name (else every entry counts).
+	for i = 1, creatures.count do
+		if mountTitles[creatures.ids[i] .. "\t" .. creatures.lower[i]] then
+			titled[creatures.ids[i]] = true
+		end
+	end
 	creatures.tags = {}
 	for i = 1, creatures.count do
-		local tag = byName[creatures.ids[i] .. "\t" .. creatures.lower[i]]
-		if mounts[creatures.ids[i]] then
+		local id = creatures.ids[i]
+		local key = id .. "\t" .. creatures.lower[i]
+		local tag = byName[key]
+		if mounts[id] and (not titled[id] or mountTitles[key]) then
 			tag = (tag and (tag .. " ") or "") .. "mount"
 		end
 		creatures.tags[i] = tag

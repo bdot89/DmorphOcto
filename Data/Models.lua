@@ -45,6 +45,7 @@ DmorphOcto_ModelData = [[
 18135	2	Alarus
 16718	2	Alaya Dawnrose
 6372	0	Albino Drake
+18282	2	Albino Drake
 16788	2	Aldrae
 16758	2	Alestus
 19116	2	Alika Ripfrost
@@ -62,8 +63,10 @@ DmorphOcto_ModelData = [[
 17329	2	Alurzion
 18418	2	Alvida
 16133	2	Alyssia Solar
+21297	2	Amalgam of Rage
 21297	3	Amalgamofrage
 834	0	Amani Crocolisk
+18474	2	Amani Dragonhawk
 18338	2	Amani Eagle
 15231	0	Amani Healing Ward
 18335	2	Amani'Alor Settler
@@ -74,6 +77,7 @@ DmorphOcto_ModelData = [[
 11347	0	Ambassador Jerrikar
 17568	2	Ambassador Kelemar
 16112	2	Ambassador Sunsorrow
+21315	2	Amber Skitterfly
 17844	2	Amelanoh Dawnstar
 16699	2	Amin
 964	0	Amy Maciulewicz
@@ -81,11 +85,14 @@ DmorphOcto_ModelData = [[
 18691	2	Analyzer X-51
 18770	2	Anarea Sundawn
 16675	2	Anathos
+6079	0	Ancient Frostsaber
+9695	0	Ancient Frostsaber
 20508	2	Ancient of Arcane
 19111	2	Ancient of Winter
 6352	1	Ancient Protector (Black)
 8810	1	Ancient Protector (Black)
 1921	1	Ancient Protector (Olive)
+21303	2	Ancient Salamanther
 18939	2	Ancient Warrior
 18940	2	Ancient Warrior
 18941	2	Ancient Warrior
@@ -138,6 +145,7 @@ DmorphOcto_ModelData = [[
 19100	2	Archmage Talyvanah
 17651	2	Aresella
 18170	2	Argent Charger
+18297	2	Argent Hippogryph
 18168	2	Argent Warhorse
 18003	2	Arisha Sunblade
 18487	2	Armored Amani Riding Bear
@@ -154,6 +162,7 @@ DmorphOcto_ModelData = [[
 18230	2	Armored Knight's Warhorse
 18488	2	Armored Purple War Bear
 18484	2	Armored Red War Bear
+18292	2	Armored Snowy Gryphon
 18267	2	Armored Thalassian Unicorn
 18270	2	Armored Unicorn
 18491	2	Armored White War Bear
@@ -164,8 +173,10 @@ DmorphOcto_ModelData = [[
 18358	3	Arthaslichking
 18622	3	Arthasundead (01)
 18623	3	Arthasundead (01)
+21310	2	Ascendant's Aquilon
 18089	2	Ash Riding Bear
 17676	2	Ashanya Quel'belore
+21351	2	Ashenvale Chimaera
 18179	2	Ashes of Al'ar (Phoenix)
 20562	2	Astalor Sunsworn
 14503	0	Atsun of the Air
@@ -174,10 +185,12 @@ DmorphOcto_ModelData = [[
 21308	3	Automatonfliermount (Copper)
 21309	3	Automatonfliermount (Dark)
 21310	3	Automatonfliermount (Silver)
+21281	2	Autumn Harvesthog
 18030	2	Autumnal Treant
 40	0	Avatar of Pompa
 20547	2	Avenant
 20301	2	Avram Duskgarde
+20943	2	Awakened Mindborer
 352	0	Axis Spinpistol
 20346	2	Azshanaya Spellwind
 18774	3	Azshara (Leg)
@@ -185,7 +198,11 @@ DmorphOcto_ModelData = [[
 18775	3	Azshara (Leg2)
 18777	3	Azshara (Leg2)
 14356	0	Azure Captain
+20840	2	Azure Cloud Serpent
+18286	2	Azure Drake
 20472	2	Azure Frog
+20927	2	Azure Riding Crane
+21313	2	Azure Skitterfly
 21418	3	Babybeholder
 21419	3	Babycrocodile (Blue)
 21420	3	Babycrocodile (Brown)
@@ -241,6 +258,7 @@ DmorphOcto_ModelData = [[
 2309	1	Basilisk (White)
 1062	1	Battle Guard
 15272	1	Battle Guard
+21308	2	Battle-Hardened Aquilon
 18274	2	Beaky
 20636	3	Bear (Blue Diseased)
 20635	3	Bear (Brown Diseased)
@@ -288,17 +306,26 @@ DmorphOcto_ModelData = [[
 18701	2	Belgrush Daggerfist
 16762	2	Bemarrin
 18145	2	Bessy
+21316	2	Bestowed Sandskimmer
 20434	2	Bethelon Wildwhisper
 20416	2	Big Turtle WoW Bear
 1763	0	Bilgefin Scavenger
 6684	0	Bishop Lazaril
 18341	2	Black Bear Cub
 15380	0	Black Blood of Draenor
+18277	2	Black Drake
+20875	2	Black Drake
 18493	2	Black Fox
+21050	2	Black Hawkstrider
+9991	0	Black Nightsaber
 18311	2	Black Pounder
 18085	2	Black Riding Bear
+20942	2	Black Serpent of N'Zoth
+18422	2	Black Skeletal Horse
 20417	2	Black Spectral Tiger
 18315	2	Black Spidertank
+14330	0	Black War Tiger
+207	0	Black Wolf
 18930	2	Blackhorn Mystic
 18931	2	Blackhorn Mystic
 18932	2	Blackhorn Warrior
@@ -343,6 +370,7 @@ DmorphOcto_ModelData = [[
 18174	2	Bloodclaw Worgen
 18105	3	Bloodelf Female Kid (01)
 18207	3	Bloodelf Male Kid
+20909	2	Bloodgorged Crawg
 21479	3	Bloodmystcrystalbig02 Corrupted
 20876	3	Bloodtickmount (Body)
 20877	3	Bloodtickmount (Bodygreen)
@@ -364,9 +392,14 @@ DmorphOcto_ModelData = [[
 17813	2	Bloodwarder Steward
 17816	2	Bloodwarder Steward
 17817	2	Bloodwarder Steward
+18476	2	Blue Dragonhawk
+18278	2	Blue Drake
+21051	2	Blue Hawkstrider
 18312	2	Blue Pounder
+21059	2	Blue Riding Nether Ray
 18319	2	Blue Rocket Car
 18316	2	Blue Spidertank
+21064	2	Blue Wind Rider
 499	1	Boar (Ivory)
 18729	3	Boar (Quill Beast Blue)
 20632	3	Boar Mount (Blue)
@@ -376,6 +409,9 @@ DmorphOcto_ModelData = [[
 18392	3	Bog Beast (Black)
 18391	3	Bog Beast (White)
 21488	3	Bog Beast Flower
+20837	2	Bonesteed of Bloodshed
+20834	2	Bonesteed of Oblivion
+20835	2	Bonesteed of Plague
 18144	2	Bonny
 16341	0	Borean Tundra Flame Keeper
 18945	2	Borrin Gloombeard
@@ -398,16 +434,21 @@ DmorphOcto_ModelData = [[
 20519	2	Brilliant Mana Wyrm
 18386	2	Brilliant Wind Serpent
 20591	2	Brindel Morningsun
+21331	2	Brinedeep Bottom-Feeder
 18301	2	Bristlefur
 20522	2	Brok Thunderforge
 18022	2	Broken Arcane Golem
 14506	0	Broken Earth Elemental
 18279	2	Bronze Drake
 18123	2	Bronze Time Weaver
+18288	2	Broodling of Sinestra
 18677	2	Brother Elias
 18678	2	Brother Eric Vesper
+21056	2	Brown Elekk
 18007	2	Brown Fox
 18090	2	Brown Riding Bear
+21340	2	Brown Scouting Ottuk
+2328	0	Brown Wolf
 20425	2	Brown Zhevra
 18742	2	Brum Bamse
 20474	2	Bullfrog
@@ -461,9 +502,11 @@ DmorphOcto_ModelData = [[
 20858	3	Celestial Serpent Mount
 20570	2	Celia Daywing
 16700	2	Celoenus
+18299	2	Cenarion War Hippogryph
 20410	2	Cenerron
 1226	1	Centaur
 4441	1	Centaur (Darkgray)
+21612	2	Cerulean Sporeglider
 16822	2	Chaddus Suncarrier
 5107	0	Chamber Overseer
 16829	2	Champion Bachi
@@ -532,6 +575,8 @@ DmorphOcto_ModelData = [[
 18618	3	Clockwork Gnome D (Red)
 18619	3	Clockwork Gnome D (Red)
 1890	0	Clover Spinpistol
+18817	2	Cobalt Riding Talbuk
+18823	2	Cobalt War Talbuk
 21050	3	Cockatricemount (Black)
 21051	3	Cockatricemount (Blue)
 21049	3	Cockatricemount (Cockatrice Mount)
@@ -551,6 +596,7 @@ DmorphOcto_ModelData = [[
 18972	2	Commando Harwall
 18697	2	Concavius
 17874	2	Conjurer Tyren
+21305	2	Coralscale Salamanther
 18928	2	Core Hound Pup
 20807	3	Corehoundmount
 20782	3	Corgi2
@@ -613,6 +659,7 @@ DmorphOcto_ModelData = [[
 2550	1	Crocodile (Swamp)
 6759	0	Cruelfin
 18749	2	Crusader Larsarius
+20916	2	Crusty Crawler
 6838	0	Crypt Fiend
 16181	1	Crypt Fiend
 11490	1	Crystal Portal
@@ -654,13 +701,17 @@ DmorphOcto_ModelData = [[
 18227	2	Dark Rider
 18497	2	Dark Rider Apprentice
 18228	2	Dark Rider's Steed [Deprecated]
+18816	2	Dark Riding Talbuk
+18822	2	Dark War Talbuk
 18679	2	Darkcaller Rayn
 11032	0	Darkclaw Bat
 18090	2	Darkmoon Dancing Bear
+20936	2	Darkmoon Dirigible
 20492	2	Darkpelt Shadowcaster
 20495	2	Darkpelt Shadowcaster
 18873	2	Darkseer Geshtol
 18902	2	Darlen Darkgrin
+18256	2	Darnassian Nightsaber
 18842	2	Darneg Darkbeard
 18973	2	Darwin Holdfall
 286	0	Dave "Ozy" Norton
@@ -682,6 +733,7 @@ DmorphOcto_ModelData = [[
 20500	2	Deepmurk Warrior
 18023	2	Defective Arcane Golem
 18022	2	Defender of Ronae'thalas
+21339	2	Delugen
 20308	2	Demetreus
 7570	1	Demon Hunter
 17540	2	Denalah Silverpoint
@@ -693,6 +745,7 @@ DmorphOcto_ModelData = [[
 20457	2	Diane Cloverfield
 21229	3	Diemetradon
 20602	2	Dior Lagerfield
+2327	0	Dire Wolf
 9569	1	Dire Wolf (Dark Brown)
 9369	1	Dire Wolf (Reddish Brown)
 15180	1	Dire Wolf (Reddish Brown)
@@ -790,6 +843,8 @@ DmorphOcto_ModelData = [[
 8609	1	Dread Lord (Green)
 20780	3	Dread Lordboss
 18113	2	Dreadlord
+14552	0	Dreadsteed
+14554	0	Dreadsteed
 20473	2	Dream Frog
 20887	3	Dreamowl Firemount
 18120	2	Dronormu
@@ -909,6 +964,7 @@ DmorphOcto_ModelData = [[
 1109	0	Earthen Servant
 69	0	Earthen Thrall
 18694	2	Earthshaper Thoron
+18272	2	Ebon Gryphon
 18100	2	Ebu
 1939	0	Echo Isle Animal
 18943	2	Echo of Corthan
@@ -918,6 +974,7 @@ DmorphOcto_ModelData = [[
 18039	2	Echo of Medivh
 18079	2	Echo of the Lich King
 16162	0	Echo of Time
+18475	2	Eclipse Dragonhawk
 15504	2	Eclipsion Jailor
 20723	2	Eclipsion Spellbinder
 20549	2	Edrion Ironstrike
@@ -955,7 +1012,11 @@ DmorphOcto_ModelData = [[
 7532	0	Elisandra Spellbinder
 18037	2	Elodia
 18354	2	Elodia
+21052	2	Elusive Emerald Hawkstrider
+21326	2	Elusive Quickhoof
+21307	2	Elysian Aquilon
 2717	0	Emerald Consort
+18280	2	Emerald Drake
 20515	2	Emerald Mana Wyrm
 18983	2	Emissary Godwin Valorcall
 18073	2	Enchanted Broom
@@ -1007,6 +1068,7 @@ DmorphOcto_ModelData = [[
 18968	2	Expedition Scout
 18969	2	Expedition Soldier
 18970	2	Expedition Soldier
+18276	2	Experiment 12-B
 10811	0	Exploding Goblin Chisel
 18748	2	Explorer Ashbeard
 18239	3	Faceless One (Blue)
@@ -1056,8 +1118,11 @@ DmorphOcto_ModelData = [[
 18192	2	Fel Wretched Elf (Deadscar)
 18193	2	Fel Wretched Elf (Deadscar)
 18194	2	Fel Wretched Elf (Deadscar)
+20868	2	Felblaze Infernal
 15298	0	Felguard Legionnaire
 20886	3	Felhound3 Shadow Mount
+2346	0	Felsteed
+2830	0	Felsteed
 258	0	Female Admirer
 751	0	Female Admirer
 21511	3	Female Satyr (Satyrfemaleskinalbino)
@@ -1111,6 +1176,8 @@ DmorphOcto_ModelData = [[
 19126	2	Firstborn of Arugal
 21331	3	Fish Mount
 18706	2	Fishface Joe
+20851	2	Flametalon of Alysrazor
+21359	2	Flarendo the Furious
 18255	2	Flaxen Riding Saber
 16173	1	Flesh Giant
 14692	1	Flesh Golem (Black1)
@@ -1132,7 +1199,10 @@ DmorphOcto_ModelData = [[
 18944	2	Forgotten Keeper
 18940	2	Forgotten Warlord
 10750	0	Forlorn Shrieker
+18263	2	Forsaken Warhorse
+21309	2	Forsworn Aquilon
 16075	0	Forworn Mule
+21293	2	Fossilized Raptor
 18008	2	Fox
 21282	3	Fox2 (Black)
 21283	3	Fox2 (Blue)
@@ -1149,6 +1219,7 @@ DmorphOcto_ModelData = [[
 20939	3	Foxwyvernmount (White)
 20940	3	Foxwyvernmount (Yellow)
 18295	2	Frayfeather Hippogryph
+18298	2	Frayfeather Hippogryph
 369	0	Freed Greengill Slave
 20521	2	Frig Thunderforge
 18641	2	Frigid Guardian
@@ -1175,6 +1246,7 @@ DmorphOcto_ModelData = [[
 18573	3	Frost Wurm Fellfire
 18503	3	Frostlord
 10808	0	Frostwing Chimaera
+14776	0	Frostwolf Howler
 16109	1	Fungal Monster
 18731	3	Furbolg (Black Helmet0)
 18732	3	Furbolg (Black Helmet1)
@@ -1274,6 +1346,7 @@ DmorphOcto_ModelData = [[
 21200	3	Furbolg Warrior02 (White Warr)
 21201	3	Furbolg Warrior02 (Yellow Brown Warr)
 5771	0	Furnan Skysoar
+20914	2	G.M.O.D.
 16752	2	Galana
 21610	3	Gallywixmechmount
 18727	2	Ganum Highmountain
@@ -1298,6 +1371,8 @@ DmorphOcto_ModelData = [[
 19133	3	Giant Spider
 18669	2	Gigno Flaxwhisker
 20528	2	Gilaras Sunfury
+20919	2	Gilded Ravasaur
+20930	2	Gilded Riding Crane
 20424	2	Gilneas Stable Horse
 18985	2	Gimle Redbrand
 18147	3	Giraffe (Dark)
@@ -1375,6 +1450,7 @@ DmorphOcto_ModelData = [[
 18405	3	Gnome Spider Tank (Blue)
 18406	3	Gnome Spider Tank (Green)
 18407	3	Gnome Spider Tank (Red)
+18266	2	Gnomeregan Mechanostrider
 1302	1	Goblin
 1304	1	Goblin
 1412	1	Goblin
@@ -1405,6 +1481,7 @@ DmorphOcto_ModelData = [[
 2280	1	Goblin Shredder
 18510	2	Goblin's Flying Machine
 18708	2	Gold-Tooth Gary
+20844	2	Golden Cloud Serpent
 20479	2	Golden Frog
 71	1	Golem Harvest
 975	1	Golem Stone
@@ -1438,15 +1515,21 @@ DmorphOcto_ModelData = [[
 17325	2	Grand Magistrix Merisa Dawnbreaker
 18671	2	Grand Sorcerer Ardaeus
 18352	2	Gray Bear Cub
+21057	2	Gray Elekk
+2320	0	Gray Wolf
 18641	2	Great Spirit of Winter
 15774	0	Greater Crust Burster
 1090	0	Greater Spindleweb
 19114	2	Greatfather Winter
 18323	2	Green Goblin Shredder
+9475	0	Green Mechanostrider
 18313	2	Green Pounder
+21060	2	Green Riding Nether Ray
 18321	2	Green Rocket Car
+16938	0	Green Skeletal Warhorse
 20419	2	Green Spectral Tiger
 18317	2	Green Spidertank
+21066	2	Green Wind Rider
 268	1	Grell (Blanca)
 483	1	Grell (Blanca)
 1017	1	Grell (Blanca)
@@ -1505,6 +1588,11 @@ DmorphOcto_ModelData = [[
 20559	2	Halduron Brightwing
 18987	2	Halfdan Coalborn
 16770	2	Halthenis
+20950	2	Hand of Bahmethra
+20947	2	Hand of Hrestimorak
+20948	2	Hand of Nilganihmaht
+20951	2	Hand of Reshkigaal
+20946	2	Hand of Salaranga
 16681	2	Hannovia
 18915	2	Hansu Go'sha
 18523	2	Happy Whimsyshire Cloud
@@ -1559,6 +1647,11 @@ DmorphOcto_ModelData = [[
 20509	3	Hawkstrider (Blue)
 20513	3	Hawkstrider (White)
 18859	2	Hazel Luppel
+20832	2	Heart of the Aspects
+20860	2	Heavenly Azure Cloud Serpent
+20862	2	Heavenly Crimson Cloud Serpent
+20863	2	Heavenly Golden Cloud Serpent
+20859	2	Heavenly Onyx Cloud Serpent
 21278	3	Hedgehogmount (Body Green)
 21279	3	Hedgehogmount (Body Pink)
 21280	3	Hedgehogmount (Body Purple)
@@ -1676,6 +1769,9 @@ DmorphOcto_ModelData = [[
 18300	3	Hippogryphmount (Hippogryph White Skin01)
 21093	3	Hippogryphmount (Hippogryphjollyskin01)
 18247	2	Hivaxxis
+20920	2	Hogrus, Swine of Good Fortune
+20957	2	Honeyback Harvester
+20958	2	Honeyback Hivemother
 20893	3	Horde PVP Mount (Body Green)
 20894	3	Horde PVP Mount (Body Orange)
 20895	3	Horde PVP Mount (Body Purple)
@@ -1985,6 +2081,7 @@ DmorphOcto_ModelData = [[
 21564	2	Illidari Archon
 21565	2	Illidari Archon
 18119	2	Illidari Demon Hunter
+18478	2	Illidari Doomhawk
 18480	2	Illidari Dragonhawk
 11342	0	Illidari Heartseeker
 18124	2	Illidari Naga Myrmidon
@@ -2032,15 +2129,19 @@ DmorphOcto_ModelData = [[
 16701	2	Innkeeper Kalarin
 17224	2	Instructor Antheol
 16810	2	Irodalmin
+18254	2	Ironforge Ram
 765	0	Irradiated Trogg
+21338	2	Iskaara Trader's Ottuk
 16865	2	Ithania
 16811	2	Ithelis
 16812	2	Ithene
 20524	2	Ithirilen Shadewind
 16813	2	Ithren
 20510	2	Ivory Hawkstider
+21341	2	Ivory Trader's Ottuk
 14345	0	Ivory War Raptor
 21002	2	Ja'y Nosliw
+20841	2	Jade Cloud Serpent
 15529	2	Jainthess Thelryn
 18870	2	Jaiymu
 243	0	Jason Redick
@@ -2057,6 +2158,7 @@ DmorphOcto_ModelData = [[
 20574	2	Jolie Keenwit
 20334	2	Judge Sutherland
 15522	2	Julia Sunstriker
+20931	2	Jungle Riding Crane
 20464	2	Ka'zinka
 18194	2	Ka'zmir Somberwind
 99	0	Kaay Carlson
@@ -2132,6 +2234,7 @@ DmorphOcto_ModelData = [[
 21362	3	Lavahorse
 20516	2	Lavender Mana Wyrm
 18989	2	Lead Explorer Whitepeak
+20876	2	Leaping Veinseeker
 16796	2	Leela the Shadow
 18763	2	Leoserith Spellbinder
 16859	2	Leshandra Fintri
@@ -2143,6 +2246,7 @@ DmorphOcto_ModelData = [[
 20583	2	Liadrin
 20316	2	Liam Greymane
 20317	2	Liam Greymane
+20937	2	Liberated Slyvern
 18447	2	Lieren
 18971	2	Lieutenant Alverold
 15911	2	Lieutenant Dawnrunner
@@ -2240,6 +2344,7 @@ DmorphOcto_ModelData = [[
 20720	3	Lobstrokoutland (Lobstrok Outland Turquoise)
 20717	3	Lobstrokoutland (Lobstrok Outland White)
 20719	3	Lobstrokoutland (Lobstrok Outland Yellow)
+18295	2	Long-Forgotten Hippogryph
 18140	2	Lonum Magicus
 16851	2	Lor'thas the Holy
 20560	2	Lor'Themar Theron
@@ -2288,6 +2393,7 @@ DmorphOcto_ModelData = [[
 20665	2	Lower City Healer
 18712	2	Lozo
 508	0	Luke Agamand
+21333	2	Lunar Launcher
 21615	3	Lunarhorsemount
 21333	3	Lunarrocketmount
 21353	3	Lunarsnakemount (Body)
@@ -2298,6 +2404,7 @@ DmorphOcto_ModelData = [[
 1048	0	Maddened Vault Guard
 20551	2	Maelor Steelguard
 18625	2	Magic Broom
+18094	2	Magic Rooster
 20907	3	Magicalfishmount
 17279	2	Magister Ala'shor Sunblood
 17201	2	Magister Astalor Bloodsworn
@@ -2324,6 +2431,7 @@ DmorphOcto_ModelData = [[
 19157	2	Magus Orelius
 18751	2	Magus Palon
 18046	2	Maiev Shadowsong
+20945	2	Mail Muncher
 16705	2	Malanius Silvershine
 18022	2	Malfunctioning Arcane Construct
 18022	2	Malfunctioning Arcane Golem
@@ -2383,6 +2491,7 @@ DmorphOcto_ModelData = [[
 18898	2	Metahnze Hawkdreamer
 20466	2	Mezaji
 18628	2	Midnight
+20836	2	Midnight
 768	1	Mine Spider (Green)
 538	1	Mine Spider (Olive)
 1873	1	Mine Spider (Olive)
@@ -2403,6 +2512,7 @@ DmorphOcto_ModelData = [[
 20712	3	Moargminion (Moarg Minion)
 18145	2	Molasses
 18882	2	Molk
+21327	2	Mollie
 12233	0	Molten Colossus
 1551	1	Monster Lure01 (Lure)
 1556	1	Monster Lure01 (Lure)
@@ -2603,6 +2713,8 @@ DmorphOcto_ModelData = [[
 20945	3	Nzothserpentmount (Red)
 11914	1	Obsidian Destroyer
 14340	0	Obsidian War Raptor
+21295	2	Obsidian Worldbreaker
+18262	2	Ochre Skeletal Warhorse
 125	0	Officer Visser
 10705	1	Ogre (Beige)
 10710	1	Ogre (Black)
@@ -2648,6 +2760,7 @@ DmorphOcto_ModelData = [[
 18713	2	Old-Tide Sam
 18714	2	One-Ear Nellie
 16816	2	Oninath
+20839	2	Onyx Cloud Serpent
 21159	3	Onyxiamount
 19002	3	Orc Female
 52	1	Orc Female (player model)
@@ -2893,6 +3006,7 @@ DmorphOcto_ModelData = [[
 18368	3	Owl (Spirit)
 20913	3	Oxmount
 547	0	Pack of Ghouls
+20933	2	Pale Riding Crane
 20859	3	Pandaren Serpent God Mount (Black)
 20860	3	Pandaren Serpent God Mount (Blue)
 20861	3	Pandaren Serpent God Mount (Green)
@@ -2921,6 +3035,7 @@ DmorphOcto_ModelData = [[
 21337	3	Parrotmount (Parrot Red)
 18221	2	Pathstrider Protector
 18223	2	Pathstrider Protector
+21328	2	Pattie
 18627	2	Pengu
 8612	0	Pentatharon
 16712	2	Perascamin
@@ -2960,6 +3075,10 @@ DmorphOcto_ModelData = [[
 20885	3	Progenitorwombatmount (Red)
 14852	0	Prophet of Quetz'lun
 16948	2	Provisioner Valine
+21058	2	Purple Elekk
+21053	2	Purple Hawkstrider
+21061	2	Purple Riding Nether Ray
+16939	0	Purple Skeletal Warhorse
 16159	0	Putrid Abomination
 18513	3	PVP Riding Ram (Turtle Mount2)
 18233	3	PVP War Horse (Red)
@@ -2975,6 +3094,7 @@ DmorphOcto_ModelData = [[
 18977	2	Quartermaster Alden
 18476	2	Quel'dorei Dragonhawk
 2186	0	Quel'dorei Steed
+18240	2	Quel'dorei Steed
 16823	2	Quelis
 20854	3	Quilin Mount (Quilen Mount01 Black)
 20855	3	Quilin Mount (Quilen Mount01 Bronze)
@@ -3058,6 +3178,7 @@ DmorphOcto_ModelData = [[
 16755	2	Rathin
 20905	3	Ratmount2
 20955	3	Ratmounthearthstone
+20915	2	Ratstallion
 20496	2	Raven
 18180	2	Raven Lord
 20865	3	Ravenlordmount (Raven Lord 1 Purple)
@@ -3083,13 +3204,18 @@ DmorphOcto_ModelData = [[
 16286	2	Recovering Pilgrim
 16287	2	Recovering Pilgrim
 16288	2	Recovering Pilgrim
+18472	2	Red Dragonhawk
+18281	2	Red Drake
 18008	2	Red Fox
 18177	2	Red Fox
 18322	2	Red Goblin Shredder
+21049	2	Red Hawkstrider
 18314	2	Red Pounder
+21063	2	Red Riding Nether Ray
 18320	2	Red Rocket Car
 18318	2	Red Spidertank
 14341	0	Red War Raptor
+2326	0	Red Wolf
 21354	3	Redpandamount (Body Blue)
 21355	3	Redpandamount (Body Gray)
 21356	3	Redpandamount (Body Orange)
@@ -3102,6 +3228,8 @@ DmorphOcto_ModelData = [[
 19140	2	Regent-Lady Celia Harlow
 19160	2	Regent-Lord Mortimer Harlow
 20597	2	Relaina Whiteshore
+18274	2	Remembered Golden Gryphon
+21065	2	Remembered Wind Rider
 18108	2	Remnants Footman
 18109	2	Remnants Footman
 18108	2	Remnants Knight
@@ -3179,6 +3307,9 @@ DmorphOcto_ModelData = [[
 20505	2	Rine
 6766	0	Riplash Sorceress
 18117	2	Risen Crypt Guard
+5050	0	Risen Mare
+10718	0	Rivendare's Deathcharger
+16937	0	Rivendare's Deathcharger
 21338	3	Riverotterlargemount01 (Black)
 21339	3	Riverotterlargemount01 (Blue)
 21340	3	Riverotterlargemount01 (Brown)
@@ -3231,8 +3362,10 @@ DmorphOcto_ModelData = [[
 21304	3	Salamanderwatermount (Orange)
 21305	3	Salamanderwatermount (Pink)
 21306	3	Salamanderwatermount (Purple)
+21302	2	Salatrancer
 16191	0	Sandworm Missile Target (DND)
 18668	2	Sanv K'la
+20955	2	Sarge's Tale
 11343	0	Sargeron Hellcaller
 18717	2	Sark Blacktooth
 18883	2	Sarkensh
@@ -3289,6 +3422,7 @@ DmorphOcto_ModelData = [[
 14634	1	Sea Giant (Skin01)
 15960	1	Sea Giant (Skin01)
 6126	1	Sea Turtle
+18512	2	Sea Turtle
 16145	1	Sea Turtle (Blue)
 5030	1	Sea Turtle (Red)
 18517	3	Sea Vrykul (VRYKULMALESKIN00 00)
@@ -3352,6 +3486,7 @@ DmorphOcto_ModelData = [[
 18689	2	Shattrath Saul
 16687	2	Sheri
 18926	2	Shivering Moonkin Hatchling
+20952	2	Shu-Zen, the Divine Sentinel
 16688	2	Silanna
 15378	1	Silithid (Aurokk Blue Green)
 15333	1	Silithid (Aurokk Tan)
@@ -3370,9 +3505,13 @@ DmorphOcto_ModelData = [[
 18374	3	Silithid Wasp (Flyer Black)
 18375	3	Silithid Wasp (Flyer Skinorange)
 13095	1	Silithid Wasp (Flyer Yellow)
+18300	2	Silver Covenant Hippogryph
 20564	2	Silver Covenant Recruit
 20565	2	Silver Covenant Recruit
 18006	2	Silver Fox
+21062	2	Silver Riding Nether Ray
+18819	2	Silver Riding Talbuk
+18825	2	Silver War Talbuk
 16469	2	Silvermoon Apprentice
 16716	2	Silvermoon Apprentice
 16808	2	Silvermoon Builder
@@ -3395,6 +3534,7 @@ DmorphOcto_ModelData = [[
 18134	3	Siren (Purple)
 20505	2	Sister of Autumn
 21225	3	Skardyn Male
+5228	0	Skeletal Horse
 21291	3	Skeletal Raptor Mount (Bone)
 21292	3	Skeletal Raptor Mount (Dark)
 21293	3	Skeletal Raptor Mount (Fossil)
@@ -3435,9 +3575,11 @@ DmorphOcto_ModelData = [[
 21325	3	Snailrockmount (Yellow)
 4167	1	Snake (Blue)
 2995	1	Snake (Green)
+20917	2	Snapback Scuttler
 20477	2	Snow Frog
 13649	1	Snow Man (01)
 14333	0	Snowclaw
+18273	2	Snowy Gryphon
 18092	2	Snowy Riding Bear
 16833	2	Soalara Dawnstar
 18916	2	Soja
@@ -3469,7 +3611,11 @@ DmorphOcto_ModelData = [[
 21505	3	Sporebat (Green)
 21506	3	Sporebat (Yellow)
 21612	3	Sporebat3mount
+6444	0	Spotted Frostsaber
+21278	2	Spring Harvesthog
+21330	2	Springfur Alpaca
 20659	2	Spymistress Mehlisah Highcrown
+21335	2	Squawks
 20506	3	Squirrel (Quel)
 21609	3	Squirrelflyingmount
 1041	0	Stabled Hunter Pet
@@ -3487,6 +3633,7 @@ DmorphOcto_ModelData = [[
 20599	2	Stella de Givenchy
 2001	0	Stillpine Raider
 1193	0	Stonevault Brute
+14777	0	Stormpike Battle Charger
 215	0	Stormwind Citizen
 228	0	Stormwind Citizen
 285	0	Stormwind Citizen
@@ -3496,6 +3643,9 @@ DmorphOcto_ModelData = [[
 112	0	Stranger
 2579	0	Stranger
 18499	2	Strigoi
+18255	2	Striped Dawnsaber
+6080	0	Striped Frostsaber
+6448	0	Striped Nightsaber
 9109	1	Succubus (New Blue)
 11654	1	Succubus (New Magenta)
 18754	3	Succubus (New Magenta)
@@ -3503,6 +3653,7 @@ DmorphOcto_ModelData = [[
 18055	3	Succubusold (Succubus Red)
 18056	3	Succubusold (Succubus Skinviolet)
 18052	3	Succubusold (Succubus)
+21279	2	Summer Harvesthog
 15524	2	Summoner Teli'Larien
 17348	2	Sunhawk Agent
 17349	2	Sunhawk Agent
@@ -3529,6 +3680,7 @@ DmorphOcto_ModelData = [[
 17361	2	Sunhawk Spy
 17362	2	Sunhawk Spy
 17363	2	Sunhawk Spy
+18480	2	Sunreaver Dragonhawk
 18386	2	Sunscale Hatchling
 17819	2	Sunseeker Botanist
 17820	2	Sunseeker Botanist
@@ -3538,6 +3690,7 @@ DmorphOcto_ModelData = [[
 16249	2	Surveyor Candress
 18259	2	Swift Alliance Steed
 18264	2	Swift Blood Kodo
+18291	2	Swift Blue Gryphon
 18261	2	Swift Blue Riding Raptor
 18265	2	Swift Brewfest Kodo
 18253	2	Swift Brewfest Ram
@@ -3546,12 +3699,18 @@ DmorphOcto_ModelData = [[
 18256	2	Swift Darnassian Saber
 18263	2	Swift Forsaken Skeletal Steed
 18266	2	Swift Gnomeregan Mechastrider
+18290	2	Swift Green Gryphon
 18260	2	Swift Grey Steed
 18258	2	Swift Grey Worg
+18257	2	Swift Horde Wolf
 18257	2	Swift Horde Worg
+15271	0	Swift Orange Raptor
+14582	0	Swift Palomino
 18254	2	Swift Red Ram
 18094	2	Swift Rooster
+18243	2	Swift Zhevra
 16750	2	Sylann
+21348	2	Taivan
 18765	2	Talavana Andalorah
 18827	3	Talbuk
 18828	3	Talbuk (Black)
@@ -3574,7 +3733,11 @@ DmorphOcto_ModelData = [[
 1561	0	Tamable Silithid
 100	0	Tamamo
 19165	2	Tamara Gracefall
+21312	2	Tamed Skitterfly
+18818	2	Tan Riding Talbuk
+18824	2	Tan War Talbuk
 16754	2	Tandrine
+21352	2	Tangled Dreamweaver
 16689	2	Tannaria
 18662	2	Tanner Brightbelt
 95	0	Taradormi
@@ -3687,6 +3850,7 @@ DmorphOcto_ModelData = [[
 16715	2	Telenus
 16698	2	Telia
 16682	2	Telina Shadehand
+20938	2	Temperamental Skyclaw
 20341	2	Tenner Pipegadge
 17785	2	Terellia
 15221	0	Terror Totem
@@ -3714,6 +3878,7 @@ DmorphOcto_ModelData = [[
 18057	2	Thorg the Big
 993	1	Threshadon (Aqua)
 1467	1	Threshadon (Siena)
+18264	2	Thunder Bluff Kodo
 1540	1	Thunder Lizard (Beast Blue)
 6083	1	Thunder Lizard (Beast Blue)
 14933	1	Thunder Lizard (Beast Blue)
@@ -3724,6 +3889,8 @@ DmorphOcto_ModelData = [[
 21254	3	Thunderlizardmount (Thunder Beast Green)
 21255	3	Thunderlizardmount (Thunder Beast Light Brown)
 21256	3	Thunderlizardmount (Thunder Beast Red)
+6443	0	Tiger
+9952	0	Tiger
 5067	1	Tiger (Black)
 3029	1	Tiger (Dark)
 5068	1	Tiger (Dark)
@@ -3765,6 +3932,7 @@ DmorphOcto_ModelData = [[
 20956	3	Tigermount
 15215	1	Tigon Female
 18098	2	Tiki
+247	0	Timber Wolf
 16162	0	Time Anomaly
 18044	2	Time-Lord Epochronos
 18721	2	Tin'go
@@ -3796,6 +3964,7 @@ DmorphOcto_ModelData = [[
 18245	2	Tomb Creeper
 18246	2	Tomb Creeper
 18248	2	Tomb Creeper
+20918	2	Tomb Stalker
 16818	2	Toranial Mishulas
 16746	2	Torial Dawnrise
 16766	2	Torian
@@ -3967,10 +4136,13 @@ DmorphOcto_ModelData = [[
 337	1	Troll Whelp (Jungle Split Skull Scout)
 20612	3	Ts Boat 02
 18510	2	Turbo-Charged Flying Machine
+14375	0	Turbostrider
 21523	3	Turtle Christmas
 20833	3	Turtlemount
 20781	3	Tuskarboat
 20781	2	Tuskarr Boat
+18289	2	Twilight Avenger
+18287	2	Twilight Drake
 18851	2	Twilight Fireblade
 18852	2	Twilight Fireblade
 18853	2	Twilight Fireblade
@@ -4026,6 +4198,7 @@ DmorphOcto_ModelData = [[
 19022	3	Undead Male NPC
 20987	3	Undead Male NPC
 21478	3	Undead Male NPC
+20911	2	Underrot Crawg
 18240	2	Unicorn
 21277	3	Unicorn (Black)
 4603	1	Unicorn (Brown Zebra)
@@ -4040,6 +4213,7 @@ DmorphOcto_ModelData = [[
 16767	2	Valanos Dawnfire
 18659	2	Valdarion Smite
 20598	2	Valentino Westwood
+18532	2	Valiance
 18137	2	Valiant
 267	0	Valund Halle
 4185	0	Vampiric Batling
@@ -4057,10 +4231,13 @@ DmorphOcto_ModelData = [[
 19108	2	Vengeful Spirit
 20414	2	Venomlash Chimaera
 20603	2	Vera Lauren
+21314	2	Verdant Skitterfly
 18235	2	Vereesa Windrunner
 20590	2	Verrus Trueshine
 18981	2	Vice Admiral Renhoff
 20888	3	Vicious Golden King
+20888	2	Vicious War Lion
+20896	2	Vicious War Wolf
 20889	3	Victorius Alliance Steed Vanilla
 20890	3	Victorius Alliance Steed Vanilla
 20891	3	Victorius Alliance Steed Vanilla
@@ -4082,14 +4259,17 @@ DmorphOcto_ModelData = [[
 18698	3	Void Walker Outland (Red)
 18699	3	Void Walker Outland (Turquoise)
 18700	3	Void Walker Outland (Yellow)
+20852	2	Voidtalon of the Dark Star
 16777	2	Voldana
 18470	2	Volkan Cruelblade
 20563	2	Voren'thal the Scryer
 16818	2	Voryn Skystrider
 299	0	Vuh'sha Torntusk
+20953	2	Vulpine Familiar
 16157	0	Walla's Damage Dealer
 18419	2	Wallowing Crewman
 18340	2	Wally
+20904	2	Wandering Ancient
 16543	2	Wanton Hostess
 16544	2	Wanton Hostess
 16545	2	Wanton Hostess
@@ -4101,6 +4281,7 @@ DmorphOcto_ModelData = [[
 18101	2	Warden Watcher
 18102	2	Warden Watcher
 18103	2	Warden Watcher
+8469	0	Warhorse
 18332	2	Warleader Zol'majin
 20297	2	Warlord Hanzento
 18561	3	Warpstalker (Blue)
@@ -4140,7 +4321,10 @@ DmorphOcto_ModelData = [[
 15227	0	Whisper
 15914	2	Whisperwind Villager
 18351	2	White Bear Cub
+9474	0	White Mechanostrider Mod B
+2786	0	White Ram
 18093	2	White Riding Bear
+18533	2	White Skeletal Warhorse
 18624	2	White Stag
 18772	2	White Stag
 18240	2	White Thalassian Unicorn
@@ -4163,9 +4347,12 @@ DmorphOcto_ModelData = [[
 20649	3	Wingedhorse
 18768	2	Winlassah Dawnstar
 6810	0	Winter Grell Trickster
+21280	2	Winter Harvesthog
 15901	0	Winter Veil Reindeer
+1166	0	Winter Wolf
 664	0	Winterfin First Responder
 1762	0	Winterfin Gatherer
+10426	0	Winterspring Frostsaber
 16828	2	Winthren
 12769	1	Wisp
 18191	2	Withered Refugee
@@ -4207,6 +4394,7 @@ DmorphOcto_ModelData = [[
 20702	3	Wrathguard (Body Red)
 20703	3	Wrathguard (Body Red)
 5028	0	Wrathscale Marauder
+20944	2	Wriggling Parasite
 18057	2	Wuzgut
 14359	0	Wyrmrest Protector
 2156	1	Wyvern
@@ -4219,6 +4407,7 @@ DmorphOcto_ModelData = [[
 18355	2	Xecc
 16830	2	Yatheon
 18813	2	Yaz'rik
+21342	2	Yellow Scouting Ottuk
 20401	2	Yohan Wildwalker
 18005	2	Young Arctic Fox
 18007	2	Young Brown Fox
@@ -4226,6 +4415,7 @@ DmorphOcto_ModelData = [[
 18004	2	Young Mist Fox
 2425	0	Young Murk Thresher
 20504	2	Young Thalassian Boar
+20861	2	Yu'lei, Daughter of Jade
 18868	2	Yur Dragonfist
 16781	2	Zaedana
 18363	2	Zafan

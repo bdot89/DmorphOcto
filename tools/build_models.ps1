@@ -8,7 +8,8 @@ param(
   [string]$TagsFile = (Join-Path $PSScriptRoot "..\Data\ModelTags.lua"),
   [string]$TagSource = (Join-Path $PSScriptRoot "data\turtle_ranks.tsv"),
   [string]$HiddenFile = (Join-Path $PSScriptRoot "..\Data\HiddenModels.lua"),
-  [string]$ClassicTags = (Join-Path $PSScriptRoot "..\Data\ClassicTags.lua")
+  [string]$ClassicTags = (Join-Path $PSScriptRoot "..\Data\ClassicTags.lua"),
+  [string]$RetailMounts = (Join-Path $PSScriptRoot "data\retail_mounts.tsv")
 )
 # Builds two files from the client's own DBFilesClient tables (read straight
 # from the MPQs, newest patch first), so everything OctoWoW added is included:
@@ -318,12 +319,40 @@ foreach ($e in $entries) {
   [void]$rows.Add([pscustomobject]@{ id = $e.id; name = $name; named = $false; custom = $e.custom })
 }
 # Famous mounts ($MOUNT_NAMES, below) under their own name too.
+$mountTitle = @{}
 foreach ($e in $entries) {
   foreach ($key in $MOUNT_NAMES.Keys) {
     if ($e.path -ieq $key) {
       [void]$rows.Add([pscustomobject]@{ id = $e.id; name = $MOUNT_NAMES[$key]; named = $true; custom = $e.custom })
+      $mountTitle[$e.id] = $MOUNT_NAMES[$key]
     }
   }
+}
+# Retail's mounts (tools/data/retail_mounts.tsv, made by the model porting
+# tool's mountbase command from Blizzard's Mount and MountXDisplay tables): a
+# display whose model and skin files a Retail mount shows gets that mount's
+# name too ("Hogrus, Swine of Good Fortune", not "Encrypted06"), unless it has
+# it already. look: that mount's look; model: other skins of a mount's model.
+$retailLook = @{}; $retailModel = @{}
+if (Test-Path $RetailMounts) {
+  foreach ($line in [IO.File]::ReadAllLines($RetailMounts)) {
+    if ($line -match '^(\d+)\tlook\t(.+)$') { $retailLook[[int]$matches[1]] = $matches[2].Trim() }
+    elseif ($line -match '^(\d+)\tmodel\t') { $retailModel[[int]$matches[1]] = $true }
+  }
+}
+$namesOf = @{}
+foreach ($line in [IO.File]::ReadAllLines($Creatures)) {
+  if ($line -match '^(\d+)\t(.+)$') { $namesOf["$($matches[1])`t$($matches[2].ToLowerInvariant())"] = $true }
+}
+foreach ($r in $rows) { $namesOf["$($r.id)`t$($r.name.ToLowerInvariant())"] = $true }
+$retailNamed = 0
+foreach ($i in $usable) {
+  $id = $display.Int($i, 0)
+  if (-not $retailLook.ContainsKey($id) -or $mountTitle.ContainsKey($id)) { continue }
+  $mountTitle[$id] = $retailLook[$id]
+  if ($namesOf.ContainsKey("$id`t$($retailLook[$id].ToLowerInvariant())")) { continue }
+  [void]$rows.Add([pscustomobject]@{ id = $id; name = $retailLook[$id]; named = $true; custom = -not $stock.ContainsKey($id) })
+  $retailNamed++
 }
 
 $utf8 = New-Object System.Text.UTF8Encoding($false)
@@ -410,17 +439,28 @@ $MOUNT_NAME = '(?i)riding|mount(?!ain)|packmule|warhorse|mechastrider|hawkstride
 # points (11 Oct 2026; the rider point is on 182 of the 191 known mount
 # models): the Undercity bat, rocket cars, the flying machine, the
 # motorcycle, the skiff and Tuskarr boat, the fel hound, the nether-gorged
-# wyrm, Darkshade and Dragonmaw drakes, the druid stag and cats, pterrordax,
-# mistfox, tigon, unicorn, and the pet-sized wyvern and hippogryph.
+# wyrm, Darkshade and Dragonmaw drakes, the druid stag, pterrordax, mistfox,
+# tigon and unicorn.
 $MOUNT_MODEL = '(?i)\\(phoenix\\phoenix|wingedhorse\\|celestialhorse\\|drake\\northrenddrake|warhorse\\victorius|armoredraptor\\|lavahorse\\|felhorse\\felhorseepic|antonidashorse\\|netherray\\|wyvern\\wyvern\.|hippogryph\\hippogryph\.|gryphon\\gryphon_ghost|turtle\\turtle\.' `
   + '|felbat\\battaxi\.|gnomerocketcar\\|goblinrocketcar\\|flyingmachinecreature_vehicle\\|motorcyclevehicle\\|skiff\\|tuskarboat\\' `
-  + '|felhoundmount\\|nethergorgedgreatwyrm\\|drakedarkshade\\|drake\\orcdrakerider\.|stag\\druitswifttravelform\.|druidcat\\' `
-  + '|pterrordax\\|mistfox\\|tigon\\|unicorn\\|wyvernpet\\|hippogryph\\hippogryphpet\.)'
+  + '|felhoundmount\\|nethergorgedgreatwyrm\\|drakedarkshade\\|drake\\orcdrakerider\.|stag\\druitswifttravelform\.' `
+  + '|pterrordax\\|mistfox\\|tigon\\|unicorn\\)'
+# Never mounts, whatever the rules above say (checked by hand against
+# Blizzard's mount tables, 15 Oct 2026): pets and cubs of mount models (sabre
+# cubs, hatchlings), models with the rider built in (the mounted knights and
+# death knights, the Four Horsemen, the kodo rider, the chess knight), the
+# unmounted death knights, druid cat form and the lynxes that share it, the
+# Mouth of C'Thun's tentacle, and invisible models.
+$NOT_MOUNT = '(?i)\\(frostsabre\\sabrecub\.|hippogryph\\hippogryphpet\.|wyvernpet\\|babyhawkstrider\\|mounteddeathknight\\(un)?mounteddeathknight|mountedknight\\' `
+  + '|mounteddemonknight\\|kodobeast\\kodorider\.|karazhanchessboss\\|deathknightwc2\\deathknightwc2\.|druidcat\\|mouthofkathune01\\|invisiblestalker\\)'
 if (Test-Path $ClassicTags) {
   foreach ($line in [IO.File]::ReadAllLines($ClassicTags)) {
     if ($line -match '^(\d+)\tmount\t') { $mountIds[[int]$matches[1]] = $true }
   }
 }
+# Blizzard's own mounts and the other skins of their models (see $RetailMounts).
+foreach ($id in $retailLook.Keys) { $mountIds[$id] = $true }
+foreach ($id in $retailModel.Keys) { $mountIds[$id] = $true }
 $pathOf = @{}
 foreach ($i in $usable) {
   $id = $display.Int($i, 0)
@@ -529,11 +569,19 @@ if (-not $byPoint) {
 }
 "Mounts: {0} displays ({1} known; {6}; {2} more from the same models or their rider point, which {3} of {4} known mount models have). New, for example: {5}" -f `
   $mountIds.Count, $known, ($mountIds.Count - $known), $seedYes, $seedKnown, ((@($examples.Keys) | Sort-Object | Select-Object -First 12) -join ", "), $spellNote
-foreach ($id in ($mountIds.Keys | Sort-Object)) { [void]$tagRows.Add("$id`tmount`t") }
+$notMount = 0
+foreach ($id in @($mountIds.Keys)) {
+  if ($pathOf.ContainsKey($id) -and "\$($pathOf[$id])" -match $NOT_MOUNT) { $mountIds.Remove($id); $notMount++ }
+}
+"Not mounts after all: {0} displays (pets, riders built in, ...); {1} named after their Retail mount" -f $notMount, $retailNamed
+# A mount with a name of its own (Retail's, or $MOUNT_NAMES) is listed under
+# that name only, not under every creature that shares the display.
+foreach ($id in ($mountIds.Keys | Sort-Object)) { [void]$tagRows.Add("$id`tmount`t$($mountTitle[$id])") }
 $sb = New-Object System.Text.StringBuilder
 [void]$sb.Append("-- Generated by tools/build_models.ps1. Do not edit.`n")
 [void]$sb.Append("-- Model filter tags, one per line: displayID<TAB>tag<TAB>name. boss and rare apply to the catalogue`n")
-[void]$sb.Append("-- entry with that display and name (Turtle WoW's creature ranks); mount applies to the display.`n")
+[void]$sb.Append("-- entry with that display and name (Turtle WoW's creature ranks); mount applies to the display, or with`n")
+[void]$sb.Append("-- a name (the mount's own) to that entry only.`n")
 [void]$sb.Append("DmorphOcto_TagData = [[`n")
 foreach ($r in $tagRows) { if (-not $r.Contains("]]")) { [void]$sb.Append("$r`n") } }
 [void]$sb.Append("]]`n")
