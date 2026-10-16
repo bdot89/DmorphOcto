@@ -1875,7 +1875,22 @@ local function installHelper(look)
 		return type(v) == "number" and v >= 0 and v <= max and v == math.floor(v)
 	end
 	function DmorphHelper_Version()
-		return 13
+		return 14
+	end
+	-- v14: riders of some mount displays get another pose (game.posesWork: the
+	-- helper could patch the game).
+	game.poses, game.posesWork = {}, true
+	function DmorphHelper_SetRiderPose(display, anim)
+		if not (whole(display, 2147483647) and display > 0 and whole(anim, 225)) then
+			error("Usage: DmorphHelper_SetRiderPose(displayID, animation)")
+		end
+		if not game.posesWork then
+			error("DmorphHelper couldn't change the game's riding pose.")
+		end
+		game.poses[display] = (anim ~= 0 and anim ~= 91) and anim or nil
+	end
+	function DmorphHelper_GetRiderPose(display)
+		return game.poses[display] or 91, game.posesWork and 1 or 0
 	end
 	-- The race byte: VanillaHelpers writes the morph's race there (tests set
 	-- game.race); DmorphHelper_SetRace writes it without a rebuild, and
@@ -1981,6 +1996,7 @@ local function removeHelper()
 	DmorphHelper_SetWeather, DmorphHelper_ClearWeather, DmorphHelper_GetWeather = nil, nil, nil
 	DmorphHelper_SetTime, DmorphHelper_GetTime = nil, nil
 	DmorphHelper_SetVirtualItem = nil
+	DmorphHelper_SetRiderPose, DmorphHelper_GetRiderPose = nil, nil
 end
 
 local function sameLook(a, b)
@@ -2043,16 +2059,16 @@ DmorphOctoDB, DmorphOctoAccount = nil, nil
 loadWithHelper()
 Mock.Tick(1.1)
 slash("dmorph status")
-check(contains(allChat(), "DmorphHelper v13 is loaded"), "status shows the helper's version")
+check(contains(allChat(), "DmorphHelper v14 is loaded"), "status shows the helper's version")
 slash("dmorph check")
 check(contains(allChat(), "DmorphHelper: |cff33ff99OK"), "the check says the helper runs")
-check(contains(allChat(), "Running v13 (this DMorph comes with v13)"), "and which version runs")
+check(contains(allChat(), "Running v14 (this DMorph comes with v14)"), "and which version runs")
 local openedForSetup = not (DmorphOctoFrame and DmorphOctoFrame:IsVisible())
 if openedForSetup then
 	slash("")
 end
 Mock.Click(DmorphOctoSetupButton)
-check(contains(DmorphOctoSetupButton.text, "Helper v13") and contains(DmorphOctoSetupText2.text, "Running v13"),
+check(contains(DmorphOctoSetupButton.text, "Helper v14") and contains(DmorphOctoSetupText2.text, "Running v14"),
 	"the Setup button and panel show the helper version")
 Mock.Click(DmorphOctoSetupClose)
 local currentVersion = DmorphHelper_Version
@@ -2621,6 +2637,33 @@ DmorphOcto_PortedGlows = nil
 removeHelper()
 Mock.portedData, Mock.portedItems, Mock.portedSets = nil, nil, nil
 Mock.serverItems[647], Mock.serverItems[16966] = nil, nil
+
+-- Rider poses (Ported.lua tag "rider<animation>", DmorphHelper v14).
+Mock.portedData = "60001\tArchmage's Prismatic Disc\tmount rider120\n60002\tSurf Jelly\tmount rider97\n"
+	.. "60003\tSkyrider2 Test\tmount\n60004\tRider 7\t\n"
+installHelper({ 1, 1, 1, 1, 1 })
+loadUI()
+installMorphAPI()
+Mock.Fire("PLAYER_ENTERING_WORLD")
+Mock.Tick(0.3)
+Mock.Tick(0.3)
+check(game.poses[60001] == 120 and game.poses[60002] == 97 and DmorphOcto.GetRiderPose(60001) == 120,
+	"riders of the discs stand and of the jelly sit: the helper is told at login")
+check(game.poses[60003] == nil and game.poses[60004] == nil and DmorphOcto.GetRiderPose(60003) == nil,
+	"a name with \"rider\" in it or a mount without the tag keeps the riding pose")
+local poseReport = ""
+for _, r in ipairs(DmorphOcto.GetSetupReport()) do
+	poseReport = poseReport .. r.text
+end
+check(contains(poseReport, "Riders stand on discs"), "the setup check says rider poses work")
+game.posesWork = false
+poseReport = ""
+for _, r in ipairs(DmorphOcto.GetSetupReport()) do
+	poseReport = poseReport .. r.text
+end
+check(contains(poseReport, "couldn't change the riding pose"), "and says so when the helper couldn't patch the game")
+removeHelper()
+Mock.portedData = nil
 loadUI()
 check(not DmorphOcto.GetCreatureCatalog().byID[60001], "without Data/Ported.lua there are no ported models")
 

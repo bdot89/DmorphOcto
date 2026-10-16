@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.16.3"
+local VERSION = "2.17.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -348,6 +348,32 @@ elseif DmorphOcto_PortedData or DmorphOcto_PortedItems then
 end
 if portedPack and not strfind(portedPack, "^%w+$") then
 	portedPack = nil
+end
+
+-- Rider poses: ported mounts whose riders Blizzard poses another way (Ported.lua's
+-- tag "rider<animation>": 120 stands crouched on the mage discs, boards, kites
+-- and carpets, 97 sits). DmorphHelper v14 (DmorphHelper_SetRiderPose) puts them
+-- on whoever rides one. Read now, before the list is parsed and dropped.
+local riderPoses = {}
+for id, anim in string.gfind(DmorphOcto_PortedData or "", "(%d+)\t[^\t\r\n]*\t[^\t\r\n]*rider(%d+)") do
+	riderPoses[tonumber(id)] = tonumber(anim)
+end
+function M.GetRiderPose(displayID)
+	return riderPoses[tonumber(displayID or 0)]
+end
+
+local posesRegistered
+local function RegisterRiderPoses()
+	if posesRegistered or type(DmorphHelper_SetRiderPose) ~= "function" or not next(riderPoses) then
+		return
+	end
+	posesRegistered = true
+	for id, anim in pairs(riderPoses) do
+		-- An error: the helper couldn't change the game's riding pose (/dmorph check says so).
+		if not pcall(DmorphHelper_SetRiderPose, id, anim) then
+			return
+		end
+	end
 end
 function M.GetPortedPack()
 	return portedPack
@@ -1445,6 +1471,7 @@ local function EnsureSession()
 	end
 	CaptureNative()
 	RegisterPortedItems()
+	RegisterRiderPoses()
 	sessionReady = true
 end
 
@@ -1923,7 +1950,7 @@ local MISSING_HELPER = "DmorphHelper.dll isn't loaded, so weapon glows, your siz
 M.MISSING_HELPER = MISSING_HELPER
 -- The DmorphHelper_Version() the DLL in helper\ reports. An older one in the
 -- game folder (DMorph was updated, the DLL wasn't copied again) is flagged.
-local HELPER_VERSION = 13
+local HELPER_VERSION = 14
 -- Rows 1-5 of the Races tab, in DmorphHelper_GetLook's order.
 local OWN_LOOK_NPC = { "npcSkin", "npcFace", "npcHairStyle", "npcHairColour" }
 
@@ -1964,8 +1991,17 @@ function M.GetSetupReport()
 		Add("DmorphHelper", "bad", "An older DmorphHelper (v" .. helperVersion .. ") is in the game folder; this DMorph "
 			.. "comes with v" .. HELPER_VERSION .. ". " .. INSTALL_HELPER)
 	elseif HasHelper() then
+		local poses = ""
+		if type(DmorphHelper_GetRiderPose) == "function" then
+			local ok, _, works = pcall(DmorphHelper_GetRiderPose, 1)
+			if ok and works == 1 then
+				poses = " Riders stand on discs, boards and carpets."
+			else
+				poses = " It couldn't change the riding pose (another mod changed that part of the game?)."
+			end
+		end
 		Add("DmorphHelper", "ok", "Running v" .. helperVersion .. " (this DMorph comes with v" .. HELPER_VERSION .. "): weapon "
-			.. "glows, size, real skin, face and hair, and your own faction and languages during race morphs work.")
+			.. "glows, size, real skin, face and hair, and your own faction and languages during race morphs work." .. poses)
 	else
 		Add("DmorphHelper", "off", "Optional, not running: weapon glows and real skin, face and hair need it. "
 			.. INSTALL_HELPER)

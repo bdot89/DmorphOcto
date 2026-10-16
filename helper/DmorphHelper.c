@@ -30,6 +30,8 @@
 //   DmorphHelper_GetVirtualItem(itemID)                       -> templateItemID, displayID
 //   DmorphHelper_SetAmmo(itemID)                             (your own ammo field; 0 = none)
 //   DmorphHelper_GetAmmo()                                   -> ammo item ID
+//   DmorphHelper_SetRiderPose(displayID, animation)          (v14; riders of that mount display: 120 stand, 97 sit; 91 usual)
+//   DmorphHelper_GetRiderPose(displayID)                     -> animation, poses work (1/0)
 // unit is a unit token for a player you could help ("player", "target", ...);
 // slot is an inventory slot, 1-19. The functions only write the values: the
 // addon keeps what it wants and puts it back after the server resends them.
@@ -50,7 +52,7 @@
 #define GAME_FASTCALL __attribute__((fastcall))
 #define GAME_THISCALL __attribute__((thiscall))
 
-#define HELPER_VERSION 13
+#define HELPER_VERSION 14
 
 // Game functions, build 5875 (from VanillaHelpers' Offsets.h).
 #define FUN_INVALID_FUNCTION_PTR_CHECK 0x42A320
@@ -741,6 +743,163 @@ static int GAME_FASTCALL Script_GetVirtualItem(void *L) {
     return 2;
 }
 
+// Rider poses (v14). Some mounts in later expansions change their rider's pose
+// (the spell's aura kit loops an animation on the rider, SpellVisualAnim): on
+// the mage discs, boards, kites and flying carpets the rider stands crouched
+// (StealthStand, 120), on a few they sit on it (SitGround, 97). 1.12 always
+// uses the riding pose (Mount, 91), set in two places: right after the rider's
+// model is attached to the mount's (0x607B40, push 0x5B before the call to the
+// model's set-animation function 0x7121A0) and every time the unit's
+// animation is picked while it has a mount model (0x5FE809, mov eax,0x5B in
+// the animation picker 0x5FE2F0; the unit is in ebx). Both are patched to ask
+// RiderAnim for the mount display the unit shows (UNIT_FIELD_MOUNTDISPLAYID,
+// which holds a mount skin too). The addon says which displays get which pose.
+#define UNIT_FIELD_MOUNTDISPLAYID 0x85
+#define ANIM_MOUNT 91
+#define ANIM_HIGHEST 225 // AnimationData's contiguous IDs (0-225) on this client
+#define RIDER_PICK_AT 0x5FE809
+#define RIDER_MOUNT_AT 0x607B3C
+#define MAX_POSES 4096
+#define POSE_HASH_SIZE 8192 // a power of two, twice the most poses
+static uint32_t g_poseDisplay[POSE_HASH_SIZE]; // 0 = empty
+static uint16_t g_poseAnim[POSE_HASH_SIZE];    // 0 after a pose is removed: the riding pose
+static int g_poseCount = 0;
+static BOOL g_posesPatched = FALSE;
+
+static int PoseSlot(uint32_t display) {
+    for (uint32_t h = (display * 2654435761u) & (POSE_HASH_SIZE - 1);; h = (h + 1) & (POSE_HASH_SIZE - 1)) {
+        if (g_poseDisplay[h] == display || g_poseDisplay[h] == 0) {
+            return (int)h;
+        }
+    }
+}
+
+// The rider's animation on a unit's mount (called from the patched code).
+__attribute__((used)) static uint32_t RiderAnim(void *unit) __asm__("DmorphHelper_RiderAnim");
+static uint32_t RiderAnim(void *unit) {
+    if (g_poseCount == 0 || !unit) {
+        return ANIM_MOUNT;
+    }
+    uint32_t *f = Fields(unit);
+    uint32_t display = f ? f[UNIT_FIELD_MOUNTDISPLAYID] : 0;
+    if (display == 0) {
+        return ANIM_MOUNT;
+    }
+    int h = PoseSlot(display);
+    return g_poseDisplay[h] == display && g_poseAnim[h] ? g_poseAnim[h] : ANIM_MOUNT;
+}
+
+// At 0x5FE809 (mov eax,0x5B; 5 bytes): eax = the rider's animation for ebx.
+__attribute__((naked)) static void RiderPickStub(void) {
+    __asm__ volatile(
+        "push %ecx\n\t"
+        "push %edx\n\t"
+        "push %ebx\n\t"
+        "call DmorphHelper_RiderAnim\n\t"
+        "add $4, %esp\n\t"
+        "pop %edx\n\t"
+        "pop %ecx\n\t"
+        "ret\n\t");
+}
+
+// At 0x607B3C (push 0; push -1; push 0x5B; 6 bytes, now call + nop): the same
+// three arguments with the rider's animation for esi; ecx (the rider's model)
+// kept, eax and edx are free there.
+__attribute__((naked)) static void RiderMountStub(void) {
+    __asm__ volatile(
+        "pop %eax\n\t"
+        "push $0\n\t"
+        "push $-1\n\t"
+        "push %eax\n\t"
+        "push %ecx\n\t"
+        "push %esi\n\t"
+        "call DmorphHelper_RiderAnim\n\t"
+        "add $4, %esp\n\t"
+        "pop %ecx\n\t"
+        "pop %edx\n\t"
+        "push %eax\n\t"
+        "jmp *%edx\n\t");
+}
+
+static BOOL WriteCall(uintptr_t at, const uint8_t *expected, size_t size, void *target) {
+    if (memcmp((const void *)at, expected, size) != 0) {
+        return FALSE;
+    }
+    uint8_t code[8];
+    int32_t rel = (int32_t)((uintptr_t)target - (at + 5));
+    code[0] = 0xE8;
+    memcpy(code + 1, &rel, 4);
+    for (size_t i = 5; i < size; i++) {
+        code[i] = 0x90;
+    }
+    DWORD old;
+    if (!VirtualProtect((LPVOID)at, size, PAGE_EXECUTE_READWRITE, &old)) {
+        return FALSE;
+    }
+    memcpy((void *)at, code, size);
+    VirtualProtect((LPVOID)at, size, old, &old);
+    FlushInstructionCache(GetCurrentProcess(), (LPCVOID)at, size);
+    return TRUE;
+}
+
+// Once, on the game's own thread (when it loads its Lua functions), so the
+// code isn't running while it changes. Both or neither: the bytes must be the
+// stock ones (another mod could have changed them).
+static void PatchRiderPoses(void) {
+    static BOOL tried = FALSE;
+    if (tried) {
+        return;
+    }
+    tried = TRUE;
+    static const uint8_t pick[] = { 0xB8, 0x5B, 0x00, 0x00, 0x00 };
+    static const uint8_t mount[] = { 0x6A, 0x00, 0x6A, 0xFF, 0x6A, 0x5B };
+    if (memcmp((const void *)RIDER_PICK_AT, pick, sizeof pick) != 0 ||
+        memcmp((const void *)RIDER_MOUNT_AT, mount, sizeof mount) != 0) {
+        return;
+    }
+    g_posesPatched = WriteCall(RIDER_PICK_AT, pick, sizeof pick, (void *)&RiderPickStub) &&
+                     WriteCall(RIDER_MOUNT_AT, mount, sizeof mount, (void *)&RiderMountStub);
+}
+
+static const char *POSE_USAGE = "Usage: DmorphHelper_SetRiderPose(displayID, animation) (0 or 91: the riding pose)";
+
+// Which pose riders of a mount display get (0 or 91 = the usual riding pose).
+static int GAME_FASTCALL Script_SetRiderPose(void *L) {
+    uint32_t display = NumberArg(L, 1, 1, 2147483647.0, POSE_USAGE);
+    uint32_t anim = NumberArg(L, 2, 0, ANIM_HIGHEST, POSE_USAGE);
+    if (!g_posesPatched) {
+        LuaError(L, "DmorphHelper couldn't change the game's riding pose.");
+        return 0;
+    }
+    if (anim == ANIM_MOUNT) {
+        anim = 0;
+    }
+    int h = PoseSlot(display);
+    if (g_poseDisplay[h] != display) {
+        if (anim == 0) {
+            return 0;
+        }
+        if (g_poseCount >= MAX_POSES) {
+            LuaError(L, "DmorphHelper: too many rider poses.");
+            return 0;
+        }
+        g_poseCount++;
+    }
+    g_poseAnim[h] = (uint16_t)anim;
+    g_poseDisplay[h] = display;
+    return 0;
+}
+
+// The pose riders of a mount display get (91 = the usual riding pose), and
+// whether poses work (1/0).
+static int GAME_FASTCALL Script_GetRiderPose(void *L) {
+    uint32_t display = NumberArg(L, 1, 1, 2147483647.0, "Usage: DmorphHelper_GetRiderPose(displayID)");
+    int h = PoseSlot(display);
+    LuaPushNumber(L, g_poseDisplay[h] == display && g_poseAnim[h] ? g_poseAnim[h] : ANIM_MOUNT);
+    LuaPushNumber(L, g_posesPatched ? 1 : 0);
+    return 2;
+}
+
 // The game lists the map cells a line crosses (the mouse pointer's line into
 // the world, line of sight) in a buffer it sizes once for 2048 cells and
 // never checks. The pointer's line reaches as far as your view distance, so
@@ -761,6 +920,7 @@ static void GrowWorldLineCells(void) {
 static void GAME_FASTCALL LoadScriptFunctions_h(void) {
     LoadScriptFunctions_o();
     GrowWorldLineCells();
+    PatchRiderPoses();
     RegisterFunction("DmorphHelper_Version", (uintptr_t)&Script_Version);
     RegisterFunction("DmorphHelper_GetItemEnchants", (uintptr_t)&Script_GetItemEnchants);
     RegisterFunction("DmorphHelper_SetItemEnchants", (uintptr_t)&Script_SetItemEnchants);
@@ -781,6 +941,8 @@ static void GAME_FASTCALL LoadScriptFunctions_h(void) {
     RegisterFunction("DmorphHelper_GetVirtualItem", (uintptr_t)&Script_GetVirtualItem);
     RegisterFunction("DmorphHelper_SetAmmo", (uintptr_t)&Script_SetAmmo);
     RegisterFunction("DmorphHelper_GetAmmo", (uintptr_t)&Script_GetAmmo);
+    RegisterFunction("DmorphHelper_SetRiderPose", (uintptr_t)&Script_SetRiderPose);
+    RegisterFunction("DmorphHelper_GetRiderPose", (uintptr_t)&Script_GetRiderPose);
 }
 
 // The game's own image must reach every address used here (a 1.12.1 exe).
