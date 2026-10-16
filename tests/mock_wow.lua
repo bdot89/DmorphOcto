@@ -486,6 +486,12 @@ function Mock.ResetUI()
 			return item[1], "item:" .. id .. ":0:0:0", item[2], 60, "Armor", "Plate", 1, item[3],
 				"Interface\\Icons\\INV_Misc_QuestionMark"
 		end
+		-- DmorphHelper's virtual items (Mock.virtualItems = { [id] = { template, display } }):
+		-- the template's record, once the game knows the template.
+		local v = Mock.virtualItems and Mock.virtualItems[id]
+		if v and v[1] ~= id then
+			return GetItemInfo(v[1])
+		end
 	end
 	-- ClassicAPI's item loading, only while the test installs ClassicAPI.
 	Mock.itemRequests = {}

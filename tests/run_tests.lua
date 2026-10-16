@@ -1944,6 +1944,7 @@ local function installHelper(look)
 	end
 	-- Virtual items: item IDs only this PC has (ported weapons).
 	game.virtual = {}
+	Mock.virtualItems = game.virtual
 	function DmorphHelper_SetVirtualItem(id, template, display)
 		if not (whole(id, 2147483647) and whole(template, 2147483647) and whole(display, 2147483647)) then
 			error("Usage: DmorphHelper_SetVirtualItem(itemID, templateItemID, displayID)")
@@ -1997,6 +1998,7 @@ local function removeHelper()
 	DmorphHelper_SetTime, DmorphHelper_GetTime = nil, nil
 	DmorphHelper_SetVirtualItem = nil
 	DmorphHelper_SetRiderPose, DmorphHelper_GetRiderPose = nil, nil
+	Mock.virtualItems = nil
 end
 
 local function sameLook(a, b)
@@ -2596,6 +2598,51 @@ Mock.Tick(0.5)
 Mock.Click(DmorphOctoSetGear)
 check(DmorphOcto.GetHideGearUnderSets(), "and back")
 DmorphOcto.SetItem(15, 0)
+-- Its preview card (user, 16 Oct: stuck on "Loading from the server..." for a
+-- ported set): it waits for a template, says so after a while, and shows the
+-- piece once a known shoulder can stand in, as when you wear it.
+do
+Mock.Click(DmorphOctoTabItems)
+for _ = 1, 20 do
+	if DmorphOctoItemSlotLabel.text == "Shoulder" then
+		break
+	end
+	Mock.Click(Mock.FindButton(">"))
+end
+Mock.Type(DmorphOctoItemSearch, "ported cloth mantle")
+local mantleRow = DmorphOctoItemListRow1
+check(mantleRow:IsVisible() and mantleRow.text.text == "Ported Cloth Mantle", "the shoulder list has the ported mantle")
+Mock.itemRequests = {}
+Mock.RunScript(mantleRow, "OnEnter")
+check(DmorphOctoItemCardStatus.text == "Loading from the server..."
+	and not contains(" " .. table.concat(Mock.itemRequests, " ") .. " ", " 901004 "),
+	"its preview waits for a template, without asking the server for the ported item's own ID")
+for _ = 1, 10 do
+	Mock.Tick(1)
+end
+check(DmorphOctoItemCardStatus.text == "The server didn't send this.", "after a while the card says it didn't come")
+local standIn
+for id in pairs(DmorphOcto.GetItemCatalog(3).byID) do
+	if id < 900000 then
+		standIn = id
+		break
+	end
+end
+Mock.serverItems[standIn] = { "Some Mantle", 2, "INVTYPE_SHOULDER" }
+Mock.Tick(1.1)
+local triedMantle = false
+for _, id in ipairs(DmorphOctoItemCardModel.tried or {}) do
+	if id == 901004 then
+		triedMantle = true
+	end
+end
+check(triedMantle and DmorphOctoItemCardStatus.text == "", "a known shoulder stands in and the card shows it")
+Mock.RunScript(mantleRow, "OnLeave")
+Mock.serverItems[standIn] = nil
+Mock.Type(DmorphOctoItemSearch, "")
+DmorphOcto.SetItem(3, 0)
+slash("demorph all")
+end
 -- A ported shoulder whose template the game doesn't know borrows a known
 -- shoulder, never another slot's item of its kind (a cloth hat drew it on the head).
 slash("item 3 901004")
@@ -2639,6 +2686,7 @@ Mock.portedData, Mock.portedItems, Mock.portedSets = nil, nil, nil
 Mock.serverItems[647], Mock.serverItems[16966] = nil, nil
 
 -- Rider poses (Ported.lua tag "rider<animation>", DmorphHelper v14).
+do
 Mock.portedData = "60001\tArchmage's Prismatic Disc\tmount rider120\n60002\tSurf Jelly\tmount rider97\n"
 	.. "60003\tSkyrider2 Test\tmount\n60004\tRider 7\t\n"
 installHelper({ 1, 1, 1, 1, 1 })
@@ -2662,6 +2710,7 @@ for _, r in ipairs(DmorphOcto.GetSetupReport()) do
 	poseReport = poseReport .. r.text
 end
 check(contains(poseReport, "couldn't change the riding pose"), "and says so when the helper couldn't patch the game")
+end
 removeHelper()
 Mock.portedData = nil
 loadUI()

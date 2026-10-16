@@ -1099,29 +1099,43 @@ end
 -- The try-on card next to an item or set row: your character wearing it, in
 -- the Dressing Room's own model (TryOn). The game can only put on items it
 -- knows: one it hasn't seen yet is asked for (ClassicAPI) and goes on when
--- it arrives.
+-- it arrives. A ported piece copies a real item's record (its template): if
+-- the server hasn't sent that one, a known item of the same slot stands in,
+-- as when you wear it (the card waited for the template forever: user,
+-- 16 Oct). After CARD_WAIT seconds the card says what didn't come.
+local CARD_WAIT = 8
 local function TryOnAll(card)
-	local missing = false
+	local missing = 0
 	for i = 1, table.getn(card.items) do
 		local id = card.items[i]
 		if not card.on[id] then
+			local ported = M.IsPortedItem(id)
+			if ported and not GetItemInfo(id) and M.CanShowPortedItem then
+				M.CanShowPortedItem(id)
+			end
 			if GetItemInfo(id) then
 				pcall(card.model.TryOn, card.model, id)
 				card.on[id] = true
 			else
-				missing = true
-				if not card.asked[id] and type(C_Item) == "table" and type(C_Item.RequestLoadItemDataByID) == "function" then
+				missing = missing + 1
+				-- A ported item's own ID means nothing to the server.
+				if not ported and not card.asked[id] and type(C_Item) == "table"
+					and type(C_Item.RequestLoadItemDataByID) == "function" then
 					card.asked[id] = true
 					pcall(C_Item.RequestLoadItemDataByID, id)
 				end
 			end
 		end
 	end
-	card.pending = missing or nil
-	if missing then
-		card.status:SetText("Loading from the server...")
-	else
+	card.pending = missing > 0 or nil
+	if missing == 0 then
 		card.status:SetText("")
+	elseif (card.waited or 0) < CARD_WAIT then
+		card.status:SetText("Loading from the server...")
+	elseif missing == table.getn(card.items) then
+		card.status:SetText("The server didn't send this.")
+	else
+		card.status:SetText(missing .. (missing == 1 and " piece" or " pieces") .. " didn't load.")
 	end
 end
 
@@ -1165,9 +1179,11 @@ local function BuildItemCard()
 		this.rotation = (this.rotation or 0) + arg1 * 0.8
 		this.model:SetRotation(this.rotation)
 		if this.pending then
+			this.waited = (this.waited or 0) + arg1
 			this.retry = (this.retry or 0) - arg1
 			if this.retry <= 0 then
-				this.retry = 0.25
+				-- Quick at first, then once a second (looking for a stand-in goes through a slot's items).
+				this.retry = this.waited < 2 and 0.25 or 1
 				TryOnAll(this)
 			end
 		end
@@ -1191,7 +1207,7 @@ local function ShowItemCard(row, items, title, r, g, b, info)
 		card.wait = REVEAL
 	end
 	card.model:Dress()
-	card.items, card.on, card.rotation = items, {}, 0
+	card.items, card.on, card.rotation, card.waited, card.retry = items, {}, 0, 0, 0.25
 	card:Show()
 	TryOnAll(card)
 end
