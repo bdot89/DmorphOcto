@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.17.1"
+local VERSION = "2.17.2"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -3758,15 +3758,40 @@ mountFrame:SetScript("OnEvent", function()
 	end
 end)
 
+-- What you have on: the item in each slot (1-19), and how much ammo and how
+-- many thrown weapons are left. A shot changes only the counts.
+local function GearState()
+	local links = {}
+	for slot = 1, 19 do
+		links[slot] = GetInventoryItemLink("player", slot) or ""
+	end
+	return table.concat(links, ";"), (GetInventoryItemCount("player", 0) or 0) .. "/" .. (GetInventoryItemCount("player", 18) or 0)
+end
+
 -- Your gear changing (armour losing durability while you're hit, an item
 -- swapped): item morphs are checked at once, and a fifth of a second later
--- checked again and the model rebuilt with them (RebuildForItems).
+-- checked again and the model rebuilt with them (RebuildForItems). Not for a
+-- shot: every arrow, bullet or throw changes your inventory, and rebuilding
+-- the model then made a hunter blink and broke the shooting animation (user, 16 Oct).
 local itemFrame = CreateFrame("Frame")
 itemFrame:RegisterEvent("UNIT_INVENTORY_CHANGED")
 itemFrame:RegisterEvent("UPDATE_INVENTORY_DURABILITY")
+itemFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 itemFrame:SetScript("OnEvent", function()
-	if event == "UNIT_INVENTORY_CHANGED" and arg1 ~= "player" then
+	if event == "PLAYER_ENTERING_WORLD" then
+		itemCheck.links, itemCheck.counts = GearState()
 		return
+	end
+	if event == "UNIT_INVENTORY_CHANGED" then
+		if arg1 ~= "player" then
+			return
+		end
+		local links, counts = GearState()
+		local shot = links == itemCheck.links and counts ~= itemCheck.counts
+		itemCheck.links, itemCheck.counts = links, counts
+		if shot then
+			return
+		end
 	end
 	if itemCheck.clock < (itemCheck.ignoreUntil or -1) then
 		return -- our own rebuild

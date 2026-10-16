@@ -475,6 +475,18 @@ function Mock.ResetUI()
 		end
 	end
 	function GetInventorySlotInfo(key) return 0, "Interface\\Paperdoll\\UI-PaperDoll-Slot-" .. key end
+	-- Your real gear (Mock.gear = { [slot] = { itemID, count } }; slot 0 = ammo).
+	Mock.gear = Mock.gear or {}
+	function GetInventoryItemLink(unit, slot)
+		local g = unit == "player" and Mock.gear[slot]
+		if g then
+			return "|cffffffff|Hitem:" .. g[1] .. ":0:0:0|h[Item " .. g[1] .. "]|h|r"
+		end
+	end
+	function GetInventoryItemCount(unit, slot)
+		local g = unit == "player" and Mock.gear[slot]
+		return g and (g[2] or 1) or 0
+	end
 	function GetItemInfo(id)
 		if id == 2955 then
 			return "First Mate Hat", "item:2955:0:0:0", 2, 1, "Armor", "Cloth", 1, "INVTYPE_HEAD",

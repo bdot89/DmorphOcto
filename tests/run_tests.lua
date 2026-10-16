@@ -2296,10 +2296,33 @@ Mock.Tick(2)
 Mock.Fire("UNIT_INVENTORY_CHANGED", "target")
 Mock.Tick(0.3)
 check(game.rebuilds == rebuilt + 2, "someone else's gear changing doesn't rebuild yours")
+-- Shooting: every arrow, bullet or throw changes the inventory; rebuilding then
+-- made a hunter blink and broke the shooting animation (user, 16 Oct).
+do
+Mock.gear[18], Mock.gear[0] = { 2504 }, { 2512, 200 }
+Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
+Mock.Tick(1.1)
+local beforeShots = game.rebuilds
+for _ = 1, 3 do
+	Mock.gear[0][2] = Mock.gear[0][2] - 1
+	Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
+	Mock.Tick(1.1)
+end
+Mock.gear[18] = { 2947, 99 }
+Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
+Mock.Tick(1.1)
+local afterSwap = game.rebuilds
+Mock.gear[18][2] = 98
+Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
+Mock.Tick(1.1)
+check(beforeShots + 1 == afterSwap and game.rebuilds == afterSwap,
+	"arrows and throws used don't rebuild the model; putting on another weapon does")
+Mock.gear[18], Mock.gear[0] = nil, nil
+end
 slash("dmorph itemcheck off")
 Mock.Fire("UPDATE_INVENTORY_DURABILITY")
 Mock.Tick(0.3)
-check(game.rebuilds == rebuilt + 2, "/dmorph itemcheck off stops the rebuilds too")
+check(game.rebuilds == rebuilt + 4, "/dmorph itemcheck off stops the rebuilds too")
 slash("dmorph itemcheck on")
 slash("item 1 0")
 
