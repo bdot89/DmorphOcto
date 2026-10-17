@@ -2243,7 +2243,7 @@ check(contains(allChat(), "Glow, ranged: Glow 29"), "status lists the glows")
 slash("item 1 2955")
 check(vh.items[1] == 2955, "the head is morphed")
 vh.items[1] = 4321 -- armour lost durability, the slot shows the real helmet again
-Mock.Fire("UPDATE_INVENTORY_DURABILITY")
+Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
 check(vh.items[1] == 2955, "a morph the game put back goes on again at once")
 vh.items[1] = 4321
 Mock.Tick(1.1)
@@ -2257,11 +2257,11 @@ Mock.Tick(11)
 slash("item 1 2955")
 for i = 1, 5 do
 	vh.items[1] = 4321
-	Mock.Fire("UPDATE_INVENTORY_DURABILITY")
+	Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
 end
 check(vh.items[1] == 2955, "five quick repairs still happen")
 vh.items[1] = 4321
-Mock.Fire("UPDATE_INVENTORY_DURABILITY")
+Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
 check(vh.items[1] == 4321 and contains(lastChat(), "keeps switching it back"),
 	"the sixth within 10 seconds pauses that slot's repairs, and says so")
 Mock.Tick(61)
@@ -2278,24 +2278,37 @@ check(vh.items[1] == 2955, "and on starts them again")
 -- Durability changes make the game redraw body parts from your real items while
 -- the morphs stay on (users: only switching an item or set brought the look back):
 -- the model is rebuilt with the morphs, at most once a second, without looping.
+-- 1.12 reports them only as UNIT_INVENTORY_CHANGED; DMorph reads the durability
+-- from a tooltip, and rebuilds for nothing else (bags, loot: running on the spot).
+Mock.gear[1] = { 7000, 1, 60, 60 } -- your real helmet, 60 / 60
+Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
 Mock.Tick(2)
 local rebuilt = game.rebuilds
-Mock.Fire("UPDATE_INVENTORY_DURABILITY")
-Mock.Tick(0.3)
-check(game.rebuilds == rebuilt + 1, "a durability change rebuilds the model with the item morphs")
+Mock.gear[1][3] = 59
 Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
 Mock.Tick(0.3)
-check(game.rebuilds == rebuilt + 1, "a gear event right after our own rebuild is ignored (no loop)")
+check(game.rebuilds == rebuilt + 1, "a durability change rebuilds the model with the item morphs")
+Mock.Tick(1.1)
+Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
 Mock.Tick(0.3)
-Mock.Fire("UPDATE_INVENTORY_DURABILITY")
+check(game.rebuilds == rebuilt + 1, "an inventory change that isn't your gear (bags, loot, food) doesn't")
+Mock.gear[1][3] = 58
+Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
 Mock.Tick(0.3)
-check(game.rebuilds == rebuilt + 1, "a second change within a second waits")
-Mock.Tick(0.6)
-check(game.rebuilds == rebuilt + 2, "and is rebuilt once the second is up")
+Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
+Mock.Tick(0.1)
+check(game.rebuilds == rebuilt + 2, "an event from our own rebuild doesn't start another (no loop)")
+Mock.gear[1][3] = 57
+Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
+Mock.Tick(0.3)
+check(game.rebuilds == rebuilt + 2, "a second change within a second waits")
+Mock.Tick(0.4)
+Mock.Tick(0.4)
+check(game.rebuilds == rebuilt + 3, "and is rebuilt once the second is up")
 Mock.Tick(2)
 Mock.Fire("UNIT_INVENTORY_CHANGED", "target")
 Mock.Tick(0.3)
-check(game.rebuilds == rebuilt + 2, "someone else's gear changing doesn't rebuild yours")
+check(game.rebuilds == rebuilt + 3, "someone else's gear changing doesn't rebuild yours")
 -- Shooting: every arrow, bullet or throw changes the inventory; rebuilding then
 -- made a hunter blink and broke the shooting animation (user, 16 Oct).
 do
@@ -2320,9 +2333,11 @@ check(beforeShots + 1 == afterSwap and game.rebuilds == afterSwap,
 Mock.gear[18], Mock.gear[0] = nil, nil
 end
 slash("dmorph itemcheck off")
-Mock.Fire("UPDATE_INVENTORY_DURABILITY")
+Mock.gear[1][3] = 50
+Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
 Mock.Tick(0.3)
-check(game.rebuilds == rebuilt + 4, "/dmorph itemcheck off stops the rebuilds too")
+check(game.rebuilds == rebuilt + 5, "/dmorph itemcheck off stops the rebuilds too")
+Mock.gear[1] = nil
 slash("dmorph itemcheck on")
 -- After a loading screen the game may have built your model before it had the
 -- items your morphs show (invisible, white in previews: user, 16 Oct): rebuilt
@@ -2482,9 +2497,9 @@ slash("")
 Mock.Click(DmorphOctoTabMounts)
 Mock.Click(DmorphOctoMountFilter)
 pickMenu("Ported", true)
-check(DmorphOctoMountFilter.text == "Ported (later expansions)" and tonumber(DmorphOctoMountListRow1.info.text) == 60001
-	and tonumber(DmorphOctoMountListRow2.info.text) == 60011 and not DmorphOctoMountListRow3:IsVisible(),
-	"the Mounts tab's Ported filter lists the ported models")
+check(DmorphOctoMountFilter.text == "Ported mounts" and tonumber(DmorphOctoMountListRow1.info.text) == 60001
+	and not DmorphOctoMountListRow2:IsVisible(),
+	"the Mounts tab's Ported filter lists the ported mounts only (not every ported model)")
 Mock.Click(DmorphOctoMountFilter)
 pickMenu("Mount models")
 DmorphOcto_ToggleUI()

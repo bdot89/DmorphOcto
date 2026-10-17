@@ -26,9 +26,11 @@ local FONTS = {
 	GameFontHighlight = 1, GameFontHighlightSmall = 1, GameFontHighlightLarge = 1,
 	GameFontDisable = 1, GameFontDisableSmall = 1, GameFontGreenSmall = 1, GameFontRedSmall = 1,
 }
-local FRAME_TYPES = { Frame = 1, Button = 1, EditBox = 1, ScrollFrame = 1, Model = 1, PlayerModel = 1, DressUpModel = 1, Slider = 1 }
+local FRAME_TYPES = { Frame = 1, Button = 1, EditBox = 1, ScrollFrame = 1, Model = 1, PlayerModel = 1, DressUpModel = 1, Slider = 1,
+	GameTooltip = 1 }
 local TEMPLATES = {
 	UIPanelButtonTemplate = 1, InputBoxTemplate = 1, FauxScrollFrameTemplate = 1, UIPanelCloseButton = 1,
+	GameTooltipTemplate = 1,
 }
 local SCRIPTS = {
 	OnClick = 1, OnEnter = 1, OnLeave = 1, OnMouseWheel = 1, OnVerticalScroll = 1,
@@ -273,6 +275,32 @@ function methods:SetVerticalScroll(v) RunScript(self, "OnVerticalScroll", v) end
 -- Tooltip
 function methods:SetOwner(owner) self.owner = owner; self.lines = {} end
 function methods:AddLine(text) table.insert(self.lines, text) end
+-- A GameTooltipTemplate tooltip's lines are <name>TextLeft1..; SetInventoryItem
+-- fills them from Mock.gear ({ itemID, count, durability, max durability }).
+function methods:ClearLines()
+	for i = 1, 30 do
+		getglobal(self.name .. "TextLeft" .. i).text = nil
+	end
+	self.numLines = 0
+end
+function methods:NumLines() return self.numLines or 0 end
+function methods:SetInventoryItem(unit, slot)
+	self:ClearLines()
+	local g = unit == "player" and Mock.gear[slot]
+	if not g then
+		return nil
+	end
+	local lines = { "Item " .. g[1] }
+	if g[3] then
+		table.insert(lines, "Armor")
+		table.insert(lines, format(DURABILITY_TEMPLATE, g[3], g[4] or 100))
+	end
+	for i, text in ipairs(lines) do
+		getglobal(self.name .. "TextLeft" .. i).text = text
+	end
+	self.numLines = table.getn(lines)
+	return 1
+end
 
 local function ApplyTemplate(widget, template)
 	local name = widget.name
@@ -284,6 +312,10 @@ local function ApplyTemplate(widget, template)
 		bar:SetScript("OnValueChanged", function()
 			this:GetParent():SetVerticalScroll(arg1)
 		end)
+	elseif template == "GameTooltipTemplate" then
+		for i = 1, 30 do
+			NewWidget("FontString", name .. "TextLeft" .. i, widget)
+		end
 	elseif template == "UIPanelCloseButton" then
 		widget:SetScript("OnClick", function()
 			this:GetParent():Hide()
@@ -515,6 +547,7 @@ function Mock.ResetUI()
 	else
 		C_Item = nil
 	end
+	DURABILITY_TEMPLATE = "Durability %d / %d"
 	ITEM_QUALITY_COLORS = {}
 	for q = -1, 6 do
 		ITEM_QUALITY_COLORS[q] = { r = 1, g = 1, b = 1, hex = "|cffffffff" }

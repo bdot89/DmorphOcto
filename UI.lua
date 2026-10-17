@@ -1856,12 +1856,15 @@ end
 -- The list leaves room on its right for the "Your skin" box.
 local MOUNT_LIST_W = 290
 
+-- Mounts only, but for "All models" (any model can be a skin). OctoWoW's and
+-- the ported ones were every model of their kind, so the Mounts tab listed
+-- all 6,399 ported models like the Models tab (user, 17 Oct). Saved by index.
 local MOUNT_FILTERS = {
 	{ text = "Mount models", tag = "mount" },
 	{ text = "All models" },
-	{ text = "New in OctoWoW", kinds = { [2] = true, [3] = true } },
+	{ text = "OctoWoW's new mounts", tag = "mount", kinds = { [2] = true, [3] = true } },
 	-- Models from later expansions (Data/Ported.lua), only on the PC that has them.
-	{ text = "Ported (later expansions)", kinds = { [4] = true } },
+	{ text = "Ported mounts", tag = "mount", kinds = { [4] = true } },
 }
 
 local function MountName(displayID)

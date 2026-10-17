@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.17.4"
+local VERSION = "2.17.5"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -3782,51 +3782,79 @@ local function MorphedItemsLoaded()
 	return true
 end
 
--- What you have on: the item in each slot (1-19), and how much ammo and how
--- many thrown weapons are left. A shot changes only the counts.
-local function GearState()
-	local links = {}
-	for slot = 1, 19 do
-		links[slot] = GetInventoryItemLink("player", slot) or ""
+-- The durability of the item in a slot ("" for none or none shown), from a
+-- hidden tooltip: 1.12 has neither UPDATE_INVENTORY_DURABILITY nor a function
+-- that says it.
+local durabilityTip, durabilityPattern
+local function Durability(slot)
+	if not durabilityTip then
+		durabilityTip = CreateFrame("GameTooltip", "DmorphOctoDurabilityTip", nil, "GameTooltipTemplate")
+		durabilityPattern = string.gsub(DURABILITY_TEMPLATE or "Durability %d / %d", "%%d", "(%%d+)")
 	end
-	return table.concat(links, ";"), (GetInventoryItemCount("player", 0) or 0) .. "/" .. (GetInventoryItemCount("player", 18) or 0)
+	durabilityTip:SetOwner(UIParent, "ANCHOR_NONE")
+	durabilityTip:ClearLines()
+	durabilityTip:SetInventoryItem("player", slot)
+	for i = 2, durabilityTip:NumLines() do
+		local line = getglobal("DmorphOctoDurabilityTipTextLeft" .. i)
+		local _, _, now = strfind(line and line:GetText() or "", durabilityPattern)
+		if now then
+			return now
+		end
+	end
+	return ""
 end
 
--- Your gear changing (armour losing durability while you're hit, an item
--- swapped): item morphs are checked at once, and a fifth of a second later
--- checked again and the model rebuilt with them (RebuildForItems). Not for a
--- shot: every arrow, bullet or throw changes your inventory, and rebuilding
--- the model then made a hunter blink and broke the shooting animation (user, 16 Oct).
+-- What you have on: the item in each slot (1-19) and the durability of the
+-- morphed ones; and how much ammo and how many thrown weapons are left.
+local function GearState()
+	local parts = {}
+	for slot = 1, 19 do
+		parts[slot] = GetInventoryItemLink("player", slot) or ""
+		if db.items[slot] then
+			parts[slot] = parts[slot] .. "@" .. Durability(slot)
+		end
+	end
+	return table.concat(parts, ";"), (GetInventoryItemCount("player", 0) or 0) .. "/" .. (GetInventoryItemCount("player", 18) or 0)
+end
+
+-- Your gear changing: item morphs are checked, and a fifth of a second later
+-- checked again and the model rebuilt with them (RebuildForItems), when the
+-- game may have redrawn a slot from your real item: another item put on, or a
+-- morphed slot's durability changed. Not for anything else UNIT_INVENTORY_CHANGED
+-- reports (bags, loot, food, every arrow, bullet or throw): rebuilding the
+-- model while you move left you running on the spot or frozen, and on every
+-- shot made a hunter blink and broke the shooting animation (users, 15-17 Oct).
 local itemFrame = CreateFrame("Frame")
 itemFrame:RegisterEvent("UNIT_INVENTORY_CHANGED")
-itemFrame:RegisterEvent("UPDATE_INVENTORY_DURABILITY")
 itemFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 itemFrame:SetScript("OnEvent", function()
 	if event == "PLAYER_ENTERING_WORLD" then
-		itemCheck.links, itemCheck.counts = GearState()
+		itemCheck.gear, itemCheck.counts = GearState()
 		-- The game can build your model before it has the items your morphs
-		-- show (a ported piece needs its template from the server): you stayed
-		-- invisible, white in previews, after logging in (user, 16 Oct). Rebuilt
-		-- once they're all in (or after LOGIN_WAIT seconds), see below.
-		itemCheck.loginWait = 0
+		-- show (a ported piece needs its template from the server), which
+		-- leaves you invisible, white in previews: then rebuilt once they're
+		-- all in (or after LOGIN_WAIT seconds), see below.
+		itemCheck.loginWait = not MorphedItemsLoaded() and 0 or nil
 		return
 	end
-	if event == "UNIT_INVENTORY_CHANGED" then
-		if arg1 ~= "player" then
-			return
-		end
-		local links, counts = GearState()
-		local shot = links == itemCheck.links and counts ~= itemCheck.counts
-		itemCheck.links, itemCheck.counts = links, counts
-		if shot then
-			return
-		end
+	if arg1 ~= "player" then
+		return
 	end
+	local gear, counts = GearState()
+	local changed = gear ~= itemCheck.gear
+	itemCheck.gear, itemCheck.counts = gear, counts
 	if itemCheck.clock < (itemCheck.ignoreUntil or -1) then
-		return -- our own rebuild
+		-- Right after our own rebuild (which changes none of this): a real
+		-- change still gets its rebuild, once the second is up.
+		if changed then
+			itemCheck.rebuildPending = true
+		end
+		return
 	end
 	CheckItems()
-	this.wait = 0.2
+	if changed then
+		this.wait = 0.2
+	end
 end)
 itemFrame:SetScript("OnUpdate", function()
 	if itemCheck.loginWait then
