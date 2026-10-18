@@ -3665,9 +3665,9 @@ local function BuildStage()
 	local size = CreateFrame("Slider", "DmorphOctoSize", plate)
 	size:SetFrameLevel(base + 6)
 	size:SetOrientation("HORIZONTAL")
-	size:SetWidth(ART_W - 170)
+	size:SetWidth(132)
 	size:SetHeight(8)
-	size:SetPoint("BOTTOM", plate, "BOTTOM", 26, 48)
+	size:SetPoint("BOTTOMLEFT", plate, "BOTTOMLEFT", 124, 50)
 	-- A thin flat track and a purple thumb (OctoBG's slider).
 	Flat(size, C.field, C.line)
 	size:SetThumbTexture(WHITE)
@@ -3681,10 +3681,11 @@ local function BuildStage()
 	size:SetValueStep(0.05)
 	ui.sizeLabel = Font(size:CreateFontString("DmorphOctoSizeLabel", "OVERLAY", "GameFontHighlightSmall"), 11)
 	ui.sizeLabel:SetPoint("RIGHT", size, "LEFT", -8, 0)
-	ui.sizeLabel:SetText("Size 100%")
+	-- "in game": it changes your character in the world, not only here (user, 18 Oct).
+	ui.sizeLabel:SetText("Size in game 100%")
 	size:SetScript("OnValueChanged", function()
 		local value = math.floor(this:GetValue() * 20 + 0.5) / 20
-		ui.sizeLabel:SetText("Size " .. math.floor(value * 100 + 0.5) .. "%")
+		ui.sizeLabel:SetText("Size in game " .. math.floor(value * 100 + 0.5) .. "%")
 		if ui.sizeSync then
 			return
 		end
@@ -3703,11 +3704,22 @@ local function BuildStage()
 		end
 	end)
 	size:SetScript("OnEnter", function()
-		Tooltip(this, "Size", "Drag to make your character smaller or bigger, in the world.",
-			"Right-click: your own size. Needs DmorphHelper (Setup shows it).")
+		Tooltip(this, "Size in game", "Drag to make your character smaller or bigger in the world, not only here.",
+			"Right-click or Reset: your own size. Needs DmorphHelper (Setup shows it).")
 	end)
 	size:SetScript("OnLeave", HideTooltip)
 	ui.sizeSlider = size
+	local sizeReset = Button(plate, "Reset", 46, 0, 0, function()
+		size:SetValue(1)
+	end, "DmorphOctoSizeReset")
+	sizeReset:ClearAllPoints()
+	sizeReset:SetPoint("LEFT", size, "RIGHT", 8, 0)
+	sizeReset:SetHeight(18)
+	sizeReset:SetFrameLevel(base + 6)
+	sizeReset:SetScript("OnEnter", function()
+		Tooltip(this, "Normal size", "Your character back to its own size, 100%.")
+	end)
+	sizeReset:SetScript("OnLeave", HideTooltip)
 
 	local function AddSlots(slots, x)
 		for i = 1, table.getn(slots) do
