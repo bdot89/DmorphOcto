@@ -1,6 +1,6 @@
 # DMorph for OctoWoW
 
-Become any creature, ride any mount, wear any item. A morph window for WoW 1.12 (OctoWoW), version 2.19.0.
+Become any creature, ride any mount, wear any item. A morph window for WoW 1.12 (OctoWoW), version 2.21.0.
 
 Morphs only change what you and other DMorph users see. Everyone else, and the server, sees your real character.
 
@@ -43,7 +43,7 @@ You can skip this step: everything else still works, just without glows, real lo
 1. Start the game from **OctoLauncher** (not WoW.exe).
 2. Click the polymorph button by the minimap, or type **/dmorph**
 3. Check the **Setup** button at the bottom left of the window:
-   - Green "Setup OK": you're ready. It also shows which DmorphHelper version is running (for example "Helper v13").
+   - Green "Setup OK": you're ready. It also shows which DmorphHelper version is running (for example "Helper v16").
    - Yellow "Old helper": close the game and run Install DmorphHelper.bat again.
    - Red "Setup: fix me": click it. It tells you what isn't working and how to fix it.
 
@@ -79,7 +79,9 @@ A ported pack (see below) keeps its list in its own folder, Interface\AddOns\DMo
 - Time of day: dawn, noon, dusk, midnight or any time, for the light, sky, sun and moon on your screen.
 - Weapon glows: Crusader, Fiery, Icy and every other glow in the game.
 - 12,000+ weapons and armour pieces, and 352 item sets in one click. Wearing a set takes the last set's pieces off, and the slots the set has no piece for show nothing, so your own gear doesn't show through (switch it with the "Own gear" button in the Sets tab).
+- Slutmog: every revealing piece in one list (chest, shirt, legs, feet), plus OctoWoW's Unseen Fashion items. **Birthday suit** takes every armour piece off to build a look up from bare skin, and **Invisible** hides one slot.
 - Wardrobe of saved outfits and favourites, for all your characters.
+- A preview box on every list: the whole model, or your character wearing the item or set, with zoom, turn and move, and **Previous / Next** to try the list one by one.
 - Other DMorph users see your model, items, mount skin and size, and you see theirs.
 - Your look stays after /reload, loading screens and logging in. During a race morph you keep your own faction, languages, flight paths and reputation, even when you log in morphed.
 - Optional ported packs: later-expansion creature models and mounts, weapons, armour, item sets and 33 weapon glows from The Burning Crusade to Mists of Pandaria (Mongoose, Berserking, Jade Spirit, Dancing Steel...). DMorph works fully without one; see "Ported packs" below.
@@ -89,15 +91,17 @@ A ported pack (see below) keeps its list in its own folder, Interface\AddOns\DMo
 
 Open the window with the minimap button, /dmorph, or a key under Key Bindings > DMorph. Escape closes it.
 
+- **Every list tab** has a preview box on the right: it shows what you hover (else what you have on). Mouse wheel or **- / +** zooms, drag turns it, right-drag moves it, **Reset** puts it back. **Previous / Next** under it put on the one above or below in the list.
 - **Dressing room (left):** your character. Drag to turn, mouse wheel to zoom, right-drag to move. The Size slider under it changes your size (right-click: normal size).
-- **Item slots around the model:** left-click for items for that slot, right-click for your own gear.
+- **Item slots around the model:** left-click for items for that slot, right-click for your own gear. A purple frame marks a morphed slot; a hidden slot shows the empty-slot picture.
 - **Reset model / Reset everything:** your own body back / clear every morph.
-- **Models tab:** every model. Click one to become it. Right-click to add it to Favourites.
-- **Mounts tab:** pick which mount gets the skin, then click a model. The arrows step through the list. Remove skin takes it off.
+- **Models tab:** every model. Click one to become it. Right-click to add it to Favourites. **Grid view** shows 8 turning models at a time instead of the list.
+- **Mounts tab:** pick which mount gets the skin, then click a model. Previous / Next step through the list. Remove skin takes it off.
 - **Favourites tab:** your starred models and mount skins.
 - **Races tab:** click a portrait to become that race with your own face. The arrow rows change skin colour, face, hair and facial hair. The dice picks a random look.
 - **Glows tab:** pick main hand, off hand or ranged, then click a glow. Glows from a ported pack say "TBC-MoP"; type "ported" in the search box to list only those.
-- **Items and Sets tabs:** filter by type, quality and source (ported items and sets have their own "Ported" filter). Hover an item or set to see your character wearing it, then click to wear it. **Own gear: hidden / shown** (Sets tab) picks whether the slots a set has no piece for show nothing (the default) or your own gear.
+- **Items and Sets tabs:** filter by type, quality and source (ported items and sets have their own "Ported" filter). Hover an item or set to see your character wearing it, then click to wear it. **Invisible** (Items tab) shows nothing in that slot. **Own gear: hidden / shown** (Sets tab) picks whether the slots a set has no piece for show nothing (the default) or your own gear.
+- **Slutmog tab:** revealing pieces of every slot; the buttons narrow it to chest, shirt, legs, feet or OctoWoW's Unseen Fashion items. **Birthday suit** (also at the top of the dressing room) shows no armour at all.
 - **Wardrobe tab:** save and load whole outfits.
 - **Weather tab:** pick clear skies or light, normal or heavy rain, snow or sandstorm; the Strength slider fine-tunes it. Time of day: Dawn, Noon, Dusk, Midnight or the Time slider. Server's weather and Real time give the real ones back. Only you see them; weather shows outdoors only.
 - **Setup (bottom left):** shows whether everything works, which DmorphHelper version is running, and how to fix what doesn't.
@@ -127,7 +131,7 @@ Item slots: 1 head, 3 shoulder, 4 shirt, 5 chest, 6 waist, 7 legs, 8 feet, 9 wri
 ## Good to know
 
 - Only friendly players can be morphed on your screen. Other DMorph users' morphs show when you target them, mouse over them or group with them (straight away with SuperWoW).
-- During a race morph your faction, languages, skills, flight paths, spells and reputation stay those of your own character (with DmorphHelper): NPCs of your faction stay friendly. Your model, skin and hair stay the other race's.
+- During a race morph your faction, languages, skills, flight paths, spells and reputation stay those of your own character (with DmorphHelper v16): NPCs of your faction stay friendly and every flight path you know shows, even as a race of the other faction. Your model, skin and hair stay the other race's.
 - With a race portrait you keep your own face and hair. If the other race doesn't have one of your values (say a Tauren hair style on a Gnome), the closest one that race has is used instead, so nothing shows up green.
 - Mount skins go on when you mount and come off when you dismount. Flight master birds keep their own look.
 - Glows and picked faces are only on your own screen for now.
@@ -188,7 +192,8 @@ Project page: https://bdot89.github.io/DmorphOcto/
 
 - **Files:** DmorphOcto.lua is the core (morphs, wardrobe, commands), Share.lua shares morphs between DMorph users, UI.lua is the window. Data/ holds the model, item and set lists. helper/ holds DmorphHelper (C source and DLL).
 - **How it works:** DMorph uses VanillaHelpers (SetUnitDisplayID, SetUnitVisibleItemID, SetUnitMountDisplayID) to morph, and ClassicAPI for the 3D previews. DmorphHelper adds weapon glows, real skin, face and hair, size, weather, time of day, and keeps your own race (faction, languages, reputation) during race morphs. It only switches on when it finds VanillaHelpers' hooks in the game.
-- **Tests:** powershell -ExecutionPolicy Bypass -File tools\run_tests.ps1 (or lua tests/run_tests.lua with Lua 5.0).
+- **Tests:** powershell -ExecutionPolicy Bypass -File tools\run_tests.ps1 (or lua tests/run_tests.lua with Lua 5.0). tests/layout.lua draws every tab's layout from the test mock into tests/layout/*.svg.
+- **Previews** show the whole model using Data/ModelFrames.lua (each model's portrait camera and size, made by tools/build_frames.ps1; ported packs carry their own PortedFrames.lua).
 - **Rebuilding the lists after an OctoWoW update:** close the game and run powershell -ExecutionPolicy Bypass -File tools\update_from_game.ps1
 - **Building DmorphHelper:** sh helper/build.sh with 32-bit MinGW (on Windows: winlibs i686, from Git Bash).
 - **Ported packs** are made by a separate converter (modern M2 models to 1.12's format, plus the game tables); it isn't published, as it works on Blizzard's files. The pack's list (Ported.lua) is a separate addon, DMorph_Ported, that DmorphOcto.toc names in OptionalDeps so it loads first; DmorphOcto still reads an older Data\Ported.lua (git-ignored) if there is one. build_*.ps1 skip the pack's patch files.
