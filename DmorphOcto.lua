@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.18.0"
+local VERSION = "2.19.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -258,9 +258,6 @@ M.ITEM_FILTERS = {
 	{ text = "1.12 items", kinds = { [0] = true } },
 	{ text = "New in OctoWoW", kinds = { [2] = true } },
 	{ text = "Ported (later expansions)", kinds = { [4] = true } },
-	-- Revealing pieces (Data/Slutmog.lua, measured from the body textures) and
-	-- OctoWoW's invisible "Unseen Fashion" items (user, 18 Oct).
-	{ text = "Slutmog", slutmog = true },
 }
 M.SET_FILTERS = {
 	{ text = "All sets" },
@@ -684,6 +681,39 @@ function M.GetItemCatalog(slot)
 	return items[slot]
 end
 
+-- The Slutmog tab's list (user, 18 Oct: "its own tab"): every revealing piece
+-- (Data/Slutmog.lua) and OctoWoW's invisible Unseen Fashion items, from the
+-- armour slots' item lists; catalog.slots[i] is the slot it's worn in.
+-- Rebuilt when looked-up items join the lists.
+local slutmogCatalog
+M.SLUTMOG_SLOTS = { 1, 3, 4, 5, 6, 7, 8, 9, 10, 15, 19 }
+function M.GetSlutmogCatalog()
+	local version = M.GetItemsVersion()
+	if not slutmogCatalog or slutmogCatalog.version ~= version then
+		local list, n, slotOf = {}, 0, {}
+		for s = 1, table.getn(M.SLUTMOG_SLOTS) do
+			local slot = M.SLUTMOG_SLOTS[s]
+			local c = M.GetItemCatalog(slot)
+			for i = 1, c.count do
+				local id = c.ids[i]
+				if not slotOf[id] and M.IsSlutmogItem(id, c.lower[i]) then
+					n = n + 1
+					list[n] = { id, c.names[i], c.lower[i], c.quality[i], c.kind[i] }
+					slotOf[id] = slot
+				end
+			end
+		end
+		table.sort(list, Before)
+		slutmogCatalog = Fill(NewCatalog(), list, n)
+		slutmogCatalog.slots = {}
+		for i = 1, slutmogCatalog.count do
+			slutmogCatalog.slots[i] = slotOf[slutmogCatalog.ids[i]]
+		end
+		slutmogCatalog.version = version
+	end
+	return slutmogCatalog
+end
+
 -- The slots an item can be morphed into, or nil if it isn't known.
 local itemSlots
 function M.GetItemSlots(itemID)
@@ -1047,9 +1077,6 @@ local function Keep(catalog, i, filter, quality, kind)
 			if not (tags and strfind(tags, filter.tag, 1, true)) then
 				return false
 			end
-		end
-		if filter.slutmog and not M.IsSlutmogItem(catalog.ids[i], catalog.lower[i]) then
-			return false
 		end
 	end
 	-- Legendary also lists artifacts (quality 6: the Warglaives of Azzinoth).
@@ -2961,6 +2988,26 @@ function M.HideItem(slot)
 	db.items[slot] = 0
 	local ok, err = ApplyItem(slot)
 	return Result(ok, err, SLOT_NAMES[slot] .. ": invisible.")
+end
+
+-- Birthday suit (user, 18 Oct): every armour slot shows nothing, to build a look
+-- up from bare skin; weapons keep what they show. Use my own gear / Reset brings it back.
+function M.BirthdaySuit()
+	if not Begin() then
+		return false, MissingAPI()
+	end
+	local ok, err = true, nil
+	for i = 1, table.getn(M.SLUTMOG_SLOTS) do
+		local slot = M.SLUTMOG_SLOTS[i]
+		if db.items[slot] ~= 0 then
+			db.items[slot] = 0
+			local slotOK, slotErr = ApplyItem(slot)
+			if ok and not slotOK then
+				ok, err = slotOK, slotErr
+			end
+		end
+	end
+	return Result(ok, err, "Birthday suit: every armour slot shows nothing. Pick pieces to build up from here.")
 end
 
 -- Gives your mount a skin: any creature model, shown whenever you ride. real

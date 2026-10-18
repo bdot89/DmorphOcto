@@ -1059,6 +1059,25 @@ Mock.Type(DmorphOctoItemID, "2955")
 press(Mock.FindButton("Apply"))
 check(vh.items[1] == 2955, "typing an item ID and pressing Apply works")
 
+-- Slutmog tab (2.19.0): revealing pieces of every slot; slot buttons narrow it.
+Mock.Click(DmorphOctoTabSlutmog)
+Mock.Click(DmorphOctoSlutmogShow4)
+Mock.Type(DmorphOctoSlutmogSearch, "barbaric loincloth")
+check(DmorphOctoSlutmogListRow1:IsVisible() and DmorphOctoSlutmogListRow1.text.text == "Barbaric Loincloth"
+	and DmorphOctoSlutmogListRow1.info.text == "Legs", "the Slutmog tab lists a revealing piece with its slot")
+press(DmorphOctoSlutmogListRow1)
+check(vh.items[7] == 3309, "clicking it wears it in its slot")
+Mock.Type(DmorphOctoSlutmogSearch, "")
+Mock.Click(DmorphOctoSlutmogShow6)
+check(contains(DmorphOctoSlutmogCount.text, "Unseen Fashion"), "Unseen says when the server hasn't sent those items yet")
+Mock.Click(DmorphOctoSlutmogShow1)
+press(DmorphOctoBirthdaySuit)
+check(vh.items[5] == 0 and vh.items[7] == 0 and vh.items[1] == 0, "Birthday suit (by Reset view) leaves every armour slot bare")
+for _, slot in ipairs(DmorphOcto.SLUTMOG_SLOTS) do
+	DmorphOcto.SetItem(slot, 0)
+end
+DmorphOcto.SetItem(1, 2955)
+
 -- Sets: wear every piece at once.
 Mock.Click(DmorphOctoTabSets)
 Mock.Type(DmorphOctoSetSearch, "battlegear of wrath")
@@ -2793,22 +2812,21 @@ check(not DmorphOcto.GetCreatureCatalog().byID[60001], "without Data/Ported.lua 
 -- 2.18.0 Slutmog (user, 18 Oct): an Items source listing Data/Slutmog.lua's revealing
 -- pieces (measured from the body textures) and OctoWoW's invisible Unseen Fashion items.
 ;(function()
-	local sm = DmorphOcto.ITEM_FILTERS[5]
-	check(sm and sm.text == "Slutmog" and sm.slutmog, "the Items source menu has Slutmog (after the old choices)")
-	local legs = DmorphOcto.GetItemCatalog(7)
-	local res, n = DmorphOcto.FilterCatalog(legs, "", sm)
-	local onlyListed, hasLoincloth = true, false
-	for k = 1, n do
-		local id = legs.ids[res[k]]
-		if not DmorphOcto.IsSlutmogItem(id, legs.lower[res[k]]) then
+	-- 2.19.0: its own tab (all slots in one list) instead of an Items source choice.
+	check(table.getn(DmorphOcto.ITEM_FILTERS) == 4, "the Items source menu is back to its four choices")
+	local sc = DmorphOcto.GetSlutmogCatalog()
+	local onlyListed, loinclothSlot = true, nil
+	for i = 1, sc.count do
+		if not DmorphOcto.IsSlutmogItem(sc.ids[i], sc.lower[i]) then
 			onlyListed = false
 		end
-		if id == 3309 then
-			hasLoincloth = true
+		if sc.ids[i] == 3309 then
+			loinclothSlot = sc.slots[i]
 		end
 	end
-	check(n > 0 and n < legs.count and onlyListed and hasLoincloth,
-		"Slutmog keeps only the listed legs (Barbaric Loincloth among them)")
+	check(sc.count > 0 and onlyListed and loinclothSlot == 7,
+		"the Slutmog list holds only listed pieces, each with its slot (Barbaric Loincloth: legs)")
+	check(not sc.byID[2955], "a piece that isn't listed isn't in the Slutmog list")
 	check(not DmorphOcto.IsSlutmogItem(2955, "first mate hat"), "a piece that isn't listed stays out")
 	check(DmorphOcto.IsSlutmogItem(109, "summer collection of unseen fashion: tabard"),
 		"OctoWoW's Unseen Fashion pieces count, by name")
@@ -2818,6 +2836,17 @@ check(not DmorphOcto.GetCreatureCatalog().byID[60001], "without Data/Ported.lua 
 	check(not DmorphOcto.HideItem(16), "weapons can't be made invisible")
 	DmorphOcto.SetItem(5, 0)
 	check(vh.items[5] == nil and DmorphOctoDB.items[5] == nil, "Use my own gear brings the slot back")
+	-- Birthday suit: every armour slot shows nothing, weapons stay.
+	DmorphOcto.SetItem(16, 2955)
+	local naked = DmorphOcto.BirthdaySuit()
+	local allHidden = true
+	for _, slot in ipairs(DmorphOcto.SLUTMOG_SLOTS) do
+		if vh.items[slot] ~= 0 then
+			allHidden = false
+		end
+	end
+	check(naked and allHidden and vh.items[16] == 2955, "Birthday suit hides every armour slot and keeps weapons")
+	DmorphOcto.SetItem(16, 0)
 end)()
 
 print(format("%d checks, %d failures", checks, failures))

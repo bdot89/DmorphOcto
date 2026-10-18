@@ -83,6 +83,7 @@ local TABS = {
 	{ key = "races", text = "Races" },
 	{ key = "glows", text = "Glows" },
 	{ key = "items", text = "Items" },
+	{ key = "slutmog", text = "Slutmog" },
 	{ key = "sets", text = "Sets" },
 	{ key = "wardrobe", text = "Wardrobe" },
 	{ key = "weather", text = "Weather" },
@@ -2435,8 +2436,7 @@ local function BuildItemsPage(page)
 		SourceMenu(this, M.ITEM_FILTERS, "itemFilter", FilterItems)
 	end, "DmorphOctoItemSource")
 	ui.itemSourceButton:SetScript("OnEnter", function()
-		Tooltip(this, "Which items", "All, 1.12's own, or the ones Turtle WoW and OctoWoW added.",
-			"Slutmog: revealing chests, shirts, legs and feet, plus OctoWoW's invisible Unseen Fashion pieces.")
+		Tooltip(this, "Which items", "All, 1.12's own, or the ones Turtle WoW and OctoWoW added.")
 	end)
 	ui.itemSourceButton:SetScript("OnLeave", HideTooltip)
 
@@ -2486,6 +2486,95 @@ local function BuildItemsPage(page)
 			"Use my own gear brings yours back.")
 	end)
 	ui.itemHideButton:SetScript("OnLeave", HideTooltip)
+end
+
+-- Slutmog tab (user, 18 Oct: "its own tab"): every revealing piece and OctoWoW's
+-- invisible Unseen Fashion items, all slots in one list; buttons narrow it to a slot.
+local SLUTMOG_SHOW = {
+	{ text = "All" }, { text = "Chest", slot = 5 }, { text = "Shirt", slot = 4 },
+	{ text = "Legs", slot = 7 }, { text = "Feet", slot = 8 }, { text = "Unseen", unseen = true },
+}
+local slutmogShow = 1
+
+local function FilterSlutmog(keep)
+	local catalog = M.GetSlutmogCatalog()
+	local found, n = M.FilterCatalog(catalog, ui.slutSearch:GetText())
+	local show = SLUTMOG_SHOW[slutmogShow]
+	local result, m = {}, 0
+	for k = 1, n do
+		local i = found[k]
+		if (not show.slot or catalog.slots[i] == show.slot)
+			and (not show.unseen or strfind(catalog.lower[i], "unseen fashion", 1, true)) then
+			m = m + 1
+			result[m] = i
+		end
+	end
+	ui.slutResult = result
+	for i = 1, table.getn(SLUTMOG_SHOW) do
+		if i == slutmogShow then
+			ui.slutButtons[i]:LockHighlight()
+		else
+			ui.slutButtons[i]:UnlockHighlight()
+		end
+	end
+	local note = Count(m, "piece")
+	if show.unseen and m == 0 then
+		note = "none yet: OctoWoW's Unseen Fashion items show once the server has sent them"
+	end
+	ui.slutCount:SetText(note)
+	ui.slutList.SetCount(m, keep)
+end
+
+local function RefreshSlutmog()
+	ui.slutList.Refresh()
+end
+
+local function BuildSlutmogPage(page)
+	ui.slutButtons = {}
+	for i = 1, table.getn(SLUTMOG_SHOW) do
+		local index = i
+		ui.slutButtons[i] = Button(page, SLUTMOG_SHOW[i].text, 66, 8 + (i - 1) * 70, -8, function()
+			slutmogShow = index
+			FilterSlutmog()
+		end, "DmorphOctoSlutmogShow" .. i)
+	end
+	Label(page, "Search:", nil, 10, -42)
+	ui.slutSearch = EditBox(page, "DmorphOctoSlutmogSearch", 200, 58, -38)
+	ui.slutSearch:SetScript("OnTextChanged", function()
+		Debounce(ui.searchTimer, 0.25, FilterSlutmog)
+	end)
+	ui.slutSearch:SetScript("OnEnterPressed", function()
+		this:ClearFocus()
+		FilterSlutmog()
+	end)
+	ui.slutCount = Label(page, "", "GameFontDisableSmall", 270, -42, "DmorphOctoSlutmogCount")
+	ui.slutList = List(page, "DmorphOctoSlutmogList", 8, -66, 70, function(row, index)
+		local catalog = M.GetSlutmogCatalog()
+		local i = ui.slutResult[index]
+		row.text:SetText(catalog.names[i])
+		row.text:SetTextColor(QualityColor(catalog.quality[i]))
+		row.info:SetText(M.SLOT_NAMES[catalog.slots[i]])
+		if catalog.ids[i] == M.GetState().items[catalog.slots[i]] then
+			row:LockHighlight()
+		end
+	end, function(index)
+		local catalog = M.GetSlutmogCatalog()
+		local i = ui.slutResult[index]
+		Morph(M.SetItem, catalog.slots[i], catalog.ids[i])
+	end, function(index, row)
+		local catalog = M.GetSlutmogCatalog()
+		local i = ui.slutResult[index]
+		if i then
+			local r, g, b = QualityColor(catalog.quality[i])
+			ShowItemCard(row, { catalog.ids[i] }, catalog.names[i], r, g, b,
+				M.SLOT_NAMES[catalog.slots[i]] .. ", item " .. catalog.ids[i] .. " - click to wear it")
+		end
+	end, nil, 15)
+	local y = -352
+	Button(page, "Birthday suit", 120, 8, y, function()
+		Morph(M.BirthdaySuit)
+	end, "DmorphOctoSlutmogBirthday")
+	Label(page, "Revealing pieces, by how much body they cover.", "GameFontDisableSmall", 136, y - 6)
 end
 
 -- Sets tab --------------------------------------------------------------------------
@@ -2858,6 +2947,7 @@ local REFRESH = {
 	races = RefreshRaces,
 	glows = RefreshGlows,
 	items = RefreshItems,
+	slutmog = RefreshSlutmog,
 	sets = RefreshSets,
 	wardrobe = RefreshWardrobe,
 }
@@ -2885,6 +2975,9 @@ local function Poll()
 		end
 		if ui.setResult and currentTab == "sets" then
 			FilterSets(true)
+		end
+		if ui.slutResult and currentTab == "slutmog" then
+			FilterSlutmog(true)
 		end
 	end
 	local left = M.GetLookupStatus()
@@ -2925,6 +3018,8 @@ ShowTab = function(key)
 		FilterModels()
 	elseif key == "items" then
 		FilterItems()
+	elseif key == "slutmog" then
+		FilterSlutmog(ui.slutResult ~= nil)
 	elseif key == "sets" and not ui.setResult then
 		FilterSets()
 	elseif key == "glows" then
@@ -3024,13 +3119,23 @@ local function BuildStage()
 		button:SetScript("OnLeave", HideTooltip)
 	end
 	local middle = ART_W / 2
-	ZoomButton("-", 24, middle - 66, "DmorphOctoZoomOut", function()
+	ZoomButton("-", 24, middle - 117, "DmorphOctoZoomOut", function()
 		Zoom(-1)
 	end, "Zoom out.")
-	ZoomButton("+", 24, middle - 40, "DmorphOctoZoomIn", function()
+	ZoomButton("+", 24, middle - 91, "DmorphOctoZoomIn", function()
 		Zoom(1)
 	end, "Zoom in, to see the details.")
-	ZoomButton("Reset view", 80, middle - 14, "DmorphOctoZoomReset", ResetView, "Back to the whole character.")
+	ZoomButton("Reset view", 80, middle - 65, "DmorphOctoZoomReset", ResetView, "Back to the whole character.")
+	-- Birthday suit (user, 18 Oct): every armour slot shows nothing, to build up from.
+	local birthday = Button(stage, "Birthday suit", 92, middle + 19, -10, function()
+		Morph(M.BirthdaySuit)
+	end, "DmorphOctoBirthdaySuit")
+	birthday:SetFrameLevel(base + 6)
+	birthday:SetScript("OnEnter", function()
+		Tooltip(this, "Birthday suit", "Every armour slot shows nothing: build a look up from bare skin.",
+			"Weapons stay. Use my own gear (Items tab) or Reset everything brings your gear back.")
+	end)
+	birthday:SetScript("OnLeave", HideTooltip)
 
 	local plate = Layer(stage, 5)
 	plate:SetPoint("BOTTOMLEFT", stage, "BOTTOMLEFT", 0, 0)
@@ -3260,6 +3365,7 @@ local function BuildTabs()
 	BuildRacesPage(ui.pages.races)
 	BuildGlowsPage(ui.pages.glows)
 	BuildItemsPage(ui.pages.items)
+	BuildSlutmogPage(ui.pages.slutmog)
 	BuildSetsPage(ui.pages.sets)
 	BuildWardrobePage(ui.pages.wardrobe)
 	BuildWeatherPage(ui.pages.weather)
