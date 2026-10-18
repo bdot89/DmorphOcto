@@ -536,7 +536,7 @@ Mock.Tick(0.15)
 Mock.Tick(0.5)
 check(Mock.modelRefreshes == refreshes + 1, "a burst of changes loads the preview once")
 check(DmorphOctoArt1.texture == "Interface\\DressUpFrame\\DressUpBackground-Orc1", "a race morph moves to that race's room")
-check(DmorphOctoLookInfo.text == "Race morph - 1 item morphed", "the name plate counts item morphs")
+check(DmorphOctoLookInfo.text == "Race morph - 1 item", "the name plate counts item morphs")
 refreshes = Mock.modelRefreshes
 Mock.Fire("UNIT_MODEL_CHANGED", "player")
 Mock.Tick(0.15)

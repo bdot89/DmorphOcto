@@ -825,13 +825,14 @@ local function UpdatePlate()
 	for _ in pairs(state.items) do
 		count = count + 1
 	end
+	-- Short words: the line wrapped into the name above it (user, 18 Oct).
 	if count == 1 then
-		info = info .. " - 1 item morphed"
+		info = info .. " - 1 item"
 	elseif count > 1 then
-		info = info .. " - " .. count .. " items morphed"
+		info = info .. " - " .. count .. " items"
 	end
 	if state.mount then
-		info = info .. " - mount morphed"
+		info = info .. " - mount skin"
 	end
 	if state.scale then
 		info = info .. " - size " .. math.floor(state.scale * 100 + 0.5) .. "%"
@@ -3658,6 +3659,7 @@ local function BuildStage()
 	ui.plateInfo = Font(plate:CreateFontString("DmorphOctoLookInfo", "OVERLAY", "GameFontHighlightSmall"), 11, C.dim)
 	ui.plateInfo:SetPoint("BOTTOM", plate, "BOTTOM", 0, 8)
 	ui.plateInfo:SetWidth(ART_W - 16)
+	ui.plateInfo:SetHeight(14) -- one line; a longer one ends in "..."
 
 	-- Your size in the world, 25% to 300% (DmorphHelper v2). Applied once the
 	-- slider stands still: each change rebuilds your model.
