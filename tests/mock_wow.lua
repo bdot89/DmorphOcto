@@ -37,6 +37,8 @@ local SCRIPTS = {
 	OnTextChanged = 1, OnEnterPressed = 1, OnEscapePressed = 1, OnUpdate = 1, OnEvent = 1,
 	OnShow = 1, OnHide = 1, OnDragStart = 1, OnDragStop = 1, OnMouseDown = 1, OnMouseUp = 1,
 	OnValueChanged = 1,
+	-- Edit box focus (OctoBG's flat edit boxes use them in game).
+	OnEditFocusGained = 1, OnEditFocusLost = 1,
 }
 
 -- Methods a DLL adds to the client (ClassicAPI): missing unless the test
@@ -84,9 +86,12 @@ function methods:SetPoint(point, relativeTo, relativePoint, x, y)
 	assert(relativePoint == nil or POINTS[relativePoint], "bad relative point " .. tostring(relativePoint))
 	assert(relativeTo == nil or type(relativeTo) == "table" or type(relativeTo) == "string", "bad relativeTo")
 	self.point = { point, relativeTo, relativePoint, x, y }
+	-- Every anchor, for layout checks (tests/layout.lua).
+	self.points = self.points or {}
+	self.points[point] = { relativeTo, relativePoint or point, x or 0, y or 0 }
 end
-function methods:ClearAllPoints() self.point = nil end
-function methods:SetAllPoints(target) self.point = { "ALL", target } end
+function methods:ClearAllPoints() self.point, self.points = nil, nil end
+function methods:SetAllPoints(target) self.point, self.points = { "ALL", target }, { ALL = target or self.parent } end
 function methods:GetName() return self.name end
 function methods:GetParent() return self.parent end
 function methods:IsShown() return self.shown end
@@ -189,6 +194,31 @@ function methods:GetText()
 	return self.text
 end
 function methods:SetTextColor(r, g, b) self.color = { r, g, b } end
+-- The flat look (2.21.0) as OctoBG uses it, seen working in game on 17 Oct 2026:
+-- a font file per string, a shadow, a button's own font string, edit box
+-- insets and a scroll bar's thumb texture.
+function methods:SetFont(file, size, flags)
+	assert(type(file) == "string" and type(size) == "number", "SetFont needs a file and a size")
+	self.font = { file, size, flags }
+end
+function methods:GetFont()
+	local f = self.font or { "Fonts\\FRIZQT__.TTF", 12, "" }
+	return f[1], f[2], f[3]
+end
+function methods:SetShadowColor() end
+function methods:SetShadowOffset() end
+function methods:SetFontString(fs)
+	assert(self.kind == "Button", "SetFontString is a Button method")
+	self.fontString = fs
+end
+function methods:SetTextInsets()
+	assert(self.kind == "EditBox", "SetTextInsets is an EditBox method")
+end
+function methods:GetThumbTexture()
+	assert(self.kind == "Slider", "GetThumbTexture is a Slider method")
+	self.thumbTexture = self.thumbTexture or NewWidget("Texture", nil, self)
+	return self.thumbTexture
+end
 function methods:SetJustifyH(j) assert(j == "LEFT" or j == "RIGHT" or j == "CENTER") end
 function methods:SetJustifyV(j) assert(j == "TOP" or j == "MIDDLE" or j == "BOTTOM") end
 function methods:LockHighlight() self.locked = true end

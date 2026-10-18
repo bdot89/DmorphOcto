@@ -259,6 +259,47 @@ public class GameFiles {
       return bits;
     } catch (Exception) { return -1; }
   }
+  // How a preview frames a model (tools/build_frames.ps1): its portrait
+  // camera (type 0, else the first), as the half height the camera sees at
+  // its target (distance * tan(fov / 2)) and the target, plus the bounding
+  // box's middle height, height and widest side, as
+  // "R Tx Ty Tz middle height width" (model units, 2 decimals); null if it
+  // can't tell. In version 256-257 headers the bounding box is 7 floats at
+  // 0xB4 (min, max, radius) and the cameras an M2Array at 0x124 of 124-byte
+  // records: type, fov, far, near, position track (28 bytes), position
+  // (3 floats at +44), target track, target (+84).
+  public string Frame(string path) {
+    int dot = path.LastIndexOf('.');
+    string m2 = (dot > 0 ? path.Substring(0, dot) : path) + ".m2";
+    string name = m2; Mpq m = Newest(m2);
+    if (m == null) { name = path; m = Newest(path); }
+    if (m == null) return null;
+    try {
+      byte[] head = m.ReadStart(name);
+      if (head == null || head.Length < 0x12C || head[0] != 'M' || head[1] != 'D' || head[2] != '2' || head[3] != '0') return null;
+      uint version = BitConverter.ToUInt32(head, 4);
+      if (version < 256 || version > 257) return null;
+      float[] box = new float[6];
+      for (int i = 0; i < 6; i++) box[i] = BitConverter.ToSingle(head, 0xB4 + i * 4);
+      uint count = BitConverter.ToUInt32(head, 0x124), ofs = BitConverter.ToUInt32(head, 0x128);
+      if (count == 0 || count > 16) return null;
+      byte[] cams = m.ReadRange(name, ofs, (int)count * 124);
+      if (cams == null) return null;
+      int pick = 0;
+      for (int c = 0; c < count; c++) if (BitConverter.ToInt32(cams, c * 124) == 0) { pick = c; break; }
+      int a = pick * 124;
+      float fov = BitConverter.ToSingle(cams, a + 4);
+      float px = BitConverter.ToSingle(cams, a + 44), py = BitConverter.ToSingle(cams, a + 48), pz = BitConverter.ToSingle(cams, a + 52);
+      float tx = BitConverter.ToSingle(cams, a + 84), ty = BitConverter.ToSingle(cams, a + 88), tz = BitConverter.ToSingle(cams, a + 92);
+      double dist = Math.Sqrt((px - tx) * (px - tx) + (py - ty) * (py - ty) + (pz - tz) * (pz - tz));
+      double height = box[5] - box[2], width = Math.Max(box[3] - box[0], box[4] - box[1]);
+      if (!(fov > 0.05 && fov < 3) || !(dist > 0.01) || !(height > 0.01) || double.IsNaN(width)) return null;
+      double half = dist * Math.Tan(fov / 2);
+      var inv = System.Globalization.CultureInfo.InvariantCulture;
+      return string.Format(inv, "{0:0.##} {1:0.##} {2:0.##} {3:0.##} {4:0.##} {5:0.##} {6:0.##}",
+        half, tx, ty, tz, (box[2] + box[5]) / 2, height, width);
+    } catch (Exception) { return null; }
+  }
   public bool Has(string name) {
     bool yes;
     if (found.TryGetValue(name, out yes)) return yes;

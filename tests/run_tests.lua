@@ -639,10 +639,10 @@ press(DmorphOctoTile1)
 check(vh.display == 4527 and DmorphOctoDB.display == 4527, "clicking a preview morphs you")
 check(DmorphOctoTile1.border[1] == 1 and DmorphOctoTile1.border[2] == 0.82, "the model you wear has a gold frame")
 check(contains(DmorphOctoFrameStatus.text, "Thrall"), "the status line confirms the morph")
-press(Mock.FindButton(">"))
+press(DmorphOctoDisplayNext)
 check(vh.display == 4528, "> steps to the next model ID")
-press(Mock.FindButton("<"))
-press(Mock.FindButton("<"))
+press(DmorphOctoDisplayPrev)
+press(DmorphOctoDisplayPrev)
 check(vh.display == 4526, "< steps back")
 
 -- Fast clicks wait their turn: the game rebuilds your character after each.
@@ -687,25 +687,25 @@ press(DmorphOctoMountListRow1)
 check(DmorphOctoDB.mount == skin and vh.mount == nil, "clicking a model makes it the skin for all your mounts")
 check(DmorphOctoMountListRow1.tick.shown and DmorphOctoMountListRow1.locked and not DmorphOctoMountListRow2.tick.shown,
 	"the skin you have on is ticked and lit in the list")
-check(DmorphOctoMountSkinID.text == "Display ID " .. skin and DmorphOctoMountSkinFor.text == "For: All my mounts"
-	and DmorphOctoMountPanelModel.displayInfo == skin, "the Your skin box shows it, turning, and which mounts it is for")
+check(DmorphOctoMountsBoxInfo.text == "Display ID " .. skin .. " - for All my mounts"
+	and DmorphOctoMountsBoxModel.displayInfo == skin, "the Your skin box shows it, turning, and which mounts it is for")
 local second = tonumber(DmorphOctoMountListRow2.info.text)
-press(DmorphOctoMountNext)
+press(DmorphOctoMountsNext)
 check(DmorphOctoDB.mount == second and DmorphOctoMountListRow2.tick.shown, "the down arrow puts on the next model")
-press(DmorphOctoMountPrev)
+press(DmorphOctoMountsPrev)
 check(DmorphOctoDB.mount == skin and DmorphOctoMountListRow1.tick.shown, "the up arrow goes back")
 for n = 1, 20 do
-	press(DmorphOctoMountNext)
+	press(DmorphOctoMountsNext)
 end
 local pickRow
-for i = 1, 15 do
+for i = 1, 14 do
 	if getglobal("DmorphOctoMountListRow" .. i).tick.shown then
 		pickRow = getglobal("DmorphOctoMountListRow" .. i)
 	end
 end
 check(pickRow and tonumber(pickRow.info.text) == DmorphOctoDB.mount, "the list scrolls to keep your skin in view")
 for n = 1, 20 do
-	press(DmorphOctoMountPrev)
+	press(DmorphOctoMountsPrev)
 end
 check(DmorphOctoDB.mount == skin, "and back up to the first")
 vh.serverMount = 10671
@@ -792,7 +792,7 @@ pickMenu("Models")
 press(DmorphOctoFavListRow1)
 check(vh.display == 11121, "clicking a favourite model morphs you")
 Mock.RunScript(DmorphOctoFavListRow1, "OnEnter")
-check(DmorphOctoPreviewCard:IsVisible() and DmorphOctoPreviewCardModel.displayInfo == 11121, "hovering a favourite previews it")
+check(DmorphOctoFavouritesBox:IsVisible() and DmorphOctoFavouritesBoxModel.displayInfo == 11121, "hovering a favourite previews it in the box")
 Mock.RunScript(DmorphOctoFavListRow1, "OnLeave")
 Mock.Click(DmorphOctoFavListRow1, "RightButton")
 check(not DmorphOcto.IsFavourite(11121) and DmorphOctoFavCount.text == "1 favourite", "right-clicking a favourite takes it off")
@@ -803,16 +803,42 @@ check(DmorphOctoFavSort.text == "Sort: ID", "favourites sort by ID too")
 Mock.Click(DmorphOctoFavSort)
 Mock.Click(DmorphOctoTabModels)
 
--- List view, with a preview card for the row under the mouse.
+-- List view, with a preview box for the row under the mouse.
 Mock.Click(DmorphOctoModelView)
 check(not DmorphOctoModelGrid:IsVisible() and DmorphOctoModelListRow1:IsVisible(), "list view swaps the grid for a list")
 check(DmorphOctoAccount.ui.list == true, "the view is remembered")
 Mock.RunScript(DmorphOctoModelListRow2, "OnEnter")
 Mock.Tick(0.7)
-check(DmorphOctoPreviewCard:IsVisible() and DmorphOctoPreviewCardModel.displayInfo == catalog.ids[2],
-	"hovering a row previews its model")
+check(DmorphOctoModelsBox:IsVisible() and DmorphOctoModelsBoxModel.displayInfo == catalog.ids[2],
+	"hovering a row previews its model in the box")
 Mock.RunScript(DmorphOctoModelListRow2, "OnLeave")
-check(not DmorphOctoPreviewCard:IsVisible(), "the preview card goes when the mouse does")
+check(contains(DmorphOctoModelsBoxInfo.text, "you have it on"), "the box goes back to the model you have on when the mouse leaves")
+do
+	-- 2.21.0 (user: the previews were zoomed in too much): the box fits the
+	-- whole model from Data/ModelFrames.lua, and zooms.
+	local box, row = DmorphOctoModelsBoxModel, nil
+	for i = 1, 15 do
+		local r = getglobal("DmorphOctoModelListRow" .. i)
+		if not row and r:IsVisible() and DmorphOcto.GetModelFrame(tonumber(r.info.text)) then
+			row = r
+		end
+	end
+	Mock.RunScript(row, "OnEnter")
+	Mock.Tick(0.7)
+	Mock.Tick(0.1)
+	local R, tx, ty, tz, middle = DmorphOcto.GetModelFrame(box.displayInfo)
+	check(R and box.displayInfo == tonumber(row.info.text) and box.camera == 0 and box.scale > 0 and box.scale < 1
+		and box.position[1] == tx and math.abs(box.position[3] - (tz - box.scale * middle)) < 0.001,
+		"the box fits the whole model: scaled down, its middle where the portrait camera looks")
+	local before = box.scale
+	press(DmorphOctoModelsBoxZoomIn)
+	Mock.Tick(0.1)
+	check(math.abs(box.scale / before - 1.25) < 0.001, "+ zooms the box in")
+	press(DmorphOctoModelsBoxZoomReset)
+	Mock.Tick(0.1)
+	check(math.abs(box.scale - before) < 0.001, "Reset puts the box's view back")
+	Mock.RunScript(row, "OnLeave")
+end
 Mock.Type(modelSearch, "thrall")
 Mock.Tick(0.7)
 local firstRow = DmorphOctoModelListRow1
@@ -836,7 +862,7 @@ check(DmorphOctoModelGrid:IsVisible() and DmorphOctoTile1Model.displayInfo == ca
 -- Races tab: portraits for your own face, < > for the game's NPC looks.
 Mock.Click(DmorphOctoTabRaces)
 check(not DmorphOctoModelGrid:IsVisible(), "switching tabs hides the models")
-check(DmorphOctoTabRaces.label.color[2] == 0.82, "the open tab is lit")
+check(DmorphOctoTabRaces.label.color[2] == 1 and DmorphOctoTabRaces.border[3] == 1, "the open tab is lit (white on purple)")
 press(DmorphOctoRace4Female)
 check(vh.display == 56, "a portrait morphs into that race (Night Elf female)")
 check(DmorphOctoRace4Female.ring.shown and not DmorphOctoRace4Male.ring.shown, "the race you wear is ringed")
@@ -961,18 +987,43 @@ check(DmorphOctoItemCount.text == "1 item", "one result says \"1 item\"")
 -- Hovering an item: your character wearing it, nothing put on.
 local itemsBefore = vh.calls
 Mock.RunScript(itemRow, "OnEnter")
-check(DmorphOctoItemCard:IsVisible() and DmorphOctoItemCardModel.unit == "player"
-	and DmorphOctoItemCardModel.tried[1] == 2955 and DmorphOctoItemCardTitle.text == "First Mate Hat",
+check(DmorphOctoItemsBox:IsVisible() and DmorphOctoItemsBoxModel.unit == "player"
+	and DmorphOctoItemsBoxModel.tried[1] == 2955 and DmorphOctoItemsBoxTitle.text == "First Mate Hat",
 	"hovering an item shows your character wearing it")
 check(vh.calls == itemsBefore and vh.items[1] == nil, "without putting it on")
 Mock.RunScript(itemRow, "OnLeave")
-check(not DmorphOctoItemCard:IsVisible(), "the preview goes when the mouse leaves")
+check(DmorphOctoItemsBoxTitle.text == "Your own gear", "the box goes back to what you wear when the mouse leaves")
 press(itemRow)
 check(vh.items[1] == 2955, "clicking an item morphs that slot")
 Mock.Type(itemSearch, "")
+-- 2.21.0: Previous / Next under the box wear the item below or above yours.
+do
+	local function LockedRow()
+		for i = 1, 13 do
+			local r = getglobal("DmorphOctoItemListRow" .. i)
+			if r:IsVisible() and r.locked then
+				return tonumber(r.info.text)
+			end
+		end
+	end
+	press(DmorphOctoItemsNext)
+	Mock.Tick(0.4)
+	check(vh.items[1] and vh.items[1] ~= 2955 and LockedRow() == vh.items[1]
+		and DmorphOctoItemsBoxTitle.text == DmorphOcto.DescribeItem(vh.items[1], 1),
+		"Next wears the next item in the list, scrolls to it and the box shows it")
+	press(DmorphOctoItemsPrev)
+	Mock.Tick(0.4)
+	check(vh.items[1] == 2955 and LockedRow() == 2955, "Previous goes back")
+end
+-- Hidden slots (Invisible, Birthday suit) show the empty slot, purple, not a question mark.
+DmorphOcto.HideItem(6)
+Mock.Tick(1.1)
+check(DmorphOctoSlot6.icon.texture == "Interface\\Paperdoll\\UI-PaperDoll-Slot-WaistSlot" and DmorphOctoSlot6.glow.shown,
+	"a hidden slot shows the empty slot picture, framed")
+DmorphOcto.SetItem(6, 0)
 press(DmorphOctoItemListRow3)
 local locked = {}
-for i = 1, 14 do
+for i = 1, 13 do
 	if getglobal("DmorphOctoItemListRow" .. i).locked then
 		table.insert(locked, i)
 	end
@@ -984,7 +1035,7 @@ local headItems = DmorphOcto.GetItemCatalog(1)
 -- Every row shown passes a test (on the catalogue entry), and some are shown.
 local function allRows(test)
 	local any = false
-	for i = 1, 14 do
+	for i = 1, 13 do
 		local row = getglobal("DmorphOctoItemListRow" .. i)
 		if row:IsVisible() then
 			any = true
@@ -1085,13 +1136,13 @@ check(DmorphOctoSetListRow1:IsVisible() and DmorphOctoSetListRow1.text.text == "
 	"the sets tab finds a set")
 Mock.RunScript(DmorphOctoSetListRow1, "OnEnter")
 check(contains(table.concat(GameTooltip.lines, "\n"), "Breastplate of Wrath"), "hovering a set lists its pieces")
-check(DmorphOctoItemCard:IsVisible() and DmorphOctoItemCardStatus.text == "Loading from the server..."
+check(DmorphOctoSetsBox:IsVisible() and DmorphOctoSetsBoxStatus.text == "Loading from the server..."
 	and contains(" " .. table.concat(Mock.itemRequests, " ") .. " ", " 16966 "),
 	"and shows you wearing it: pieces the game hasn't seen yet are asked for")
 Mock.serverItems[16966] = { "Breastplate of Wrath", 4, "INVTYPE_CHEST" }
 Mock.Tick(0.3)
 local triedWrath = false
-for _, id in ipairs(DmorphOctoItemCardModel.tried) do
+for _, id in ipairs(DmorphOctoSetsBoxModel.tried) do
 	if id == 16966 then
 		triedWrath = true
 	end
@@ -1250,7 +1301,7 @@ slash("")
 check(DmorphOctoModelListRow1:IsVisible() and not DmorphOctoModelGrid:IsVisible() and not DmorphOctoModelView:IsVisible(),
 	"without ClassicAPI the models tab is a list")
 Mock.RunScript(DmorphOctoModelListRow1, "OnEnter")
-check(not DmorphOctoPreviewCard:IsVisible(), "and rows have no preview card")
+check(DmorphOctoModelsBoxStatus.text == "3D previews need ClassicAPI.", "and the box says previews need ClassicAPI")
 check(DmorphOctoAccount.ui.list == false, "the grid stays chosen for later")
 DmorphOcto_ToggleUI()
 
@@ -1894,7 +1945,7 @@ local function installHelper(look)
 		return type(v) == "number" and v >= 0 and v <= max and v == math.floor(v)
 	end
 	function DmorphHelper_Version()
-		return 15
+		return 16
 	end
 	-- v14: riders of some mount displays get another pose (game.posesWork: the
 	-- helper could patch the game).
@@ -2080,16 +2131,16 @@ DmorphOctoDB, DmorphOctoAccount = nil, nil
 loadWithHelper()
 Mock.Tick(1.1)
 slash("dmorph status")
-check(contains(allChat(), "DmorphHelper v15 is loaded"), "status shows the helper's version")
+check(contains(allChat(), "DmorphHelper v16 is loaded"), "status shows the helper's version")
 slash("dmorph check")
 check(contains(allChat(), "DmorphHelper: |cff33ff99OK"), "the check says the helper runs")
-check(contains(allChat(), "Running v15 (this DMorph comes with v15)"), "and which version runs")
+check(contains(allChat(), "Running v16 (this DMorph comes with v16)"), "and which version runs")
 local openedForSetup = not (DmorphOctoFrame and DmorphOctoFrame:IsVisible())
 if openedForSetup then
 	slash("")
 end
 Mock.Click(DmorphOctoSetupButton)
-check(contains(DmorphOctoSetupButton.text, "Helper v15") and contains(DmorphOctoSetupText2.text, "Running v15"),
+check(contains(DmorphOctoSetupButton.text, "Helper v16") and contains(DmorphOctoSetupText2.text, "Running v16"),
 	"the Setup button and panel show the helper version")
 Mock.Click(DmorphOctoSetupClose)
 local currentVersion = DmorphHelper_Version
@@ -2466,6 +2517,17 @@ check(game.race == 1, "the race stays yours while the spellbook is still open")
 SpellBookFrame:Hide()
 check(game.race == 2 and vh.display == 51, "and the Orc race goes back when both close")
 SpellBookFrame, ReputationFrame = nil, nil
+-- 2.20.0: the race byte must match the model shown (VanillaHelpers can put
+-- back a wrong one; user, 18 Oct: wrong skin and no gear until a restart).
+do
+	game.race = 1
+	local rebuilt, repairs = game.rebuilds, DmorphOcto.GetRaceRepairs()
+	Mock.Tick(1.1)
+	check(game.race == 2 and game.rebuilds == rebuilt + 1 and DmorphOcto.GetRaceRepairs() == repairs + 1,
+		"a race byte that doesn't match the Orc model is put right and the model rebuilt")
+	Mock.Tick(1.1)
+	check(game.rebuilds == rebuilt + 1, "and left alone once it's right")
+end
 press(DmorphOctoCreatorRandom)
 check(wearable(game.look, "2:0") and vh.display == 51, "the dice picks a look the race can wear, on your model")
 -- From an NPC look: the rows take you back to your own model with its face.
@@ -2482,6 +2544,9 @@ Mock.Tick(1.1)
 check(sameLook(game.look, REAL) and game.enchants[16][1] == 803 and game.enchants[18][1] == 0,
 	"resetting everything puts your real look and glows back")
 check(game.ownRace == 1, "the helper keeps your own race without a race morph too (loading screens)")
+game.race = 2 -- the morph's race left behind with your own model showing
+Mock.Tick(1.1)
+check(game.race == 1 and vh.display == vh.serverDisplay, "a morph's race left in the byte after a reset goes back to your own")
 -- A race with no list (High Elf here) keeps the NPC rows.
 press(DmorphOctoRace10Male)
 check(contains(DmorphOctoRacesHint.text, "an NPC has"), "a race with no look list uses NPC looks")
@@ -2691,13 +2756,13 @@ local mantleRow = DmorphOctoItemListRow1
 check(mantleRow:IsVisible() and mantleRow.text.text == "Ported Cloth Mantle", "the shoulder list has the ported mantle")
 Mock.itemRequests = {}
 Mock.RunScript(mantleRow, "OnEnter")
-check(DmorphOctoItemCardStatus.text == "Loading from the server..."
+check(DmorphOctoItemsBoxStatus.text == "Loading from the server..."
 	and not contains(" " .. table.concat(Mock.itemRequests, " ") .. " ", " 901004 "),
 	"its preview waits for a template, without asking the server for the ported item's own ID")
 for _ = 1, 10 do
 	Mock.Tick(1)
 end
-check(DmorphOctoItemCardStatus.text == "The server didn't send this.", "after a while the card says it didn't come")
+check(DmorphOctoItemsBoxStatus.text == "The server didn't send this.", "after a while the card says it didn't come")
 local standIn
 for id in pairs(DmorphOcto.GetItemCatalog(3).byID) do
 	if id < 900000 then
@@ -2708,12 +2773,12 @@ end
 Mock.serverItems[standIn] = { "Some Mantle", 2, "INVTYPE_SHOULDER" }
 Mock.Tick(1.1)
 local triedMantle = false
-for _, id in ipairs(DmorphOctoItemCardModel.tried or {}) do
+for _, id in ipairs(DmorphOctoItemsBoxModel.tried or {}) do
 	if id == 901004 then
 		triedMantle = true
 	end
 end
-check(triedMantle and DmorphOctoItemCardStatus.text == "", "a known shoulder stands in and the card shows it")
+check(triedMantle and DmorphOctoItemsBoxStatus.text == "", "a known shoulder stands in and the card shows it")
 Mock.RunScript(mantleRow, "OnLeave")
 Mock.serverItems[standIn] = nil
 Mock.Type(DmorphOctoItemSearch, "")

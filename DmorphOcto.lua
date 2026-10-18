@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.19.0"
+local VERSION = "2.21.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1125,6 +1125,55 @@ function M.GetDisplayName(displayID)
 	end
 end
 
+-- How a preview frames a display so the whole model shows (Data/ModelFrames.lua
+-- and, for ported models, DMorph_Ported's PortedFrames.lua, both made by
+-- tools/build_frames.ps1): the half height the model's portrait camera sees
+-- at its target, the target (x, y, z), and the model's middle height, height
+-- and widest side, in model units. nil when the display has no data.
+local frameModels, frameDisplays
+local function ParseFrames(data, models, displays)
+	if type(data) ~= "table" or type(data.models) ~= "string" or type(data.displays) ~= "string" then
+		return
+	end
+	local rows = {}
+	for line in string.gfind(data.models, "[^\n]+") do
+		local values, n = {}, 0
+		for v in string.gfind(line, "%S+") do
+			n = n + 1
+			values[n] = tonumber(v)
+		end
+		if n == 7 then
+			table.insert(rows, values)
+		else
+			table.insert(rows, false)
+		end
+	end
+	local base = table.getn(models)
+	for i = 1, table.getn(rows) do
+		models[base + i] = rows[i]
+	end
+	for id, row in string.gfind(data.displays, "(%d+):(%d+)") do
+		local values = rows[tonumber(row)]
+		if values then
+			displays[tonumber(id)] = base + tonumber(row)
+		end
+	end
+end
+
+function M.GetModelFrame(displayID)
+	if not frameModels then
+		frameModels, frameDisplays = {}, {}
+		ParseFrames(DmorphOcto_ModelFrames, frameModels, frameDisplays)
+		ParseFrames(DmorphOcto_PortedFrames, frameModels, frameDisplays)
+		-- The strings aren't needed once parsed.
+		DmorphOcto_ModelFrames, DmorphOcto_PortedFrames = nil, nil
+	end
+	local f = frameDisplays[displayID or 0] and frameModels[frameDisplays[displayID]]
+	if f then
+		return f[1], f[2], f[3], f[4], f[5], f[6], f[7]
+	end
+end
+
 function M.DescribeDisplay(displayID)
 	local name = M.GetDisplayName(displayID)
 	if name then
@@ -1622,6 +1671,39 @@ local function ApplyBody()
 	return ok, err
 end
 
+-- The race byte has to match the model you show: the game paints your skin,
+-- hair and gear by that race, and with another race's there you stand there
+-- half naked in the wrong skin (user, 18 Oct: after changing race and set;
+-- neither a /reload nor Reset everything helped, only restarting the game).
+-- VanillaHelpers keeps the byte it found when a race morph went on and puts
+-- it back when the morph comes off; if the byte held another race just then,
+-- that race stays for good. So once a second the byte is checked against the
+-- model the game shows (a racial model's race, else your own) and repaired.
+-- Not while a window holds your own race (HoldRace). raceRepairs: how many.
+local raceRepairs = 0
+local function RepairRace()
+	if not (sessionReady and nativeRace) or next(raceSwapped) or next(raceHeld)
+		or type(DmorphHelper_GetRace) ~= "function" or type(DmorphHelper_SetRace) ~= "function" then
+		return
+	end
+	local ok, display = pcall(UnitDisplayInfo, "player")
+	local got, race = pcall(DmorphHelper_GetRace, "player")
+	if not (ok and type(display) == "number" and got and type(race) == "number") then
+		return
+	end
+	local want = DisplayRace(display) or nativeRace
+	if race ~= want and pcall(DmorphHelper_SetRace, "player", want) then
+		raceRepairs = raceRepairs + 1
+		if type(DmorphHelper_Rebuild) == "function" then
+			pcall(DmorphHelper_Rebuild, "player")
+		end
+	end
+end
+M.RepairRace = RepairRace
+function M.GetRaceRepairs()
+	return raceRepairs
+end
+
 -- Holds (on) or releases your own race for a reason. Returns whether the
 -- race was changed back just now, so the window can redraw.
 function M.HoldRace(reason, on)
@@ -2025,7 +2107,7 @@ local MISSING_HELPER = "DmorphHelper.dll isn't loaded, so weapon glows, your siz
 M.MISSING_HELPER = MISSING_HELPER
 -- The DmorphHelper_Version() the DLL in helper\ reports. An older one in the
 -- game folder (DMorph was updated, the DLL wasn't copied again) is flagged.
-local HELPER_VERSION = 15
+local HELPER_VERSION = 16
 -- Rows 1-5 of the Races tab, in DmorphHelper_GetLook's order.
 local OWN_LOOK_NPC = { "npcSkin", "npcFace", "npcHairStyle", "npcHairColour" }
 
@@ -2404,6 +2486,7 @@ local function WatchHelper()
 	if not (sessionReady and HasHelper()) or helperHold > 0 then
 		return
 	end
+	RepairRace()
 	CheckItems()
 	WatchScale()
 	local current = ReadLook()
@@ -3420,6 +3503,9 @@ local function ShowStatus()
 	elseif table.getn(repaired) > 0 then
 		Print("Item morphs the game switched back and DMorph put back this session: " .. table.concat(repaired, ", ") .. ".")
 	end
+	if raceRepairs > 0 then
+		Print("Race byte left on the wrong race and put right this session: " .. raceRepairs .. " times.")
+	end
 	for real, skin in pairs(db.mountSkins) do
 		Print("Skin for " .. M.DescribeDisplay(real) .. ": " .. M.DescribeDisplay(skin) .. ".")
 	end
@@ -3756,7 +3842,10 @@ end)
 
 -- Your own race while the flight map, spellbook or reputation list is open
 -- (see HoldRace). Blizzard's TaxiFrame handles TAXIMAP_OPENED before us, so
--- once the race is back it draws the flight paths again; the spellbook and
+-- once the race is back it draws the flight paths again. That alone left the
+-- map empty (user, 18 Oct): the game works out which paths you can fly when
+-- the flight master's list arrives, before this event, so DmorphHelper v16
+-- does that with your own race (its TaxiBuildRoutes hook); the spellbook and
 -- reputation list are held before they read their spells and standings.
 local held = {}
 local function HoldWhileShown(frame, reason)

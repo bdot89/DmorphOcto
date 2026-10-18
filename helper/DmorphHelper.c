@@ -53,7 +53,7 @@
 #define GAME_FASTCALL __attribute__((fastcall))
 #define GAME_THISCALL __attribute__((thiscall))
 
-#define HELPER_VERSION 15
+#define HELPER_VERSION 16
 
 // Game functions, build 5875 (from VanillaHelpers' Offsets.h).
 #define FUN_INVALID_FUNCTION_PTR_CHECK 0x42A320
@@ -74,6 +74,13 @@
 // 14 callers, among them 0x5EC720, which works out your skill in a chat
 // message's language (300 = understood; less and 0x49B560 scrambles the text).
 #define FUN_SKILL_RACE_CLASS_FIND 0x6DE040
+// Works out every flight path's route from the node you're at (no arguments,
+// plain ret), when the flight master sends its nodes (SMSG_SHOWTAXINODES, via
+// 0x4DB340). Each step (0x4DBCE0) reads your race byte and skips nodes whose
+// flight mounts (TaxiNodes +0x38/+0x3C: 2224 / 3574 Horde, 541 / 3837
+// Alliance) are only the other faction's; Lua's TaxiNodeGetType only reads the
+// result, so a race morph of the other faction left an empty flight map.
+#define FUN_TAXI_BUILD_ROUTES 0x4DC010
 #define LUA_IS_NUMBER 0x6F34D0
 #define LUA_TO_NUMBER 0x6F3620
 #define LUA_PUSH_NUMBER 0x6F3810
@@ -374,20 +381,45 @@ static uint32_t OwnRace(void) {
     return g_ownRace && GetActivePlayer() == g_ownGuid ? g_ownRace : 0;
 }
 
-static int GAME_FASTCALL ChatHandler_h(void *param, uint32_t msgId, uint32_t time, void *msg) {
-    uint32_t own = OwnRace();
+// Your own race in the byte for one call of the game's. HoldOwnRace writes it
+// (hold.race = the race it found, 0 if nothing was changed); ReleaseOwnRace
+// puts that race back, but only if the byte still holds your own race and your
+// model is still the same display: if a morph went on or off meanwhile (addons'
+// Lua runs inside the chat handler), VanillaHelpers has written the race that
+// goes with it, and that stays. v15 and older put the old race back whatever
+// happened, which could leave a morph's race on your own model (wrong skin, no
+// gear) until the game was restarted.
+typedef struct {
+    uint32_t own, race, display;
+} RaceHold;
+
+static RaceHold HoldOwnRace(uint32_t own) {
+    RaceHold hold = { own, 0, 0 };
     void *me = own ? Me() : NULL;
     if (!me) {
-        return ChatHandler_o(param, msgId, time, msg);
+        return hold;
     }
     uint32_t race = Fields(me)[UNIT_FIELD_BYTES_0] & 0xFF;
-    WriteRace(me, own);
-    int result = ChatHandler_o(param, msgId, time, msg);
-    // The handler may have run addons' Lua that changed things: look again.
-    me = Me();
-    if (me) {
-        WriteRace(me, race);
+    if (race != own) {
+        hold.race = race;
+        hold.display = Fields(me)[UNIT_FIELD_DISPLAYID];
+        WriteRace(me, own);
     }
+    return hold;
+}
+
+static void ReleaseOwnRace(RaceHold hold) {
+    void *me = hold.race ? Me() : NULL;
+    if (me && (Fields(me)[UNIT_FIELD_BYTES_0] & 0xFF) == hold.own &&
+        Fields(me)[UNIT_FIELD_DISPLAYID] == hold.display) {
+        WriteRace(me, hold.race);
+    }
+}
+
+static int GAME_FASTCALL ChatHandler_h(void *param, uint32_t msgId, uint32_t time, void *msg) {
+    RaceHold hold = HoldOwnRace(OwnRace());
+    int result = ChatHandler_o(param, msgId, time, msg);
+    ReleaseOwnRace(hold);
     return result;
 }
 
@@ -405,18 +437,24 @@ static void BuildReputation_h(void) {
         BuildReputation_o();
         return;
     }
-    uint32_t race = Fields(me)[UNIT_FIELD_BYTES_0] & 0xFF;
     uint32_t own = OwnRace();
     if (!own) {
-        own = race;
+        own = Fields(me)[UNIT_FIELD_BYTES_0] & 0xFF;
     }
-    WriteRace(me, own);
+    RaceHold hold = HoldOwnRace(own);
     BuildReputation_o();
-    me = Me();
-    if (me) {
-        WriteRace(me, race);
-    }
+    ReleaseOwnRace(hold);
     g_builtRace = own;
+}
+
+// Flight paths (v16): the routes are worked out with your own race, so a race
+// morph of the other faction still shows your faction's flight paths.
+typedef void (*TaxiBuildRoutes_t)(void);
+static TaxiBuildRoutes_t TaxiBuildRoutes_o = NULL;
+static void TaxiBuildRoutes_h(void) {
+    RaceHold hold = HoldOwnRace(OwnRace());
+    TaxiBuildRoutes_o();
+    ReleaseOwnRace(hold);
 }
 
 // Your skills (weapon skills, professions, languages) and how the spellbook
@@ -1008,6 +1046,11 @@ static void InstallHook(void) {
                       (LPVOID *)&BuildReputation_o) != MH_OK ||
         MH_EnableHook((LPVOID)FUN_BUILD_BASE_REPUTATION) != MH_OK) {
         BuildReputation_o = NULL;
+    }
+    if (MH_CreateHook((LPVOID)FUN_TAXI_BUILD_ROUTES, (LPVOID)&TaxiBuildRoutes_h,
+                      (LPVOID *)&TaxiBuildRoutes_o) != MH_OK ||
+        MH_EnableHook((LPVOID)FUN_TAXI_BUILD_ROUTES) != MH_OK) {
+        TaxiBuildRoutes_o = NULL;
     }
     if (MH_CreateHook((LPVOID)FUN_SKILL_RACE_CLASS_INFO, (LPVOID)&SkillRaceClass_h,
                       (LPVOID *)&SkillRaceClass_o) != MH_OK ||

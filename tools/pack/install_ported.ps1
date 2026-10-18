@@ -239,6 +239,14 @@ $toc = @(
   "## Version: $bundle",
   "Ported.lua"
 )
+# How DMorph's previews frame each ported model (newer packs have it).
+$framesTarget = Join-Path $listDir "PortedFrames.lua"
+if ($files | Where-Object { $_.Name -eq "PortedFrames.lua" }) {
+  Copy-Item (Join-Path $pack "PortedFrames.lua") $framesTarget -Force
+  $toc += "PortedFrames.lua"
+} elseif (Test-Path $framesTarget) {
+  Remove-Item $framesTarget
+}
 [IO.File]::WriteAllLines((Join-Path $listDir "DMorph_Ported.toc"), [string[]]$toc, (New-Object System.Text.UTF8Encoding $false))
 if (Test-Path $oldList) { Remove-Item $oldList }
 "Put Ported.lua in Interface\AddOns\DMorph_Ported (DMorph updates don't touch it)."
