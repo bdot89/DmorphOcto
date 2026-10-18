@@ -7,7 +7,8 @@
 //     (PLAYER_BYTES and PLAYER_BYTES_2)
 //   - a player's size (OBJECT_FIELD_SCALE_X, a float: what Enlarge spells change)
 //   - a player's race byte (UNIT_FIELD_BYTES_0): your own race while chat is
-//     read during a race morph, so the game understands your languages
+//     read during a race morph, and for the race/class skill lookups (your
+//     languages, skills, spellbook), so the game understands your languages
 //
 // Lua functions (registered when the game loads its own):
 //   DmorphHelper_Version()                                   -> version
@@ -52,7 +53,7 @@
 #define GAME_FASTCALL __attribute__((fastcall))
 #define GAME_THISCALL __attribute__((thiscall))
 
-#define HELPER_VERSION 14
+#define HELPER_VERSION 15
 
 // Game functions, build 5875 (from VanillaHelpers' Offsets.h).
 #define FUN_INVALID_FUNCTION_PTR_CHECK 0x42A320
@@ -69,6 +70,10 @@
 #define FUN_BUILD_BASE_REPUTATION 0x4D5430
 // SkillRaceClassInfo for (race, class, skill), fastcall + 1 stack arg; NULL if none.
 #define FUN_SKILL_RACE_CLASS_INFO 0x6DDF90
+// The same table, second index (exact race + class + skill match), same call;
+// 14 callers, among them 0x5EC720, which works out your skill in a chat
+// message's language (300 = understood; less and 0x49B560 scrambles the text).
+#define FUN_SKILL_RACE_CLASS_FIND 0x6DE040
 #define LUA_IS_NUMBER 0x6F34D0
 #define LUA_TO_NUMBER 0x6F3620
 #define LUA_PUSH_NUMBER 0x6F3810
@@ -420,15 +425,33 @@ static void BuildReputation_h(void) {
 // row for some of your skills, and the skill list (GetSkillLineInfo) reads
 // the missing row and crashes. So a lookup with the morph's race in your
 // byte is made with your own race.
-static void *GAME_FASTCALL SkillRaceClass_h(uint32_t race, uint32_t cls, uint32_t skill) {
+// The race a lookup should use: your own when it was asked with the morph's
+// race that sits in your byte.
+static uint32_t LookupRace(uint32_t race) {
     uint32_t own = OwnRace();
     if (own && race != own) {
         void *me = Me();
         if (me && race == (Fields(me)[UNIT_FIELD_BYTES_0] & 0xFF)) {
-            race = own;
+            return own;
         }
     }
-    return SkillRaceClass_o(race, cls, skill);
+    return race;
+}
+
+static void *GAME_FASTCALL SkillRaceClass_h(uint32_t race, uint32_t cls, uint32_t skill) {
+    return SkillRaceClass_o(LookupRace(race), cls, skill);
+}
+
+// Chat languages (v15): whether you understand a message is your skill in its
+// language (0x5EC720), found through the table's second index with the race
+// byte. Holding your own race only while SMSG_MESSAGECHAT runs (ChatHandler_h)
+// missed every message the game queues until the sender's name is known
+// (0x49CAE0 queues, the name-cache callback 0x49CCC0 shows it later), and your
+// own and your faction's chat came out scrambled during a race morph (user
+// report, 18 Oct 2026). This lookup is made with your own race too.
+static SkillRaceClass_t SkillRaceClassFind_o = NULL;
+static void *GAME_FASTCALL SkillRaceClassFind_h(uint32_t race, uint32_t cls, uint32_t skill) {
+    return SkillRaceClassFind_o(LookupRace(race), cls, skill);
 }
 
 static const char *RACE_USAGE = "Usage: DmorphHelper_GetRace(unit)";
@@ -990,6 +1013,11 @@ static void InstallHook(void) {
                       (LPVOID *)&SkillRaceClass_o) != MH_OK ||
         MH_EnableHook((LPVOID)FUN_SKILL_RACE_CLASS_INFO) != MH_OK) {
         SkillRaceClass_o = NULL;
+    }
+    if (MH_CreateHook((LPVOID)FUN_SKILL_RACE_CLASS_FIND, (LPVOID)&SkillRaceClassFind_h,
+                      (LPVOID *)&SkillRaceClassFind_o) != MH_OK ||
+        MH_EnableHook((LPVOID)FUN_SKILL_RACE_CLASS_FIND) != MH_OK) {
+        SkillRaceClassFind_o = NULL;
     }
     if (MH_CreateHook((LPVOID)FUN_CWEATHER_SET_WEATHER, (LPVOID)&SetWeather_h, (LPVOID *)&SetWeather_o) != MH_OK ||
         MH_EnableHook((LPVOID)FUN_CWEATHER_SET_WEATHER) != MH_OK) {
