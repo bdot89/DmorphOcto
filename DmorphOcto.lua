@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.21.3"
+local VERSION = "2.21.4"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1126,7 +1126,7 @@ function M.GetDisplayName(displayID)
 end
 
 -- How a preview frames a display so the whole model shows (Data/ModelFrames.lua
--- and, for ported models, DMorph_Ported's PortedFrames.lua, both made by
+-- and, for ported models, Data/PortedFrames.lua (one pack's), both made by
 -- tools/build_frames.ps1): the half height the model's portrait camera sees
 -- at its target, the target (x, y, z), the middle of the model's vertices
 -- (x, y, z), its height and widest side, in model units. nil when the
@@ -1168,7 +1168,12 @@ function M.GetModelFrame(displayID)
 	if not frameModels then
 		frameModels, frameDisplays = {}, {}
 		ParseFrames(DmorphOcto_ModelFrames, frameModels, frameDisplays)
-		ParseFrames(DmorphOcto_PortedFrames, frameModels, frameDisplays)
+		-- Ported frames come with DMorph (Data/PortedFrames.lua) for one pack:
+		-- the display IDs only mean those models with that pack.
+		local ported = DmorphOcto_PortedFrames
+		if type(ported) == "table" and (not ported.pack or ported.pack == M.GetPortedPack()) then
+			ParseFrames(ported, frameModels, frameDisplays)
+		end
 		-- The strings aren't needed once parsed.
 		DmorphOcto_ModelFrames, DmorphOcto_PortedFrames = nil, nil
 	end

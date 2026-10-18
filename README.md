@@ -1,6 +1,6 @@
 # DMorph for OctoWoW
 
-Become any creature, ride any mount, wear any item. A morph window for WoW 1.12 (OctoWoW), version 2.21.3.
+Become any creature, ride any mount, wear any item. A morph window for WoW 1.12 (OctoWoW), version 2.21.4.
 
 Morphs only change what you and other DMorph users see. Everyone else, and the server, sees your real character.
 
@@ -193,7 +193,7 @@ Project page: https://bdot89.github.io/DmorphOcto/
 - **Files:** DmorphOcto.lua is the core (morphs, wardrobe, commands), Share.lua shares morphs between DMorph users, UI.lua is the window. Data/ holds the model, item and set lists. helper/ holds DmorphHelper (C source and DLL).
 - **How it works:** DMorph uses VanillaHelpers (SetUnitDisplayID, SetUnitVisibleItemID, SetUnitMountDisplayID) to morph, and ClassicAPI for the 3D previews. DmorphHelper adds weapon glows, real skin, face and hair, size, weather, time of day, and keeps your own race (faction, languages, reputation) during race morphs. It only switches on when it finds VanillaHelpers' hooks in the game.
 - **Tests:** powershell -ExecutionPolicy Bypass -File tools\run_tests.ps1 (or lua tests/run_tests.lua with Lua 5.0). tests/layout.lua draws every tab's layout from the test mock into tests/layout/*.svg.
-- **Previews** show the whole model using Data/ModelFrames.lua (each model's portrait camera and size, made by tools/build_frames.ps1; ported packs carry their own PortedFrames.lua).
+- **Previews** show the whole model using Data/ModelFrames.lua (each model's portrait camera and size, made by tools/build_frames.ps1; and Data/PortedFrames.lua for the ported pack, only used when the pack ID matches).
 - **Rebuilding the lists after an OctoWoW update:** close the game and run powershell -ExecutionPolicy Bypass -File tools\update_from_game.ps1
 - **Building DmorphHelper:** sh helper/build.sh with 32-bit MinGW (on Windows: winlibs i686, from Git Bash).
 - **Ported packs** are made by a separate converter (modern M2 models to 1.12's format, plus the game tables); it isn't published, as it works on Blizzard's files. The pack's list (Ported.lua) is a separate addon, DMorph_Ported, that DmorphOcto.toc names in OptionalDeps so it loads first; DmorphOcto still reads an older Data\Ported.lua (git-ignored) if there is one. build_*.ps1 skip the pack's patch files.

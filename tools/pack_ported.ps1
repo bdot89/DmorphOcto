@@ -57,10 +57,6 @@ if ($patches.Count -eq 0) {
 $list = Join-Path ([IO.Path]::GetDirectoryName($addon)) "DMorph_Ported\Ported.lua"
 if (-not (Test-Path $list)) { $list = Join-Path $addon "Data\Ported.lua" }
 if (-not (Test-Path $list)) { throw "Ported.lua is missing (Interface\AddOns\DMorph_Ported or DmorphOcto\Data). $sentAPack" }
-# How the previews frame each ported model (tools\build_frames.ps1 -Ported), if made.
-$frames = Join-Path ([IO.Path]::GetDirectoryName($list)) "PortedFrames.lua"
-$extra = @()
-if (Test-Path $frames) { $extra = @($frames) }
 
 $version = ""
 foreach ($line in [IO.File]::ReadAllLines((Join-Path $addon "DmorphOcto.toc"))) {
@@ -89,14 +85,13 @@ if (Test-Path $Out) {
 $total = 0
 foreach ($p in $patches) { $total += $p.Length }
 $total += (Get-Item $list).Length
-foreach ($e in $extra) { $total += (Get-Item $e).Length }
 $drive = New-Object IO.DriveInfo ([IO.Path]::GetPathRoot($Out))
 if ($drive.AvailableFreeSpace -lt $total + 50MB) {
   throw ("{0} needs {1:N1} GB free, it has {2:N1} GB. Free some space or pick another drive with -Out." -f $Out, ($total / 1GB), ($drive.AvailableFreeSpace / 1GB))
 }
 
 $entries = New-Object System.Collections.ArrayList
-$files = @($patches | ForEach-Object { $_.FullName }) + @($list) + $extra
+$files = @($patches | ForEach-Object { $_.FullName }) + @($list)
 $i = 0
 foreach ($src in $files) {
   $i++
