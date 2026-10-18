@@ -508,7 +508,7 @@ check(DmorphOctoArt1.texture == "Interface\\DressUpFrame\\DressUpBackground-Huma
 	"the preview stands in your race's dressing room")
 check(DmorphOctoLookName.text == "Tester" and DmorphOctoLookInfo.text == "Not morphed", "the name plate shows your own look")
 local frontLoads = front.unitLoads
-say(".morph 4527")
+say(".race 2")
 Mock.Tick(0.05)
 check(front.unitLoads == frontLoads and not back:IsShown(), "a change doesn't touch the model you see")
 Mock.Tick(0.1)
@@ -517,7 +517,7 @@ check(back:IsShown() and back.unit == "player" and back.level < front.level,
 check(DmorphOctoArt1:GetParent().level > back.level and DmorphOctoArt1:GetParent().level < front.level,
 	"the backdrop sits between the two models")
 local refreshes = Mock.modelRefreshes
-say(".morph 4528")
+say(".race 3")
 Mock.Tick(0.15)
 check(Mock.modelRefreshes == refreshes, "a model that is still loading isn't loaded again")
 Mock.Tick(0.5)
@@ -526,8 +526,30 @@ check(newFront == back and front.unitLoads == frontLoads, "then it replaces the 
 Mock.Tick(0.15)
 check(Mock.modelRefreshes == refreshes + 1, "and the change made while it loaded follows straight after")
 Mock.Tick(0.5)
-check(DmorphOctoLookName.text == (DmorphOcto.GetDisplayName(4528) or "Unlisted model") and DmorphOctoLookInfo.text == "Display ID 4528",
-	"the name plate names the morph")
+-- 2.21.3: a creature morph shows whole in a creature view, not on your character.
+do
+	local creature
+	local all = DmorphOcto.GetCreatureCatalog()
+	for i = 1, all.count do
+		if not creature and DmorphOcto.GetModelFrame(all.ids[i]) then
+			creature = all.ids[i]
+		end
+	end
+	say(".morph " .. creature)
+	Mock.Tick(0.15)
+	Mock.Tick(0.5)
+	check(DmorphOctoStageModel:IsShown() and DmorphOctoStageModel.displayInfo == creature
+		and DmorphOctoStageModel.camera == 0 and DmorphOctoStageModel.scale < 1
+		and not DmorphOctoModel1:IsShown() and not DmorphOctoModel2:IsShown(),
+		"a creature morph shows whole in the dressing room")
+	check(DmorphOctoLookName.text == (DmorphOcto.GetDisplayName(creature) or "Unlisted model")
+		and DmorphOctoLookInfo.text == "Display ID " .. creature, "the name plate names the morph")
+	say(".race 2")
+	Mock.Tick(0.15)
+	Mock.Tick(0.5)
+	check(not DmorphOctoStageModel:IsShown() and previews():IsShown() and previews().unit == "player",
+		"a race morph is back on your character")
+end
 refreshes = Mock.modelRefreshes
 say(".morph 4527")
 say(".item 1 2955")
@@ -574,7 +596,7 @@ Mock.cursorX = 200
 Mock.Tick(0.05)
 Mock.RunScript(DmorphOctoModelDrag, "OnMouseUp", "LeftButton")
 check(front.rotation ~= rotation and at(front)[2] == zoomed[2], "dragging still turns it, without moving it")
-say(".morph 4527")
+say(".race 3")
 Mock.Tick(0.15)
 local _, loading = previews()
 check(at(loading)[1] == zoomed[1] and at(loading)[2] == zoomed[2], "the new look loads already zoomed")
@@ -826,9 +848,16 @@ do
 	Mock.RunScript(row, "OnEnter")
 	Mock.Tick(0.7)
 	Mock.Tick(0.1)
-	local R, tx, ty, tz, middle = DmorphOcto.GetModelFrame(box.displayInfo)
-	check(R and box.displayInfo == tonumber(row.info.text) and box.camera == 0 and box.scale > 0 and box.scale < 1
-		and box.position[1] == tx and math.abs(box.position[3] - (tz - box.scale * middle)) < 0.001,
+	-- Past the load-time nudge (4 s), so the scale is exact.
+	for _ = 1, 5 do
+		Mock.Tick(1)
+	end
+	local R, tx, ty, tz, cx, cy, cz = DmorphOcto.GetModelFrame(box.displayInfo)
+	local s = box.scale
+	local reach = s * math.sqrt(cx * cx + cy * cy) + 0.001
+	check(R and box.displayInfo == tonumber(row.info.text) and box.camera == 0 and s > 0 and s < 1
+		and math.abs(box.position[1] - tx) <= reach and math.abs(box.position[2] - ty) <= reach
+		and math.abs(box.position[3] - (tz - s * cz)) < 0.001,
 		"the box fits the whole model: scaled down, its middle where the portrait camera looks")
 	local before = box.scale
 	press(DmorphOctoModelsBoxZoomIn)

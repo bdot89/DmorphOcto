@@ -694,27 +694,47 @@ end
 -- diagonal, as M2 cameras are documented (erring on the small side if not).
 -- Without data the portrait stays, zoom scaling it. Unverified in game: that
 -- SetModelScale / SetPosition leave the model's own camera where it is.
+-- 2.21.3 (user: many ported models blank, cut off or off to one side until
+-- zoomed in and out): sizes come from the vertices (headers of converted
+-- models were nonsense), the model's real middle (not its origin) goes where
+-- the camera looks, turning with it, and while a model loads (view.fresh)
+-- the scale goes on a hair different every other frame: the game seems to
+-- skip a value it already has, and loses it when the model finishes loading.
 P.FIT, P.ZOOM_FACTOR = 0.88, 1.25
+-- The client's trig functions take degrees or radians depending on its build.
+P.ANGLE = math.sin(math.pi / 2) > 0.99 and 1 or 180 / math.pi
 local function FrameView(view)
 	local model, id = view.model, view.loaded
 	local zoom = math.pow(P.ZOOM_FACTOR, view.zoom or 0)
-	local R, tx, ty, tz, middle, height, width = M.GetModelFrame(id)
+	local R, tx, ty, tz, cx, cy, cz, height, width = M.GetModelFrame(id)
+	local nudge = 1
+	if view.fresh then
+		view.flip = not view.flip
+		nudge = view.flip and 1.001 or 1
+	end
 	if not R then
-		model:SetModelScale(zoom)
+		model:SetModelScale(zoom * nudge)
 		model:SetPosition(0, 0, 0)
 		return
 	end
 	local a = view.aspect
 	local rv = R / math.sqrt(1 + a * a)
 	local scale = P.FIT * math.min(2 * rv / height, 2 * rv * a / width) * zoom
-	model:SetModelScale(scale)
-	model:SetPosition(tx, ty + (view.panX or 0) * 2 * rv, tz - scale * middle + (view.panY or 0) * 2 * rv)
+	-- The middle turns with the model (SetFacing turns it round its origin).
+	local f = (view.facing or 0) * P.ANGLE
+	local c, s = math.cos(f), math.sin(f)
+	local mx, my = cx * c - cy * s, cx * s + cy * c
+	model:SetModelScale(scale * nudge)
+	model:SetPosition(tx - scale * mx, ty - scale * my + (view.panX or 0) * 2 * rv,
+		tz - scale * cz + (view.panY or 0) * 2 * rv)
 end
 
 local function StartView(view, displayID)
 	local model = view.model
 	view.loaded = displayID
 	view.settle = SETTLE
+	-- Seconds the framing is pushed through while the model loads (FrameView).
+	view.fresh = 4
 	-- Drop the old model and its skins first, so none carry over to the new one.
 	pcall(model.ClearModel, model)
 	model:SetDisplayInfo(displayID)
@@ -773,7 +793,15 @@ local function TickView(view, elapsed, spin)
 	if not view.loaded then
 		return
 	end
-	-- A loading model forgets its scale and place, so they go on every frame.
+	-- A loading model forgets its scale, place and camera, so they go on every
+	-- frame, and are pushed through while it is fresh.
+	if view.fresh then
+		view.fresh = view.fresh - elapsed
+		if view.fresh <= 0 then
+			view.fresh = nil
+		end
+		pcall(view.model.SetCamera, view.model, 0)
+	end
 	FrameView(view)
 	if spin and view.displayID and not view.manual then
 		view.facing = view.facing + elapsed * 1.6
@@ -855,6 +883,23 @@ local RequestPreview
 local function ApplyView(model)
 	local p = ui.preview
 	model:SetPosition(p.zoom, p.panX, p.panY - p.zoom * 0.28)
+	-- The creature view (P.StageCreature) follows the same zoom, turn and pan.
+	local v = ui.stageView
+	if v then
+		v.zoom, v.facing, v.manual = p.zoom / ZOOM_STEP, p.rotation, true
+		v.panX, v.panY = p.panX / 3, p.panY / 3
+	end
+end
+
+-- 2.21.3 (user's screenshots: a big creature morph filled the dressing room):
+-- morphed into a creature with frame data, the stage shows that display in a
+-- creature view framed like the preview boxes, not your character (item
+-- morphs don't show on creatures anyway).
+function P.StageCreature()
+	local display = M.GetState().display
+	if ui.canPreview and ui.stageView and display and M.GetModelFrame(display) then
+		return display
+	end
 end
 
 local function Zoom(step)
@@ -890,6 +935,22 @@ end
 -- can leave textures from the earlier look on it.
 local function LoadPreview()
 	local p = ui.preview
+	local creature = P.StageCreature()
+	local v = ui.stageView
+	if creature then
+		p.models[1]:Hide()
+		p.models[2]:Hide()
+		v.model:Show()
+		ApplyView(v.model)
+		if v.displayID ~= creature then
+			LoadView(v, creature)
+		end
+		return
+	end
+	if v then
+		v.model:Hide()
+		v.displayID = nil
+	end
 	if p.loading then
 		p.again = true
 		return
@@ -1410,6 +1471,9 @@ function P.NewBox(page, key, kind, y, rows, heading, step)
 		this.dragX, this.panX, this.panY = nil, nil, nil
 	end)
 	drag:SetScript("OnUpdate", function()
+		if ui.stageView.model:IsShown() then
+			TickView(ui.stageView, arg1, false)
+		end
 		if this.dragX then
 			local x = GetCursorPosition()
 			local turn = (x - this.dragX) * 0.02
@@ -3582,6 +3646,11 @@ local function BuildStage()
 		p.models[i] = model
 	end
 	ui.preview = p
+	-- Creature morphs show here instead (P.StageCreature).
+	ui.stageView = NewView(stage, "DmorphOctoStageModel", base + 1, base + 3, ART_W / (ART_H - 4 - PLATE_H))
+	ui.stageView.model:SetPoint("TOPLEFT", stage, "TOPLEFT", 0, -4)
+	ui.stageView.model:SetPoint("BOTTOMRIGHT", stage, "BOTTOMRIGHT", 0, PLATE_H)
+	ui.stageView.model:Hide()
 
 	-- Over the model: drag to turn it, right-drag to move it, mouse wheel to
 	-- zoom in and out.
@@ -3607,6 +3676,7 @@ local function BuildStage()
 			p.rotation = p.rotation + (x - this.dragX) * 0.02
 			this.dragX = x
 			p.models[p.front]:SetRotation(p.rotation)
+			ui.stageView.facing = p.rotation
 		elseif this.panX then
 			-- The farther in, the smaller a step: the model follows the cursor.
 			local x, y = GetCursorPosition()

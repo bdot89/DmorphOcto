@@ -263,7 +263,8 @@ public class GameFiles {
   // camera (type 0, else the first), as the half height the camera sees at
   // its target (distance * tan(fov / 2)) and the target, plus the bounding
   // box's middle height, height and widest side, as
-  // "R Tx Ty Tz middle height width" (model units, 2 decimals); null if it
+  // "R Tx Ty Tz Cx Cy Cz height width" (model units, 2 decimals; C the box's
+  // middle); null if it
   // can't tell. In version 256-257 headers the bounding box is 7 floats at
   // 0xB4 (min, max, radius) and the cameras an M2Array at 0x124 of 124-byte
   // records: type, fov, far, near, position track (28 bytes), position
@@ -281,6 +282,25 @@ public class GameFiles {
       if (version < 256 || version > 257) return null;
       float[] box = new float[6];
       for (int i = 0; i < 6; i++) box[i] = BitConverter.ToSingle(head, 0xB4 + i * 4);
+      // The header's box is often wrong in converted (ported) models (a
+      // pterrordax 231 units tall), so the box comes from the vertices
+      // (M2Array at 0x44, 48-byte records, position first) when it can.
+      uint vcount = BitConverter.ToUInt32(head, 0x44), vofs = BitConverter.ToUInt32(head, 0x48);
+      if (vcount > 0 && vcount <= 300000) {
+        byte[] verts = m.ReadRange(name, vofs, (int)vcount * 48);
+        if (verts != null) {
+          float[] vb = { float.MaxValue, float.MaxValue, float.MaxValue, float.MinValue, float.MinValue, float.MinValue };
+          for (int v = 0; v < vcount; v++) {
+            for (int k = 0; k < 3; k++) {
+              float p = BitConverter.ToSingle(verts, v * 48 + k * 4);
+              if (float.IsNaN(p) || Math.Abs(p) > 10000) continue;
+              if (p < vb[k]) vb[k] = p;
+              if (p > vb[k + 3]) vb[k + 3] = p;
+            }
+          }
+          if (vb[3] > vb[0] && vb[4] > vb[1] && vb[5] > vb[2]) box = vb;
+        }
+      }
       uint count = BitConverter.ToUInt32(head, 0x124), ofs = BitConverter.ToUInt32(head, 0x128);
       if (count == 0 || count > 16) return null;
       byte[] cams = m.ReadRange(name, ofs, (int)count * 124);
@@ -296,8 +316,8 @@ public class GameFiles {
       if (!(fov > 0.05 && fov < 3) || !(dist > 0.01) || !(height > 0.01) || double.IsNaN(width)) return null;
       double half = dist * Math.Tan(fov / 2);
       var inv = System.Globalization.CultureInfo.InvariantCulture;
-      return string.Format(inv, "{0:0.##} {1:0.##} {2:0.##} {3:0.##} {4:0.##} {5:0.##} {6:0.##}",
-        half, tx, ty, tz, (box[2] + box[5]) / 2, height, width);
+      return string.Format(inv, "{0:0.##} {1:0.##} {2:0.##} {3:0.##} {4:0.##} {5:0.##} {6:0.##} {7:0.##} {8:0.##}",
+        half, tx, ty, tz, (box[0] + box[3]) / 2, (box[1] + box[4]) / 2, (box[2] + box[5]) / 2, height, width);
     } catch (Exception) { return null; }
   }
   public bool Has(string name) {
