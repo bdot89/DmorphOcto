@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.17.5"
+local VERSION = "2.18.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -258,6 +258,9 @@ M.ITEM_FILTERS = {
 	{ text = "1.12 items", kinds = { [0] = true } },
 	{ text = "New in OctoWoW", kinds = { [2] = true } },
 	{ text = "Ported (later expansions)", kinds = { [4] = true } },
+	-- Revealing pieces (Data/Slutmog.lua, measured from the body textures) and
+	-- OctoWoW's invisible "Unseen Fashion" items (user, 18 Oct).
+	{ text = "Slutmog", slutmog = true },
 }
 M.SET_FILTERS = {
 	{ text = "All sets" },
@@ -954,6 +957,15 @@ local function StartLookup()
 		end
 	end
 	DmorphOcto_ItemPending = nil
+	-- OctoWoW's "Summer Collection of Unseen Fashion" (invisible pieces; the tabard
+	-- is 109): asked for once so they join the lists and the Slutmog filter.
+	for id = 100, 160 do
+		if account.itemInfo[id] == nil then
+			lookup.count = lookup.count + 1
+			lookup.ids[lookup.count] = id
+			lookup.left = lookup.left + 1
+		end
+	end
 end
 
 local function LookupTick(elapsed)
@@ -1006,6 +1018,20 @@ local function LookupAnswer(itemID, success)
 	end
 end
 
+-- Slutmog: the revealing pieces Data/Slutmog.lua lists (read once) and any item
+-- named like OctoWoW's invisible "Summer Collection of Unseen Fashion".
+local slutmog
+function M.IsSlutmogItem(itemID, lowerName)
+	if not slutmog then
+		slutmog = {}
+		for id in string.gfind(DmorphOcto_SlutmogData or "", "(%d+)") do
+			slutmog[tonumber(id)] = true
+		end
+		DmorphOcto_SlutmogData = nil
+	end
+	return slutmog[itemID] or (lowerName and strfind(lowerName, "unseen fashion", 1, true)) and true or false
+end
+
 -- Whether entry i passes a filter from the *_FILTERS lists ({ kinds = ..., tag
 -- = ... }) and a quality from QUALITY_FILTERS. Both are optional.
 local function Keep(catalog, i, filter, quality, kind)
@@ -1021,6 +1047,9 @@ local function Keep(catalog, i, filter, quality, kind)
 			if not (tags and strfind(tags, filter.tag, 1, true)) then
 				return false
 			end
+		end
+		if filter.slutmog and not M.IsSlutmogItem(catalog.ids[i], catalog.lower[i]) then
+			return false
 		end
 	end
 	-- Legendary also lists artifacts (quality 6: the Warglaives of Azzinoth).
@@ -2918,6 +2947,20 @@ function M.SetItem(slot, itemID)
 		return Result(ok, err, SLOT_NAMES[slot] .. ": " .. M.DescribeItem(itemID, slot) .. ".")
 	end
 	return Result(ok, err, SLOT_NAMES[slot] .. " reset.")
+end
+
+-- Shows nothing in an armour slot (item 0, as under a set with your own gear
+-- hidden): the slot is invisible on your character. SetItem(slot, 0) resets it.
+function M.HideItem(slot)
+	if not Begin() then
+		return false, MissingAPI()
+	end
+	if not SLOT_NAMES[slot] or slot == 16 or slot == 17 or slot == 18 then
+		return false, "Only armour slots can be made invisible."
+	end
+	db.items[slot] = 0
+	local ok, err = ApplyItem(slot)
+	return Result(ok, err, SLOT_NAMES[slot] .. ": invisible.")
 end
 
 -- Gives your mount a skin: any creature model, shown whenever you ride. real

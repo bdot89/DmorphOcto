@@ -2435,7 +2435,8 @@ local function BuildItemsPage(page)
 		SourceMenu(this, M.ITEM_FILTERS, "itemFilter", FilterItems)
 	end, "DmorphOctoItemSource")
 	ui.itemSourceButton:SetScript("OnEnter", function()
-		Tooltip(this, "Which items", "All, 1.12's own, or the ones Turtle WoW and OctoWoW added.")
+		Tooltip(this, "Which items", "All, 1.12's own, or the ones Turtle WoW and OctoWoW added.",
+			"Slutmog: revealing chests, shirts, legs and feet, plus OctoWoW's invisible Unseen Fashion pieces.")
 	end)
 	ui.itemSourceButton:SetScript("OnLeave", HideTooltip)
 
@@ -2475,6 +2476,16 @@ local function BuildItemsPage(page)
 		ui.itemBox:SetText("")
 		Morph(M.SetItem, itemSlot, 0)
 	end)
+	-- Nothing in this slot: the piece is invisible (armour slots only).
+	ui.itemHideButton = Button(page, "Invisible", 100, 352, y, function()
+		ui.itemBox:SetText("")
+		Morph(M.HideItem, itemSlot)
+	end, "DmorphOctoItemHide")
+	ui.itemHideButton:SetScript("OnEnter", function()
+		Tooltip(this, "Invisible", "Shows nothing in this slot: no piece and none of your own gear.",
+			"Use my own gear brings yours back.")
+	end)
+	ui.itemHideButton:SetScript("OnLeave", HideTooltip)
 end
 
 -- Sets tab --------------------------------------------------------------------------

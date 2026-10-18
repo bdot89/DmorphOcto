@@ -2790,6 +2790,36 @@ Mock.portedData = nil
 loadUI()
 check(not DmorphOcto.GetCreatureCatalog().byID[60001], "without Data/Ported.lua there are no ported models")
 
+-- 2.18.0 Slutmog (user, 18 Oct): an Items source listing Data/Slutmog.lua's revealing
+-- pieces (measured from the body textures) and OctoWoW's invisible Unseen Fashion items.
+;(function()
+	local sm = DmorphOcto.ITEM_FILTERS[5]
+	check(sm and sm.text == "Slutmog" and sm.slutmog, "the Items source menu has Slutmog (after the old choices)")
+	local legs = DmorphOcto.GetItemCatalog(7)
+	local res, n = DmorphOcto.FilterCatalog(legs, "", sm)
+	local onlyListed, hasLoincloth = true, false
+	for k = 1, n do
+		local id = legs.ids[res[k]]
+		if not DmorphOcto.IsSlutmogItem(id, legs.lower[res[k]]) then
+			onlyListed = false
+		end
+		if id == 3309 then
+			hasLoincloth = true
+		end
+	end
+	check(n > 0 and n < legs.count and onlyListed and hasLoincloth,
+		"Slutmog keeps only the listed legs (Barbaric Loincloth among them)")
+	check(not DmorphOcto.IsSlutmogItem(2955, "first mate hat"), "a piece that isn't listed stays out")
+	check(DmorphOcto.IsSlutmogItem(109, "summer collection of unseen fashion: tabard"),
+		"OctoWoW's Unseen Fashion pieces count, by name")
+	local hid, hideMsg = DmorphOcto.HideItem(5)
+	check(hid and vh.items[5] == 0 and DmorphOctoDB.items[5] == 0 and contains(hideMsg, "invisible"),
+		"Invisible shows nothing in the slot")
+	check(not DmorphOcto.HideItem(16), "weapons can't be made invisible")
+	DmorphOcto.SetItem(5, 0)
+	check(vh.items[5] == nil and DmorphOctoDB.items[5] == nil, "Use my own gear brings the slot back")
+end)()
+
 print(format("%d checks, %d failures", checks, failures))
 if failures > 0 then
 	os.exit(1)
