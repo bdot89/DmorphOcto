@@ -1024,6 +1024,16 @@ Mock.RunScript(itemRow, "OnLeave")
 check(DmorphOctoItemsBoxTitle.text == "Your own gear", "the box goes back to what you wear when the mouse leaves")
 press(itemRow)
 check(vh.items[1] == 2955, "clicking an item morphs that slot")
+do
+	-- 2.21.5: the refreshes after a click don't dress the box again (it drew
+	-- your character white until the next hover).
+	local dressed = DmorphOctoItemsBoxModel.tried
+	Mock.Tick(0.4)
+	Mock.Click(DmorphOctoTabItems) -- refreshes the tab, as a morph does
+	Mock.Tick(1.1)
+	check(DmorphOctoItemsBoxModel.tried == dressed and dressed[1] == 2955 and DmorphOctoItemsBoxTitle.text == "First Mate Hat",
+		"after a click the box keeps the try-on it has (no reload), named plainly")
+end
 Mock.Type(itemSearch, "")
 -- 2.21.0: Previous / Next under the box wear the item below or above yours.
 do
@@ -1038,7 +1048,7 @@ do
 	press(DmorphOctoItemsNext)
 	Mock.Tick(0.4)
 	check(vh.items[1] and vh.items[1] ~= 2955 and LockedRow() == vh.items[1]
-		and DmorphOctoItemsBoxTitle.text == DmorphOcto.DescribeItem(vh.items[1], 1),
+		and DmorphOctoItemsBoxTitle.text == DmorphOcto.GetItemCatalog(1).names[DmorphOcto.GetItemCatalog(1).byID[vh.items[1]]],
 		"Next wears the next item in the list, scrolls to it and the box shows it")
 	press(DmorphOctoItemsPrev)
 	Mock.Tick(0.4)

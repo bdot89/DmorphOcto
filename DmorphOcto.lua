@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.21.4"
+local VERSION = "2.21.5"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1848,6 +1848,17 @@ function M.CanShowPortedItem(itemID)
 		pcall(DmorphHelper_SetVirtualItem, itemID, template, p.display)
 	end
 	return true
+end
+
+-- The icon of the known item a ported piece copies (the piece's own ID has
+-- none until the game has that item: the slot showed a question mark).
+function M.GetPortedIcon(itemID)
+	if not M.CanShowPortedItem(itemID) then
+		return nil
+	end
+	local p = PortedItems()[tonumber(itemID)]
+	local ok, _, _, _, _, _, _, _, _, texture = pcall(GetItemInfo, p.template)
+	return ok and texture or nil
 end
 
 local function ApplyItem(slot)

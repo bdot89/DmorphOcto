@@ -987,6 +987,10 @@ local function UpdateSlots()
 			if not ok then
 				texture = nil
 			end
+			-- A ported piece: the icon of the item it copies.
+			if not texture and M.IsPortedItem(itemID) then
+				texture = M.GetPortedIcon(itemID)
+			end
 			-- Not in the client's cache yet: asked for once (ported items copy a
 			-- known item's record, the server knows nothing of their own IDs).
 			if not texture and not ui.iconAsked[itemID] and not M.IsPortedItem(itemID)
@@ -1399,14 +1403,28 @@ function P.BoxShowItems(box, items, title, color, info)
 	P.BoxText(box, title, color, info)
 	if not box.loaded then
 		-- Your character as it is now (once per opening of the window).
-		box.loaded = true
+		box.loaded, box.dressed = true, nil
 		box.model:SetFrameLevel(box.base + 1)
 		box.model:SetUnit("player")
 		box.wait = REVEAL
 		P.ApplyBoxView(box)
 	end
+	-- The same items again (a click refreshes the window several times): left
+	-- as they are. Dressing a model again while its textures load drew your
+	-- character white until the next hover (user, 19 Oct).
+	items = items or {}
+	local same = table.getn(items) == table.getn(box.items)
+	for i = 1, table.getn(items) do
+		if items[i] ~= box.items[i] then
+			same = false
+		end
+	end
+	if same and box.dressed then
+		return
+	end
+	box.dressed = true
 	box.model:Dress()
-	box.items, box.on, box.waited, box.retry = items or {}, {}, 0, 0.25
+	box.items, box.on, box.waited, box.retry = items, {}, 0, 0.25
 	P.TryOnAll(box)
 end
 
@@ -2782,7 +2800,9 @@ function P.ShowItemIn(box, itemID, slot, info)
 	local catalog = M.GetItemCatalog(slot)
 	local index = catalog.byID and catalog.byID[itemID]
 	local r, g, b = QualityColor(index and catalog.quality[index])
-	P.BoxShowItems(box, { itemID }, M.DescribeItem(itemID, slot), { r, g, b }, info or ("Item " .. itemID))
+	-- The plain name (DescribeItem gives "[name] (id)", the id is on the line below).
+	local name = index and catalog.names[index] or M.DescribeItem(itemID, slot)
+	P.BoxShowItems(box, { itemID }, name, { r, g, b }, info or ("Item " .. itemID))
 end
 
 -- The slot's item you have on, else your own gear.
@@ -4093,7 +4113,7 @@ local function Build()
 		PlaySound("igCharacterInfoClose")
 		-- The try-on boxes load your character afresh next time.
 		for _, box in pairs(ui.boxes) do
-			box.loaded = nil
+			box.loaded, box.dressed = nil, nil
 		end
 		ui.menu:Hide()
 		-- A click still waiting at the gate is applied now.
