@@ -7,7 +7,8 @@
 <meta name="description" content="Free morph addon for WoW 1.12 (OctoWoW): become any creature, ride any mount, wear any item.">
 <!-- What Discord (and other sites) show when the link is posted. Discord cuts the
      description at about 350 characters: keep it under that, the pack line last.
-     Change ?v= on the image after a new banner, so Discord fetches it again. -->
+     Change ?v= on the image after a new banner, so Discord fetches it again.
+     This page follows README.md section by section, with the same words: change both together. -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Free addon for WoW 1.12 · OctoWoW">
 <meta property="og:title" content="🦄 DMorph v2.21: become any creature, ride any mount, wear any item ✨">
@@ -20,108 +21,167 @@
 <meta property="og:image:alt" content="DMorph for OctoWoW: three friends morphed in glowing armour and a winged mount, with the features and numbers">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://bdot89.github.io/DmorphOcto/banner.png?v=2221">
-<meta name="theme-color" content="#b46bff">
+<meta name="theme-color" content="#b44cff">
 <style>
-:root{--bg:#0d0c10;--panel:#16131b;--gold:#b8923a;--line:#8a6d2b;--text:#eee;--dim:#a39d8f;--green:#33ff99;--purple:#b46bff;--yellow:#ffd23f}
+:root{--bg:#0c0a11;--panel:#16111f;--panel2:#1d1529;--text:#f1ecff;--dim:#b3a7cb;
+ --fel:#72f92b;--fel2:#9ffe3c;--pur:#b44cff;--pur2:#cb70ff;--pur3:#d192fd;--teal:#43fadd}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:radial-gradient(ellipse 900px 500px at 80% 10%,rgba(150,70,230,.18),transparent 70%),radial-gradient(ellipse 700px 500px at 0% 0%,rgba(40,200,140,.12),transparent 70%),var(--bg);color:var(--text);font:17px/1.5 "Segoe UI",system-ui,-apple-system,sans-serif}
-main{max-width:1040px;margin:0 auto;padding:28px 16px 48px}
-.banner{display:block;width:100%;height:auto;border:2px solid var(--gold);border-radius:4px;box-shadow:0 14px 40px rgba(0,0,0,.7)}
-h1{font-size:34px;margin:26px 0 4px;line-height:1.2}
-h1 .d{color:var(--green)}h1 .m{color:var(--purple)}
-.tag{color:var(--dim);font-size:18px}
-.buttons{display:flex;flex-wrap:wrap;gap:12px;margin:22px 0 8px}
-.btn{display:inline-block;padding:11px 20px;border-radius:4px;font-weight:600;text-decoration:none;border:1px solid var(--line)}
-.btn.main{background:linear-gradient(#a8202a,#6e1016);color:#ffd23f}
-.btn.alt{background:var(--panel);color:var(--text)}
-h2{font-size:22px;margin:30px 0 12px;color:var(--yellow)}
-ul.features{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px 24px}
-ul.features li{background:var(--panel);border:1px solid #2a2110;border-radius:4px;padding:10px 14px}
-ul.features b{color:#fff}
-.gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
-.gallery figure{background:var(--panel);border:1px solid #2a2110;border-radius:4px;overflow:hidden}
-.gallery img{display:block;width:100%;height:auto}
-.gallery figcaption{padding:8px 12px;color:var(--dim);font-size:15px}
-.wide{margin-top:14px}
-.wide img{display:block;width:100%;height:auto;border:1px solid #2a2110;border-radius:4px}
-ol{padding-left:22px}ol li{margin:6px 0}
-code{background:#221d29;padding:1px 6px;border-radius:3px;font-size:15px}
-a{color:var(--green)}
-footer{margin-top:36px;color:var(--dim);font-size:14px;border-top:1px solid #2a2110;padding-top:14px}
+body{background:
+  radial-gradient(ellipse 900px 520px at 85% 0%,rgba(180,76,255,.22),transparent 70%),
+  radial-gradient(ellipse 700px 500px at 0% 0%,rgba(114,249,43,.12),transparent 70%),var(--bg);
+ color:var(--text);font:17px/1.55 "Segoe UI",system-ui,-apple-system,sans-serif}
+main{max-width:1060px;margin:0 auto;padding:28px 16px 48px}
+a{color:var(--fel2)}
+.banner{display:block;width:100%;height:auto;border-radius:10px;border:2px solid transparent;
+ background:linear-gradient(var(--bg),var(--bg)) padding-box,linear-gradient(90deg,var(--fel2),var(--teal),var(--pur2),var(--pur)) border-box;
+ box-shadow:-12px 0 30px -10px rgba(114,249,43,.5),12px 0 30px -10px rgba(180,76,255,.6),0 18px 40px rgba(0,0,0,.6)}
+h1{font:900 40px/1.15 "Segoe UI Black","Segoe UI",sans-serif;margin:26px 0 2px;letter-spacing:-.5px}
+.d{color:var(--fel2);text-shadow:0 0 18px rgba(114,249,43,.6)}.m{color:var(--pur2);text-shadow:0 0 18px rgba(180,76,255,.7)}
+.slogan{font-size:22px;font-weight:700;color:#fff}
+.lead{margin-top:8px;color:#e6defa}
+.safe{margin-top:12px;padding:10px 14px;border-left:3px solid var(--teal);background:rgba(67,250,221,.06);border-radius:0 6px 6px 0;color:#dff}
+.buttons{display:flex;flex-wrap:wrap;gap:12px;margin:22px 0 6px}
+.btn{display:inline-block;padding:11px 20px;border-radius:10px;font-weight:700;text-decoration:none;color:#fff;border:2px solid transparent;
+ background:linear-gradient(var(--panel2),var(--panel2)) padding-box,linear-gradient(90deg,var(--fel2),var(--teal),var(--pur2),var(--pur)) border-box}
+.btn.main{background:linear-gradient(90deg,#4fc21c,#2f9e8a 50%,#8f34d6) padding-box,linear-gradient(90deg,var(--fel2),var(--teal),var(--pur2),var(--pur)) border-box;
+ box-shadow:-8px 0 20px -6px rgba(114,249,43,.6),8px 0 20px -6px rgba(180,76,255,.7)}
+.btn.discord{background:linear-gradient(#5865f2,#4752c4) padding-box,linear-gradient(90deg,#8ea1ff,#5865f2) border-box}
+.under{font-size:15px;color:var(--dim)}
+h2{font:800 26px/1.2 "Segoe UI",sans-serif;margin:38px 0 14px;color:#fff}
+h2 .hl{background:linear-gradient(90deg,var(--fel2),var(--teal),var(--pur3));-webkit-background-clip:text;background-clip:text;color:transparent}
+h3{font-size:19px;margin:0 0 6px;color:#fff}
+.pack{margin-top:30px;padding:18px 22px;border-radius:12px;border:2px solid transparent;
+ background:linear-gradient(135deg,rgba(60,20,100,.92),rgba(22,14,36,.95) 60%,rgba(30,70,20,.85)) padding-box,
+            linear-gradient(90deg,var(--fel2),var(--teal),var(--pur2),var(--pur)) border-box;
+ box-shadow:-12px 0 28px -10px rgba(114,249,43,.55),12px 0 28px -10px rgba(180,76,255,.7)}
+.pack h2{margin:0 0 8px}
+.nums{display:flex;flex-wrap:wrap;gap:8px 22px;margin:6px 0 10px}
+.nums div b{display:block;font:900 30px/1 "Segoe UI Black","Segoe UI",sans-serif;color:var(--fel2);text-shadow:0 0 12px rgba(114,249,43,.5)}
+.nums div span{font-size:15px;color:#e6d8ff}
+b.g{color:var(--fel2)}
+.features{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px 18px}
+.features li{background:var(--panel);border:1px solid #2b1f3d;border-radius:8px;padding:11px 14px}
+.features li>b{display:block;color:#fff;font-size:17px}
+.features li span{color:var(--dim);font-size:15.5px}
+.intro{color:#e6defa;margin-bottom:16px}
+.tabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(470px,1fr));gap:18px}
+.tab{background:var(--panel);border:1px solid #2b1f3d;border-radius:10px;overflow:hidden}
+.tab img{display:block;width:100%;height:auto;border-bottom:1px solid #2b1f3d}
+.tab div{padding:12px 15px 14px}
+.tab p{color:var(--dim);font-size:15.5px}
+.gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:14px}
+.gallery img{display:block;width:100%;height:auto;border-radius:8px;border:1px solid #2b1f3d}
+.wide img{display:block;width:100%;height:auto;border-radius:8px;border:1px solid #2b1f3d;margin-top:14px}
+.steps{counter-reset:s;list-style:none;display:grid;gap:12px}
+.steps>li{background:var(--panel);border:1px solid #2b1f3d;border-radius:10px;padding:14px 16px 14px 62px;position:relative}
+.steps>li:before{counter-increment:s;content:counter(s);position:absolute;left:16px;top:13px;width:32px;height:32px;border-radius:8px;
+ font:900 18px/32px "Segoe UI Black","Segoe UI",sans-serif;text-align:center;color:#0c0a11;background:linear-gradient(135deg,var(--fel2),var(--teal) 55%,var(--pur2))}
+.steps p,.steps ul{color:#e2d9f5;font-size:16px}
+.steps ul{margin:6px 0 0 18px}
+.warn{margin-top:8px;padding:8px 12px;border-left:3px solid #ffcc33;background:rgba(255,204,51,.07);border-radius:0 6px 6px 0;color:#ffe9a8;font-size:15.5px}
+code{background:#251b35;padding:1px 6px;border-radius:4px;font-size:15px;color:#fff}
+.note{margin-top:12px;color:var(--dim);font-size:15.5px}
+footer{margin-top:40px;color:var(--dim);font-size:14px;border-top:1px solid #2b1f3d;padding-top:14px}
 </style>
 </head>
 <body>
 <main>
-<img class="banner" src="banner.png" alt="DMorph for OctoWoW: become any creature, ride any mount, wear any item">
-<h1><span class="d">D</span><span class="m">Morph</span> for OctoWoW</h1>
-<p class="tag">✨ The free morph addon for WoW 1.12: become any creature 🐉, ride any mount 🐎, wear any item 🗡️, swap your race 🧝, light up your weapons 🔥 and change the weather ⛈️. Only you and other DMorph users see it, so it's 100% client-side and safe 🔒.</p>
+<img class="banner" src="banner.png?v=2221" alt="DMorph for OctoWoW: three friends morphed in glowing armour and a winged mount, with the features and numbers">
+
+<h1>🦄 <span class="d">D</span><span class="m">Morph</span> for OctoWoW</h1>
+<p class="slogan">Become anything. Ride anything. Wear anything. ✨</p>
+<p class="lead"><b>DMorph</b> is a free morph addon for WoW 1.12 (OctoWoW), <b>version 2.21.9</b>. Turn into a dragon 🐉, ride a mechanical chicken 🐔, swap your race 🧝, light your blade on fire 🔥, make it snow in Orgrimmar ❄️, and dress up in any armour set in the game 🛡️, all from one slick purple window.</p>
+<p class="safe">🔒 <b>100% client-side and safe:</b> morphs only change what <i>you</i> and other DMorph users see. Everyone else, and the server, sees your real character.</p>
 <div class="buttons">
   <a class="btn main" href="https://github.com/bdot89/DmorphOcto/releases/latest/download/DmorphOcto.zip">⬇️ Download DMorph (ZIP)</a>
-  <a class="btn alt" href="https://github.com/bdot89/DmorphOcto">📖 Full guide on GitHub</a>
-  <a class="btn alt" href="https://github.com/bdot89/DmorphOcto/releases">📜 What's new</a>
+  <a class="btn discord" href="https://discord.gg/EScgbGmBj">💬 Join our Discord</a>
+  <a class="btn" href="https://github.com/bdot89/DmorphOcto#readme">📖 Full guide on GitHub</a>
+  <a class="btn" href="https://github.com/bdot89/DmorphOcto/releases">📜 What's new</a>
 </div>
+<p class="under">Unzip, drop the <b>DmorphOcto</b> folder into your AddOns, done. Full steps below 👇</p>
 
-<h2>🌟 Features</h2>
+<section class="pack">
+  <h2>🚀 Want MORE? <span class="hl">The Ported Pack</span></h2>
+  <div class="nums">
+    <div><b>8,157</b><span>creatures</span></div><div><b>2,193</b><span>mounts</span></div><div><b>48,889</b><span>weapons &amp; armour</span></div>
+    <div><b>915</b><span>sets</span></div><div><b>33</b><span>glows</span></div>
+  </div>
+  <p>From <b>The Burning Crusade to Mists of Pandaria</b>, right inside DMorph. Free and optional, and friends with the pack see your ported looks too 👯</p>
+  <div class="buttons"><a class="btn discord" href="https://discord.gg/EScgbGmBj">💬 Join our Discord to get the Ported Pack</a></div>
+  <p class="under">The download links and help are on the Discord. How to install it: <a href="#pack">Ported Pack</a> below 👇</p>
+</section>
+
+<h2>🌟 <span class="hl">What you get</span></h2>
 <ul class="features">
-  <li>🐲 <b>16,000+ creatures</b> (13,000+ models) with 3D previews, search, A-Z or ID sort</li>
-  <li>👑 <b>560+ bosses, every mount and rares</b> as filters</li>
-  <li>🐎 <b>950 mount skins</b> (3,143 with the pack): any model on your mount, mount and dismount with your own keys</li>
-  <li>🧝 <b>Real skin, face and hair</b> for every race, one row at a time</li>
-  <li>✨ <b>Weapon enchant glows:</b> Crusader, Fiery, Icy and every glow in the game</li>
-  <li>⛈️ <b>Weather:</b> clear skies, rain, snow or a sandstorm, light to heavy, on your screen in every zone, and any <b>time of day</b> from dawn to midnight</li>
-  <li>🗡️ <b>13,000+ items</b> with type, quality and source filters</li>
-  <li>🛡️ <b>351 item sets</b> in one click, the last set's pieces come off</li>
-  <li>📏 <b>Your size:</b> 25% to 300%, seen by other DMorph users too</li>
-  <li>⭐ <b>Favourites and a wardrobe</b> of saved outfits for all your characters</li>
-  <li>👯 <b>See each other's morphs:</b> DMorph users see each other's looks</li>
-  <li>🏳️ <b>Race morphs keep your faction:</b> languages, every flight path and friendly NPCs stay yours, even as the other faction</li>
-  <li>🚀 <b>Optional ported packs:</b> later-expansion models, mounts, armour, sets and 33 glows from TBC to Mists of Pandaria, shared privately between friends</li>
-  <li>👀 <b>A preview box on every list:</b> the whole model, or you wearing the item or set; zoom, turn, move, and <b>Previous / Next</b> to try the list one by one</li>
-  <li>👙 <b>Slutmog and Birthday suit:</b> every revealing piece in one list, OctoWoW's Unseen Fashion, and a bare-skin start; any slot can be <b>Invisible</b></li>
-  <li>🔍 <b>Zoom and turn</b> your character in the dressing room</li>
-  <li>⌨️ <b>DMorph's chat commands:</b> <code>.morph</code> <code>.item</code> <code>.mount</code> <code>.glow</code></li>
-  <li>✅ <b>Checked against your game files:</b> nothing in the lists turns invisible</li>
+  <li><b>🐲 16,000+ creatures</b><span>13,000+ different models, every one in the game, with turning 3D previews, search, and filters for bosses 👑, rares 💎 and mounts</span></li>
+  <li><b>🐎 950 mounts</b><span>Any of 950 mount models (3,143 with the pack), or any other model, as the look of your mount, from Ashes of Al'ar 🔥🦅 to a giant crab. Mount and dismount with your own keys</span></li>
+  <li><b>🧝 Every race and gender</b><span>With real skin colours, faces, hair styles, hair colours and beards. You keep your own faction, languages, flight paths and reputation</span></li>
+  <li><b>🗡️ 13,000+ items &amp; 351 sets</b><span>Every weapon and armour piece, and whole sets in one click. Hover to try it on first</span></li>
+  <li><b>✨ Weapon glows</b><span>Crusader, Fiery, Icy and every other enchant glow in the game, on any weapon</span></li>
+  <li><b>👙 Slutmog</b><span>Every revealing piece in one list, plus <b class="g">Birthday suit</b> 🎂 and <b class="g">Invisible</b> slots</span></li>
+  <li><b>⛈️ Weather &amp; time of day</b><span>Rain, snow or a sandstorm 🌪️, dawn 🌅, noon ☀️, dusk 🌇 or midnight 🌙, in every zone</span></li>
+  <li><b>📏 Your size</b><span>From a tiny 25% 🐭 to a towering 300% 🦖</span></li>
+  <li><b>👗 Wardrobe &amp; favourites</b><span>Save whole outfits ⭐ and star your best finds, shared by all your characters</span></li>
+  <li><b>👯 Share with friends</b><span>Other DMorph users see your model, items, mount skin and size, and you see theirs</span></li>
+  <li><b>🚀 Optional ported packs</b><span>Thousands more creatures, mounts, armour and glows from The Burning Crusade to Mists of Pandaria</span></li>
 </ul>
+<p class="note">Your look stays through /reload, loading screens and logging in. 💾</p>
 
-<h2>📸 Screenshots</h2>
-<div class="gallery">
-  <figure><img src="models.jpg" alt="Models tab" loading="lazy"><figcaption><b>Become anything.</b> 16,000+ creatures, 8,157 more with the pack, each turning in the preview before you click. Grow or shrink from 25% to 300%.</figcaption></figure>
-  <figure><img src="mounts.jpg" alt="Mounts tab" loading="lazy"><figcaption><b>Ride anything.</b> Any model as your mount skin: on when you mount, off when you get down. 950 mount models, 3,143 with the pack.</figcaption></figure>
-  <figure><img src="races.jpg" alt="Races tab" loading="lazy"><figcaption><b>Any race, still you.</b> Your own face and hair on every race, real skin colours and styles, and your faction, languages and flight paths kept.</figcaption></figure>
-  <figure><img src="glows.jpg" alt="Glows tab" loading="lazy"><figcaption><b>Every enchant glow</b> on any weapon, plus 33 from TBC to Mists with the pack: Sunfire, Mongoose, Crackling Lightning...</figcaption></figure>
-  <figure><img src="items.jpg" alt="Items tab" loading="lazy"><figcaption><b>Every weapon and armour piece.</b> Filter by type, quality and source, hover to try it on, click to wear. Invisible hides a slot.</figcaption></figure>
-  <figure><img src="slutmog.jpg" alt="Slutmog tab" loading="lazy"><figcaption><b>Show some skin.</b> Every revealing piece, measured from how much body it covers. Birthday suit starts you from bare skin.</figcaption></figure>
-  <figure><img src="sets.jpg" alt="Sets tab" loading="lazy"><figcaption><b>A whole outfit in one click.</b> 351 sets, 1,266 with the pack; uncovered slots go bare so your own gear never peeks through.</figcaption></figure>
-  <figure><img src="wardrobe.jpg" alt="Wardrobe tab" loading="lazy"><figcaption><b>Save your looks.</b> Model, items, glows, mount skin and size in one outfit, shared by all your characters.</figcaption></figure>
-  <figure><img src="favourites.jpg" alt="Favourites tab" loading="lazy"><figcaption><b>Your best finds at hand.</b> Star any model or mount skin; favourites follow you to every character.</figcaption></figure>
-  <figure><img src="weather.jpg" alt="Weather tab" loading="lazy"><figcaption><b>Your sky, your time.</b> Rain, snow or sandstorms from light to heavy, and any time of day, in every zone.</figcaption></figure>
-</div>
-<div class="wide"><img src="world.jpg" alt="Mount skin and creature morph in Orgrimmar" loading="lazy"></div>
-
-<h2>🚀 Want a LOT more models? The ported pack</h2>
-<p>An optional set of extra patch files adds looks from later expansions: <b>8,157 creature looks</b>, <b>2,193 mounts</b>, <b>12,798 weapons and shields</b>, <b>36,091 armour looks</b>, <b>915 armour sets</b> and <b>33 weapon glows</b> from The Burning Crusade to Mists of Pandaria. They show up in DMorph's lists under "Ported (later expansions)", and friends with the same pack see each other's ported looks. DMorph works fully without it. The pack is Blizzard's art, so it's never on GitHub: it's shared privately, and installed with one double-click on <b>Install Ported.bat</b>.</p>
-<div class="gallery">
-  <figure><img src="ported-gunner.jpg" alt="A ported goblin gunner mount in Orgrimmar" loading="lazy"><figcaption>2,193 ported mounts, from goblin gunners...</figcaption></figure>
-  <figure><img src="ported-mount.jpg" alt="A ported war machine mount in Orgrimmar" loading="lazy"><figcaption>...to war machines in Orgrimmar's rain</figcaption></figure>
-  <figure><img src="ported-glow.jpg" alt="Crackling Lightning glow on a ported sword" loading="lazy"><figcaption>Crackling Lightning, one of the 33 new glows</figcaption></figure>
-  <figure><img src="ported-armour.jpg" alt="Ported armour and weapon" loading="lazy"><figcaption>Ported armour and weapons</figcaption></figure>
-  <figure><img src="ported-glow.webp" alt="Ported winged shoulders and a glowing sword" loading="lazy"><figcaption>Ported shoulders and a glowing sword</figcaption></figure>
-  <figure><img src="ported-pandaria.jpg" alt="Ported armour and greatsword" loading="lazy"><figcaption>A ported set and greatsword</figcaption></figure>
-  <figure><img src="ported-owl.jpg" alt="A ported flying machine mount" loading="lazy"><figcaption>Machines and flying mounts</figcaption></figure>
-  <figure><img src="ported-jetbike.jpg" alt="A ported jet bike mount" loading="lazy"><figcaption>Every mount works with your own mount keys</figcaption></figure>
+<h2>📸 <span class="hl">Screenshots</span></h2>
+<p class="intro">One window, ten tabs, and your character front and centre: the dressing room on the left always shows you as you'll look in the world, and every list has its own preview box that turns, zooms and moves, so you see everything before you click it. 👀</p>
+<div class="tabs">
+  <div class="tab"><img src="models.jpg" alt="Models tab" loading="lazy"><div><h3>🐲 Models: become anything</h3><p>16,000+ creatures to become (13,000+ different models, every one in the game), plus 8,157 more from later expansions with a ported pack. Search by name, sort A-Z or by ID, filter for bosses, rares or mounts, and watch each one turn in the preview before you commit. Grow or shrink yourself from 25% to 300% with the size slider. Here: Supremus, at 125%. 😈</p></div></div>
+  <div class="tab"><img src="mounts.jpg" alt="Mounts tab" loading="lazy"><div><h3>🐎 Mounts: ride anything</h3><p>Pick any model as the skin for all your mounts, or for just one of them. It goes on the moment you mount and comes off when you get down, and you still use your own mount keys. 950 mount models to choose from, and 3,143 with the pack (2,193 more), from Ashes of Al'ar to the Venomous Gladiator's Goredrake turning in the preview. 🐉</p></div></div>
+  <div class="tab"><img src="races.jpg" alt="Races tab" loading="lazy"><div><h3>🧝 Races: any race, still you</h3><p>Every race and gender, wearing your own face, skin and hair. The arrows step through real skin colours, faces, hair styles, hair colours and facial hair, and the dice 🎲 rolls a whole new look. Your faction, languages, flight paths and reputation stay your own, so a Horde character can be a dwarf and still talk to Orgrimmar.</p></div></div>
+  <div class="tab"><img src="glows.jpg" alt="Glows tab" loading="lazy"><div><h3>✨ Glows: every enchant, any weapon</h3><p>Every weapon glow in the game for main hand, off hand and ranged. With the pack, 33 more from The Burning Crusade to Mists of Pandaria: Sunfire, Mongoose, Berserking, Crackling Lightning ⚡, Jade Spirit and more. Hover one and the preview puts it on your weapon.</p></div></div>
+  <div class="tab"><img src="items.jpg" alt="Items tab" loading="lazy"><div><h3>🗡️ Items: every weapon and armour piece</h3><p>13,000+ weapons and armour pieces, and 48,889 more with the pack. Filter by slot, type, quality and source, hover to try it on, click to wear it. <b class="g">Invisible</b> 👻 hides a slot completely. Here: the Scythe of Elune, on a dwarf.</p></div></div>
+  <div class="tab"><img src="slutmog.jpg" alt="Slutmog tab" loading="lazy"><div><h3>👙 Slutmog: show some skin</h3><p>Every revealing piece in one list: chests, shirts, legs and feet, measured from how much body each one actually covers, not guessed from its name. Chainkinis, halter tops, loincloths, tropical skirts 🌺 and airy sandals, plus OctoWoW's invisible Unseen Fashion pieces. Hit <b class="g">Birthday suit</b> 🎂 and build your look up from bare skin.</p></div></div>
+  <div class="tab"><img src="sets.jpg" alt="Sets tab" loading="lazy"><div><h3>🛡️ Sets: a whole outfit in one click</h3><p>351 sets, and 1,266 with the pack. One click wears every piece, and the slots a set doesn't cover go bare, so your own gear never peeks through. Hover a set to see every piece on your character first.</p></div></div>
+  <div class="tab"><img src="wardrobe.jpg" alt="Wardrobe tab" loading="lazy"><div><h3>👗 Wardrobe: save your looks</h3><p>Save your whole look as an outfit: model, items, glows, mount skin and size. Outfits are shared by all your characters and come back in one click.</p></div></div>
+  <div class="tab"><img src="favourites.jpg" alt="Favourites tab" loading="lazy"><div><h3>⭐ Favourites: your best finds at hand</h3><p>Right-click any model or mount skin to star it. Your favourites follow you to every character.</p></div></div>
+  <div class="tab"><img src="weather.jpg" alt="Weather tab" loading="lazy"><div><h3>⛈️ Weather: your sky, your time</h3><p>Clear skies, rain 🌧️, snow ❄️ or a sandstorm 🌪️, from light to heavy, and any time of day: dawn, noon, dusk or midnight. It stays on in every zone, and only you see it.</p></div></div>
 </div>
 
-<h2>🛠️ Install in two minutes</h2>
-<ol>
-  <li>In <b>OctoLauncher</b>, tick the <b>vanillaHelpers</b> mod.</li>
-  <li><a href="https://github.com/bdot89/DmorphOcto/releases/latest/download/DmorphOcto.zip">Download DmorphOcto.zip</a>, <b>Extract All</b>, and move the <b>DmorphOcto</b> folder from it into <code>OctoWoW\Interface\AddOns\</code>.</li>
-  <li>Close the game, open that folder and double-click <b>Install DmorphHelper.bat</b> (if Windows warns you: <i>More info</i>, then <i>Run anyway</i>). It adds the glows, real skin, face and hair, the size slider, the weather and the time of day. Do it again after each update.</li>
-  <li>Start the game <b>from OctoLauncher</b> and click the minimap button, or type <code>/dmorph</code>.</li>
-  <li>The <b>Setup</b> button at the bottom of the window is green when it all works. Red? Click it: it says what isn't running and how to fix it.</li>
+<h2>🌍 <span class="hl">Out in the world</span></h2>
+<p class="intro">Other DMorph users see your model, items, mount skin and size, and you see theirs. 👯</p>
+<div class="wide"><img src="world.jpg" alt="In the world" loading="lazy"><img src="morphs.jpg" alt="More morphs" loading="lazy"></div>
+<p class="intro" style="margin-top:16px">With a ported pack (optional, see below) 🚀:</p>
+<div class="gallery">
+  <img src="ported-gunner.jpg" alt="A ported goblin gunner mount" loading="lazy">
+  <img src="ported-mount.jpg" alt="A ported war machine mount in Orgrimmar" loading="lazy">
+  <img src="ported-glow.jpg" alt="Crackling Lightning glow on a ported sword" loading="lazy">
+  <img src="ported-armour.jpg" alt="Ported armour and weapons" loading="lazy">
+  <img src="ported-glow.webp" alt="Ported winged shoulders and a glowing sword" loading="lazy">
+  <img src="ported-pandaria.jpg" alt="A ported set and greatsword" loading="lazy">
+  <img src="ported-owl.jpg" alt="A ported flying machine" loading="lazy">
+  <img src="ported-jetbike.jpg" alt="A ported jet bike" loading="lazy">
+</div>
+
+<h2>🛠️ <span class="hl">How to install</span></h2>
+<p class="intro">It takes about two minutes. ⏱️</p>
+<ol class="steps">
+  <li><h3>Turn on VanillaHelpers ✅</h3><p>Open OctoLauncher and, in its list of mods, tick <b>vanillaHelpers</b>. DMorph needs it. Without it, nothing can morph.</p></li>
+  <li><h3>Put DMorph in your AddOns folder 📁</h3><p><a href="https://github.com/bdot89/DmorphOcto/releases/latest/download/DmorphOcto.zip"><b>Download DmorphOcto.zip</b></a>, right-click it and choose <b>Extract All</b>, then <b>Extract</b>. Move the <b>DmorphOcto</b> folder inside it into your game's AddOns folder, so it ends up like this: <code>OctoWoW\Interface\AddOns\DmorphOcto\DmorphOcto.toc</code></p>
+    <p class="warn">Used GitHub's green <b>Code &gt; Download ZIP</b> button instead? Then the folder is called <b>DmorphOcto-main</b>: rename it to <b>DmorphOcto</b>.</p></li>
+  <li><h3>Run the installer 🪄</h3><p>For glows, real skin, face and hair, size, weather and time of day. Close the game completely, open <code>OctoWoW\Interface\AddOns\DmorphOcto</code> and double-click <b>Install DmorphHelper.bat</b>. "Windows protected your PC": click <b>More info</b>, then <b>Run anyway</b>. A black window ends with "DmorphHelper is installed". You can skip this step: everything else still works.</p></li>
+  <li><h3>Play! 🎮</h3><p>Start the game from <b>OctoLauncher</b> (not WoW.exe). Click the polymorph button by the minimap 🐑, or type <code>/dmorph</code>. The <b>Setup</b> button at the bottom left:</p>
+    <ul><li>🟢 Green "Setup OK": you're ready (it shows the DmorphHelper version, for example "Helper v16").</li><li>🟡 Yellow "Old helper": close the game and run Install DmorphHelper.bat again.</li><li>🔴 Red "Setup: fix me": click it. It tells you what isn't working and how to fix it.</li></ul></li>
 </ol>
-<p>Step by step, plus updating and fixes: <a href="https://github.com/bdot89/DmorphOcto#readme">the install guide</a>. Have fun, and show your friends your best morphs! 🎉</p>
+<p class="note">Updating, fixes for common problems, every tab and the chat commands: <a href="https://github.com/bdot89/DmorphOcto#readme">the full guide on GitHub</a>.</p>
 
-<footer>Morphs change only what DMorph users see; everyone else sees your real character. Made for the OctoWoW 1.12.1 client. Not affiliated with Blizzard Entertainment.</footer>
+<h2 id="pack">🚀 <span class="hl">Ported Pack (optional)</span></h2>
+<p class="intro">Want a LOT more models? DMorph has no later-expansion models, and doesn't need them. The Ported Pack adds them: <b>8,157 creature looks</b> (2,193 of them mounts), <b>12,798 weapons and shields</b>, <b>36,091 armour looks</b>, <b>915 armour sets</b> and <b>33 weapon glows</b>, converted from a newer WoW install. They show in DMorph's lists under <b>Ported (later expansions)</b>. These are Blizzard's files, so the pack isn't on GitHub: 💬 <a href="https://discord.gg/EScgbGmBj"><b>get the download links on our Discord</b></a>.</p>
+<p class="note" style="margin-bottom:14px">✅ <b>Before you start:</b> DMorph 2.19.0 or newer installed (see above), about <b>50 GB of free space</b> (the download is about 15 GB, most of it can be deleted afterwards), and the <b>game closed</b>.</p>
+<ol class="steps">
+  <li><h3>Download BOTH parts</h3><p>Get <b>Part 1</b> and <b>Part 2</b> from the Discord. Pick one site, MEGA or File Insane: the files are the same.</p></li>
+  <li><h3>Unzip both parts into ONE folder</h3><p>Make a folder, for example <code>C:\DMorphPack</code>. Right-click <b>Part 1</b> → <b>Extract All</b>, change the path to <code>C:\DMorphPack</code> → <b>Extract</b>. Do the same with <b>Part 2</b>, into the <b>same</b> folder.</p>
+    <p class="warn">⚠️ Windows adds the zip's name to the path: delete that part, so both parts land in the same folder. Don't unzip into the game folder. The folder then has <b>Install Ported.bat</b>, <b>manifest.txt</b>, <b>Ported.lua</b> and 17 patch files.</p></li>
+  <li><h3>Install</h3><p>Double-click <b>Install Ported.bat</b> in that folder ("Windows protected your PC": <b>More info</b>, then <b>Run anyway</b>). It finds your game, checks every file (a few minutes), never replaces OctoWoW's own patches, and installs DmorphHelper. Wait for <b>"The ported models are installed"</b>.</p></li>
+  <li><h3>Play! 🎮</h3><p>Start the game from <b>OctoLauncher</b>, type <code>/dmorph</code> and pick <b>Ported (later expansions)</b>.</p></li>
+</ol>
+<p class="note">🧹 Afterwards you can delete the two zips and the patch-?.mpq files in your pack folder (the game has its own copy). Keep <b>Remove Ported.bat</b> and <b>install_ported.ps1</b>: double-click <b>Remove Ported.bat</b> to take the pack out again. DMorph users with the same pack see each other's ported models, mounts and items; everyone else sees your normal look.</p>
+
+<footer>Made with 💜 for the OctoWoW community · <a href="https://github.com/bdot89/DmorphOcto">GitHub</a> · <a href="https://discord.gg/EScgbGmBj">Discord</a><br>Morphs change only what DMorph users see; everyone else sees your real character. Made for the OctoWoW 1.12.1 client. Not affiliated with Blizzard Entertainment.</footer>
 </main>
 </body>
 </html>

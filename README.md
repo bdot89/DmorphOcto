@@ -13,6 +13,15 @@
 Unzip, drop the **DmorphOcto** folder into your AddOns, done. Full steps below 👇 · 🌐 [Project page](https://bdot89.github.io/DmorphOcto/) · 📜 [All versions](https://github.com/bdot89/DmorphOcto/releases)
 
 
+## 🚀 Want MORE? The Ported Pack
+
+**8,157** creatures · **2,193** mounts · **48,889** weapons & armour · **915** sets · **33** glows, from **The Burning Crusade to Mists of Pandaria**, right inside DMorph. Free and optional, and friends with the pack see your ported looks too 👯
+
+### 💬 [**Join our Discord to get the Ported Pack**](https://discord.gg/EScgbGmBj)
+
+The download links and help are on the Discord. How to install it: [Ported Pack](#-ported-pack-optional) below 👇
+
+
 ## 🌟 What you get
 
 | | |
@@ -221,22 +230,23 @@ Item slots: 1 head, 3 shoulder, 4 shirt, 5 chest, 6 waist, 7 legs, 8 feet, 9 wri
 - A ported item borrows a normal item while it's on you. The first time you wear one after logging in, the game may still be loading that item: click it again a second later.
 
 
-## 🚀 Ported packs (optional)
+## 🚀 Ported Pack (optional)
 
-Want a LOT more models? DMorph from this page has no later-expansion models, and doesn't need them. A ported pack adds them: extra patch files with 8,157 creature looks (2,193 of them mounts), 12,798 weapons and shields, 36,091 armour looks, 915 armour sets and 33 weapon glows converted from a newer WoW install, plus a list for DMorph (the DMorph_Ported addon). They show in DMorph's lists under "Ported (later expansions)". These are Blizzard's files, so packs are never on GitHub: they're passed between friends privately.
+Want a LOT more models? DMorph has no later-expansion models, and doesn't need them. The Ported Pack adds them: extra patch files with **8,157 creature looks** (2,193 of them mounts), **12,798 weapons and shields**, **36,091 armour looks**, **915 armour sets** and **33 weapon glows**, converted from a newer WoW install, plus a list for DMorph (the DMorph_Ported addon). They show in DMorph's lists under **Ported (later expansions)**. These are Blizzard's files, so the pack isn't on GitHub: 💬 [**get the download links on our Discord**](https://discord.gg/EScgbGmBj).
 
-If someone sends you a pack:
+**✅ Before you start:** DMorph 2.19.0 or newer installed (see How to install), about **50 GB of free space** (the download is about 15 GB, most of it can be deleted afterwards), and the **game closed**.
 
-1. Update DMorph to the version the pack was made with, or newer.
-2. Close the game and double-click **Install Ported.bat** in the pack folder you downloaded, the one with manifest.txt and the patch files in it (DMorph's own copy in DmorphOcto\tools\pack only goes into packs; **Pack Ported.bat** is only for the PC that made the models). It checks every file first, never replaces OctoWoW's own patches, removes ported patches from an older pack, puts the list in its own addon folder (DMorph_Ported, which DMorph updates never touch), and installs DmorphHelper. **Remove Ported.bat** takes them out again.
-3. Start the game from OctoLauncher.
+1. **Download BOTH parts** (Part 1 and Part 2) from the Discord. Pick one site, MEGA or File Insane: the files are the same.
+2. **Unzip both parts into ONE folder.** Make a folder, for example **C:\DMorphPack**. Right-click **Part 1** → **Extract All**, change the path to **C:\DMorphPack** → **Extract**. Do the same with **Part 2**, into the **same** folder.
+   > ⚠️ Windows adds the zip's name to the path: delete that part, so both parts land in the same folder. Don't unzip into the game folder. The folder then has **Install Ported.bat**, **manifest.txt**, **Ported.lua** and 17 patch files.
+3. **Install:** double-click **Install Ported.bat** in that folder ("Windows protected your PC": **More info**, then **Run anyway**). It finds your game, checks every file (a few minutes), never replaces OctoWoW's own patches, removes patches from an older pack, puts the list in its own addon folder (DMorph_Ported, which DMorph updates never touch) and installs DmorphHelper. Wait for **"The ported models are installed"**.
+4. **Play:** start the game from **OctoLauncher**, type **/dmorph** and pick **Ported (later expansions)**. 🎮
 
-If you made the pack yourself and want to send it:
+🧹 Afterwards you can delete the two zips and the patch-?.mpq files in your pack folder (the game has its own copy). Keep **Remove Ported.bat** and **install_ported.ps1**: double-click **Remove Ported.bat** to take the pack out again.
 
-1. Close the game and double-click **Pack Ported.bat** in the DmorphOcto folder. It copies the ported patches and the list into a **DmorphPorted** folder on your Desktop, with a manifest of every file's checksum.
-2. Upload that whole folder privately (Google Drive, OneDrive or MEGA) and send the link to your friends. It's several GB.
+DMorph users with the same pack see each other's ported models, mounts and items; everyone else sees your normal look.
 
-Pack again after every porting run: friends need exactly the same pack. DMorph users with the same pack see each other's ported models, mounts and items; everyone else sees your normal look.
+**Made the models yourself?** Close the game and double-click **Pack Ported.bat** in the DmorphOcto folder. It copies the ported patches and the list into a **DmorphPorted** folder on your Desktop, with a manifest of every file's checksum. Share that whole folder privately; pack again after every porting run, as friends need exactly the same pack.
 
 
 ## 🧑‍💻 For developers
