@@ -834,7 +834,7 @@ Mock.Tick(0.7)
 check(DmorphOctoModelsBox:IsVisible() and DmorphOctoModelsBoxModel.displayInfo == catalog.ids[2],
 	"hovering a row previews its model in the box")
 Mock.RunScript(DmorphOctoModelListRow2, "OnLeave")
-check(contains(DmorphOctoModelsBoxInfo.text, "you have it on"), "the box goes back to the model you have on when the mouse leaves")
+check(contains(DmorphOctoModelsBoxInfo.text, "click to morph"), "the box keeps the hovered model when the mouse leaves the row (to reach the box)")
 do
 	-- 2.21.0 (user: the previews were zoomed in too much): the box fits the
 	-- whole model from Data/ModelFrames.lua, and zooms.
@@ -868,6 +868,11 @@ do
 	check(math.abs(box.scale - before) < 0.001, "Reset puts the box's view back")
 	Mock.RunScript(row, "OnLeave")
 end
+-- /dmorph frametest draws one display five ways at two angles, for an in-game check.
+slash("frametest 10720")
+Mock.Tick(0.1)
+check(DmorphOctoFrameTest:IsShown() and contains(DmorphOctoFrameTest.title.text, "10720"), "/dmorph frametest opens the framing test")
+DmorphOctoFrameTest:Hide()
 Mock.Type(modelSearch, "thrall")
 Mock.Tick(0.7)
 local firstRow = DmorphOctoModelListRow1
@@ -1021,7 +1026,7 @@ check(DmorphOctoItemsBox:IsVisible() and DmorphOctoItemsBoxModel.unit == "player
 	"hovering an item shows your character wearing it")
 check(vh.calls == itemsBefore and vh.items[1] == nil, "without putting it on")
 Mock.RunScript(itemRow, "OnLeave")
-check(DmorphOctoItemsBoxTitle.text == "Your own gear", "the box goes back to what you wear when the mouse leaves")
+check(DmorphOctoItemsBoxTitle.text == "First Mate Hat", "the box keeps the hovered item when the mouse leaves the row")
 press(itemRow)
 check(vh.items[1] == 2955, "clicking an item morphs that slot")
 do
@@ -2323,6 +2328,22 @@ Mock.Type(DmorphOctoGlowSearch, "holyglow")
 check(DmorphOctoGlowCount.text == "2 glows", "or by its effect model")
 Mock.Type(DmorphOctoGlowSearch, "")
 check(DmorphOctoGlowListRow4.text.text == "Glow 29", "a glow no enchant names is called by its number")
+do
+	-- 2.21.6: hovering a glow puts it on your weapon for a look (a preview model
+	-- can't draw enchants); leaving the tab takes it off again.
+	local loads = DmorphOctoGlowsBoxModel.unitLoads or 0
+	Mock.RunScript(DmorphOctoGlowListRow3, "OnEnter")
+	local shown = game.enchants[16][1]
+	check(shown ~= 803 and shown ~= 0 and DmorphOcto.GetGlow(16) == nil,
+		"hovering a glow shows it on your weapon without picking it")
+	Mock.RunScript(DmorphOctoGlowListRow3, "OnLeave")
+	Mock.Tick(0.8)
+	check(game.enchants[16][1] == shown and (DmorphOctoGlowsBoxModel.unitLoads or 0) > loads,
+		"it stays when the mouse leaves the row, and the box shows you with it")
+	Mock.Click(DmorphOctoTabModels)
+	check(game.enchants[16][1] == 803, "leaving the tab puts your own glow back")
+	Mock.Click(DmorphOctoTabGlows)
+end
 press(DmorphOctoGlowListRow1)
 check(game.enchants[16][1] == 1900 and game.enchants[16][2] == 0, "clicking a glow puts its enchant on the main hand")
 check(DmorphOctoGlowListRow1.tick.shown and DmorphOctoGlowState.text == "Main hand: Crusader",

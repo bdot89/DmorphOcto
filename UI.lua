@@ -645,12 +645,11 @@ local function List(parent, name, x, y, infoWidth, fill, click, enter, width, ro
 			row:SetScript("OnEnter", function()
 				enter(this.index, this)
 			end)
-			-- The preview box goes back to what you have on (list.leave).
+			-- The preview box keeps the last row hovered, so the mouse can go over
+			-- to it (user, 19 Oct: it went back as soon as the mouse left the row).
+			-- It shows what you have on again after a change (list.leave).
 			row:SetScript("OnLeave", function()
 				GameTooltip:Hide()
-				if list.leave then
-					list.leave()
-				end
 			end)
 		end
 		list.rows[i] = row
@@ -2584,8 +2583,13 @@ local function GlowTooltip(index, row)
 	if not i then
 		return
 	end
-	P.BoxText(ui.glowBox, all.name[i], C.accent, "Click: on your " .. strlower(M.SLOT_NAMES[glowSlot]))
-	GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
+	P.BoxText(ui.glowBox, all.name[i], C.accent, "Showing on you - click to keep it")
+	-- The glow goes on your character for a look (a preview model can't draw
+	-- enchants); it stays until another row, a click, or leaving the tab.
+	M.PreviewGlow(glowSlot, all.enchant[i])
+	Debounce(ui.glowTimer, 0.7, P.ReloadGlowBox)
+	-- On the left, off the preview box.
+	GameTooltip:SetOwner(row, "ANCHOR_LEFT")
 	GameTooltip:SetText(all.name[i])
 	local shown = 0
 	for name in string.gfind(all.names[i], "[^;]+") do
@@ -2610,6 +2614,23 @@ end
 
 -- The glow on the picked slot, in the box (a preview model can't draw an
 -- enchant, so the box shows you and names it; the glow is on the stage).
+-- The glow box's model again from your character (with the glow now on it),
+-- and the dressing room too.
+function P.ReloadGlowBox()
+	local box = ui.glowBox
+	box.model:SetFrameLevel(box.base + 1)
+	box.model:SetUnit("player")
+	box.wait, box.loaded, box.dressed = REVEAL, true, nil
+	RequestPreview()
+end
+
+-- Takes hovered glows off (leaving the tab, closing the window, a click).
+function P.EndGlowPreview()
+	for i = 1, table.getn(M.GLOW_SLOTS) do
+		M.PreviewGlow(M.GLOW_SLOTS[i], nil)
+	end
+end
+
 function P.RefreshGlowBox()
 	local picked = M.GetGlow(glowSlot)
 	local where = "on your " .. strlower(M.SLOT_NAMES[glowSlot]) .. " - see it on the left"
@@ -2636,6 +2657,7 @@ local function BuildGlowsPage(page)
 	for i = 1, table.getn(M.GLOW_SLOTS) do
 		local slot = M.GLOW_SLOTS[i]
 		local button = Button(page, M.SLOT_NAMES[slot], 96, 150 + (i - 1) * 100, -7, function()
+			P.EndGlowPreview()
 			glowSlot = this.slot
 			RefreshGlows()
 		end, "DmorphOctoGlowSlot" .. slot)
@@ -3126,7 +3148,7 @@ local function SetTooltip(index, row)
 	if not i then
 		return
 	end
-	GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
+	GameTooltip:SetOwner(row, "ANCHOR_LEFT")
 	GameTooltip:SetText(catalog.names[i], QualityColor(catalog.quality[i]))
 	local pieces = catalog.pieces[i]
 	for k = 1, table.getn(pieces) do
@@ -3597,6 +3619,9 @@ local function TabLook(tab, active)
 end
 
 ShowTab = function(key)
+	if key ~= "glows" then
+		P.EndGlowPreview()
+	end
 	currentTab = key
 	ui.menu:Hide()
 	for i = 1, table.getn(TABS) do
@@ -4077,6 +4102,23 @@ local function BuildSetupPanel()
 	ui.setupPanel = panel
 end
 
+-- The window closes. (Outside Build: Lua 5.0 allows 32 upvalues a function.)
+function P.OnWindowHide()
+	PlaySound("igCharacterInfoClose")
+	P.EndGlowPreview()
+	-- The try-on boxes load your character afresh next time.
+	for _, box in pairs(ui.boxes) do
+		box.loaded, box.dressed = nil, nil
+	end
+	ui.menu:Hide()
+	-- A click still waiting at the gate is applied now.
+	local nextCall = ui.gateNext
+	ui.gateBusy, ui.gateNext = nil, nil
+	if nextCall then
+		Morph(nextCall[1], nextCall[2], nextCall[3])
+	end
+end
+
 local function Build()
 	frame = CreateFrame("Frame", "DmorphOctoFrame", UIParent)
 	frame:Hide()
@@ -4109,20 +4151,7 @@ local function Build()
 		UpdatePlate()
 		RequestPreview()
 	end)
-	frame:SetScript("OnHide", function()
-		PlaySound("igCharacterInfoClose")
-		-- The try-on boxes load your character afresh next time.
-		for _, box in pairs(ui.boxes) do
-			box.loaded, box.dressed = nil, nil
-		end
-		ui.menu:Hide()
-		-- A click still waiting at the gate is applied now.
-		local nextCall = ui.gateNext
-		ui.gateBusy, ui.gateNext = nil, nil
-		if nextCall then
-			Morph(nextCall[1], nextCall[2], nextCall[3])
-		end
-	end)
+	frame:SetScript("OnHide", P.OnWindowHide)
 	frame:SetScript("OnUpdate", function()
 		this.sincePoll = (this.sincePoll or 0) + arg1
 		if this.sincePoll > 1 then
@@ -4169,6 +4198,7 @@ local function Build()
 	ui.previewTimer = NewTimer()
 	ui.revealTimer = NewTimer()
 	ui.gateTimer = NewTimer()
+	ui.glowTimer = NewTimer()
 	-- ClassicAPI's Model:SetDisplayInfo shows creatures by display ID.
 	local probe = CreateFrame("Model", nil, frame)
 	ui.canPreview = type(probe.SetDisplayInfo) == "function"
@@ -4228,6 +4258,102 @@ function M.ToggleUI()
 end
 
 M.RegisterListener(RefreshAll)
+
+-- /dmorph frametest [displayID] (2.21.6): the user reported previews cut off
+-- or empty twice after fixes made blind. This shows one display five ways,
+-- at two angles, to see in game which way the client draws a framed model:
+--   A: portrait camera, scale fits, middle moved in world units (FrameView)
+--   B: as A, but the move given in the model's own units (divided by scale)
+--   C: the portrait camera alone (scale 1, not moved)
+--   D: no camera, scale 0.1 / height (as the Shenanigans addon), not moved
+--   E: as A, without turning the middle with the model
+-- Top row facing the camera, bottom row turned a quarter.
+function P.FrameTest(args)
+	local display = M.ParseID(args[1] or "") or 63568
+	local R, tx, ty, tz, cx, cy, cz, height, width = M.GetModelFrame(display)
+	if not (ui.canPreview and R) then
+		DEFAULT_CHAT_FRAME:AddMessage("DMorph frame test: no 3D previews or no frame data for display " .. display .. ".")
+		return
+	end
+	local test = DmorphOctoFrameTest
+	if not test then
+		test = CreateFrame("Frame", "DmorphOctoFrameTest", UIParent)
+		test:SetFrameStrata("FULLSCREEN_DIALOG")
+		test:SetWidth(5 * 150 + 20)
+		test:SetHeight(2 * 170 + 50)
+		test:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+		Flat(test, C.bg, C.accent)
+		test:EnableMouse(true)
+		test.title = Font(test:CreateFontString(nil, "OVERLAY"), 13, C.gold)
+		test.title:SetPoint("TOPLEFT", test, "TOPLEFT", 10, -8)
+		local close = Button(test, "Close", 60, 5 * 150 + 20 - 70, -6, function()
+			DmorphOctoFrameTest:Hide()
+		end)
+		close:SetHeight(18)
+		test.cells = {}
+		for row = 1, 2 do
+			for col = 1, 5 do
+				local cell = CreateFrame("Frame", nil, test)
+				cell:SetWidth(144)
+				cell:SetHeight(160)
+				cell:SetPoint("TOPLEFT", test, "TOPLEFT", 10 + (col - 1) * 150, -36 - (row - 1) * 170)
+				Flat(cell, C.card, C.line)
+				local model = CreateFrame("Model", nil, cell)
+				model:SetPoint("TOPLEFT", cell, "TOPLEFT", 2, -2)
+				model:SetPoint("BOTTOMRIGHT", cell, "BOTTOMRIGHT", -2, 16)
+				local label = Font(cell:CreateFontString(nil, "OVERLAY"), 12, C.accent)
+				label:SetPoint("BOTTOM", cell, "BOTTOM", 0, 2)
+				label:SetText(string.sub("ABCDE", col, col) .. row)
+				table.insert(test.cells, { model = model, col = col, row = row })
+			end
+		end
+		test:SetScript("OnUpdate", function()
+			local d = this.data
+			for i = 1, table.getn(this.cells) do
+				local c = this.cells[i]
+				local m = c.model
+				local f = c.row == 2 and 1.5708 or 0
+				local a = 140 / 142
+				local rv = d.R / math.sqrt(1 + a * a)
+				local s = 0.88 * math.min(2 * rv / d.height, 2 * rv * a / d.width)
+				local fa = f * P.ANGLE
+				local mx = d.cx * math.cos(fa) - d.cy * math.sin(fa)
+				local my = d.cx * math.sin(fa) + d.cy * math.cos(fa)
+				m:SetFacing(f)
+				if c.col == 1 then
+					m:SetModelScale(s)
+					m:SetPosition(d.tx - s * mx, d.ty - s * my, d.tz - s * d.cz)
+				elseif c.col == 2 then
+					m:SetModelScale(s)
+					m:SetPosition((d.tx - s * mx) / s, (d.ty - s * my) / s, (d.tz - s * d.cz) / s)
+				elseif c.col == 3 then
+					m:SetModelScale(1)
+					m:SetPosition(0, 0, 0)
+				elseif c.col == 4 then
+					m:SetModelScale(0.1 / d.height)
+					m:SetPosition(0, 0, 0)
+				else
+					m:SetModelScale(s)
+					m:SetPosition(d.tx - s * d.cx, d.ty - s * d.cy, d.tz - s * d.cz)
+				end
+			end
+		end)
+	end
+	test.data = { R = R, tx = tx, ty = ty, tz = tz, cx = cx, cy = cy, cz = cz, height = height, width = width }
+	test.title:SetText("DMorph frame test: display " .. display .. " (" .. (M.GetDisplayName(display) or "?")
+		.. "). Screenshot this and say which boxes show the whole model, centred.")
+	for i = 1, table.getn(test.cells) do
+		local m = test.cells[i].model
+		pcall(m.ClearModel, m)
+		m:SetDisplayInfo(display)
+		if test.cells[i].col ~= 4 then
+			pcall(m.SetCamera, m, 0)
+		end
+		pcall(m.SetLight, m, 1, 0, 0, -0.7, -0.7, 0.7, 1, 1, 1, 0.8, 1, 1, 1)
+	end
+	test:Show()
+end
+M.commands.frametest = P.FrameTest
 
 -- Minimap button ------------------------------------------------------------------
 

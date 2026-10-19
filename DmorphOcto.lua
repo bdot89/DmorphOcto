@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.21.5"
+local VERSION = "2.21.6"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -2502,6 +2502,8 @@ local function RebuildForItems()
 	end
 end
 
+-- Glows hovered in the Glows tab (M.PreviewGlow), per slot.
+local glowPreview = {}
 local function WatchHelper()
 	if not (sessionReady and HasHelper()) or helperHold > 0 then
 		return
@@ -2545,8 +2547,10 @@ local function WatchHelper()
 				db.glowReal[slot] = { p, t }
 			end
 			local want
-			if db.glows[slot] then
-				want = { db.glows[slot], 0 }
+			-- A glow hovered in the Glows tab shows until the mouse moves on (M.PreviewGlow).
+			local pick = glowPreview[slot] or db.glows[slot]
+			if pick then
+				want = { pick, 0 }
 			elseif written then
 				want = db.glowReal[slot]
 			end
@@ -2555,11 +2559,22 @@ local function WatchHelper()
 					db.glowWritten[slot] = { want[1], want[2] }
 				end
 			end
-			if not db.glows[slot] then
+			if not pick then
 				db.glowWritten[slot] = nil
 			end
 		end
 	end
+end
+
+-- Shows a glow on a weapon without picking it (the Glows tab's hover, user
+-- 19 Oct: the preview box can't draw enchants, your character can); nil
+-- ends it and your picked or own glow comes back.
+function M.PreviewGlow(slot, enchantID)
+	if not GLOW_SLOT[slot] or glowPreview[slot] == enchantID then
+		return
+	end
+	glowPreview[slot] = enchantID
+	WatchHelper()
 end
 
 -- Glow and look actions need both DLLs.
@@ -2790,6 +2805,7 @@ function M.SetGlow(slot, enchantID)
 		end
 	end
 	db.glows[slot] = enchantID
+	glowPreview[slot] = nil -- picked now: the hover look is over
 	WatchHelper()
 	Notify()
 	if not enchantID then
