@@ -162,17 +162,63 @@ Pack again after every porting run: friends need exactly the same pack. DMorph u
 
 ![DMorph banner](docs/banner.png)
 
+One window, ten tabs, and your character front and centre: the dressing room on the left always shows you as you'll look in the world, and every list has its own preview box that turns, zooms and moves, so you see everything before you click it.
+
+### Models: become anything
 ![Models tab](docs/models.jpg)
-![Races tab](docs/races.jpg)
-![Glows tab](docs/glows.jpg)
-![Items tab](docs/items.jpg)
-![Sets tab](docs/sets.jpg)
-![Weather tab](docs/weather.jpg)
-![Wardrobe tab](docs/wardrobe.jpg)
+
+Every creature model in the game, 16,000+ of them, plus 8,000+ more from later expansions with a ported pack. Search by name, sort A-Z or by ID, filter for bosses, rares or mounts, and watch each one turn in the preview before you commit. Grow or shrink yourself from 25% to 300% with the size slider. Here: Supremus, at 125%.
+
+### Mounts: ride anything
 ![Mounts tab](docs/mounts.jpg)
+
+Pick any model as the skin for all your mounts, or for just one of them. It goes on the moment you mount and comes off when you get down, and you still use your own mount keys. Over 3,000 mount models with the pack, from Ashes of Al'ar to the Venomous Gladiator's Goredrake turning in the preview.
+
+### Races: any race, still you
+![Races tab](docs/races.jpg)
+
+Every race and gender, wearing your own face, skin and hair. The arrows step through real skin colours, faces, hair styles, hair colours and facial hair, and the dice rolls a whole new look. Your faction, languages, flight paths and reputation stay your own, so a Horde character can be a dwarf and still talk to Orgrimmar.
+
+### Glows: every enchant, any weapon
+![Glows tab](docs/glows.jpg)
+
+Every weapon glow in the game for main hand, off hand and ranged. With the pack, 33 more from The Burning Crusade to Mists of Pandaria: Sunfire, Mongoose, Berserking, Crackling Lightning, Jade Spirit and more. Hover one and the preview puts it on your weapon.
+
+### Items: every weapon and armour piece
+![Items tab](docs/items.jpg)
+
+12,000+ weapons and armour pieces, and tens of thousands more with the pack. Filter by slot, type, quality and source, hover to try it on, click to wear it. **Invisible** hides a slot completely. Here: the Scythe of Elune, on a dwarf.
+
+### Slutmog: show some skin
+![Slutmog tab](docs/slutmog.jpg)
+
+Every revealing piece in one list: chests, shirts, legs and feet, measured from how much body each one actually covers, not guessed from its name. Chainkinis, halter tops, loincloths, tropical skirts and airy sandals, plus OctoWoW's invisible Unseen Fashion pieces. Hit **Birthday suit** and build your look up from bare skin.
+
+### Sets: a whole outfit in one click
+![Sets tab](docs/sets.jpg)
+
+352 sets from 1.12, and 1,200+ with the pack. One click wears every piece, and the slots a set doesn't cover go bare, so your own gear never peeks through. Hover a set to see every piece on your character first.
+
+### Wardrobe: save your looks
+![Wardrobe tab](docs/wardrobe.jpg)
+
+Save your whole look as an outfit: model, items, glows, mount skin and size. Outfits are shared by all your characters and come back in one click.
+
+### Favourites: your best finds at hand
 ![Favourites tab](docs/favourites.jpg)
+
+Right-click any model or mount skin to star it. Your favourites follow you to every character.
+
+### Weather: your sky, your time
+![Weather tab](docs/weather.jpg)
+
+Clear skies, rain, snow or a sandstorm, from light to heavy, and any time of day: dawn, noon, dusk or midnight. It stays on in every zone, and only you see it.
+
+### Out in the world
 ![In the world](docs/world.jpg)
 ![More morphs](docs/morphs.jpg)
+
+Other DMorph users see your model, items, mount skin and size, and you see theirs.
 
 With a ported pack (optional, see above):
 
