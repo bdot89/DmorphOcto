@@ -864,6 +864,15 @@ do
 	local full = Mock.select10(DmorphOcto.GetModelFrame(box.displayInfo))
 	check(box.displayInfo == tonumber(row.info.text) and box.camera == (full and 1 or 0)
 		and math.abs(box.scale - 1) < 0.001, "the box shows the model through its full-body camera, unscaled")
+	-- 2.21.8: a PlayerModel, so it turns and comes closer like the dressing room.
+	local turned = box.rotation
+	Mock.Tick(0.5)
+	check(box.kind == "PlayerModel" and box.rotation and box.rotation ~= turned, "the box is a PlayerModel that turns")
+	press(DmorphOctoModelsBoxZoomIn)
+	Mock.Tick(0.05)
+	check(math.abs(box.position[1] - 0.3) < 0.001, "+ brings it closer, as in the dressing room")
+	press(DmorphOctoModelsBoxZoomReset)
+	Mock.Tick(0.05)
 	local before = box.scale
 	press(DmorphOctoModelsBoxZoomIn)
 	Mock.Tick(0.1)

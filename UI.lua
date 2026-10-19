@@ -679,10 +679,25 @@ end
 -- an opaque layer, and moves up to `high` once REVEAL has passed. aspect:
 -- the model frame's width / height. zoom (steps), panX / panY (parts of the
 -- view's height) are the user's (preview boxes).
+-- 2.21.8 (user: "I can't drag the model around or zoom in myself, use the
+-- same controls as the character window"): a plain Model with a camera set
+-- ignores SetPosition and SetFacing, the dressing room's PlayerModel moves
+-- and turns. So views are PlayerModels when ClassicAPI's SetDisplayInfo works
+-- on one (ui.playerViews, checked once), else Models as before.
 local function NewView(parent, name, low, high, aspect)
-	local model = CreateFrame("Model", name, parent)
+	local model = CreateFrame(ui.playerViews and "PlayerModel" or "Model", name, parent)
 	model:SetFrameLevel(low)
-	return { model = model, low = low, high = high, facing = 0, aspect = aspect or 1, zoom = 0, panX = 0, panY = 0 }
+	return { model = model, low = low, high = high, facing = 0, aspect = aspect or 1, zoom = 0, panX = 0, panY = 0,
+		player = ui.playerViews }
+end
+
+-- Turns a view (PlayerModels turn with SetRotation, Models with SetFacing).
+function P.TurnView(view)
+	if view.player then
+		view.model:SetRotation(view.facing or 0)
+	else
+		view.model:SetFacing(view.facing or 0)
+	end
 end
 
 -- The whole model in view (2.21.0; user: the previews were "zoomed in too
@@ -714,6 +729,11 @@ local function FrameView(view)
 		end
 	end
 	view.model:SetModelScale(zoom)
+	-- A PlayerModel also comes closer and moves as the dressing room does
+	-- (zoom 0.3 a step, pan from the box's drag).
+	if view.player then
+		view.model:SetPosition((view.zoom or 0) * 0.3, (view.panX or 0) * 3, (view.panY or 0) * 3)
+	end
 end
 
 local function StartView(view, displayID)
@@ -730,7 +750,7 @@ local function StartView(view, displayID)
 	view.camera = P.ViewCamera(displayID)
 	pcall(model.SetCamera, model, view.camera)
 	pcall(model.SetLight, model, 1, 0, 0, -0.7, -0.7, 0.7, 1, 1, 1, 0.8, 1, 1, 1)
-	model:SetFacing(view.facing or 0)
+	P.TurnView(view)
 	FrameView(view)
 end
 
@@ -795,7 +815,7 @@ local function TickView(view, elapsed, spin)
 	if spin and view.displayID and not view.manual then
 		view.facing = view.facing + elapsed * 1.6
 	end
-	view.model:SetFacing(view.facing)
+	P.TurnView(view)
 end
 
 local function KindColor(kind)
@@ -4193,6 +4213,9 @@ local function Build()
 	local probe = CreateFrame("Model", nil, frame)
 	ui.canPreview = type(probe.SetDisplayInfo) == "function"
 	probe:Hide()
+	local player = CreateFrame("PlayerModel", nil, frame)
+	ui.playerViews = ui.canPreview and type(player.SetDisplayInfo) == "function" or nil
+	player:Hide()
 	ui.menu = BuildMenu()
 
 	BuildStage()
