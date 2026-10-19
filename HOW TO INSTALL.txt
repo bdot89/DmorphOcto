@@ -6,11 +6,12 @@ STEP 1: TURN ON VANILLAHELPERS
   2. In its list of mods, tick "vanillaHelpers".
 
 STEP 2: PUT DMORPH IN YOUR ADDONS FOLDER
-  1. Unzip the download (right-click the ZIP > Extract All > Extract).
-  2. Find the folder "DmorphOcto-main" that has "DmorphOcto.toc" inside it.
-  3. Rename that folder to "DmorphOcto".
-  4. Move it into your game's AddOns folder, so it ends up like this:
+  1. Unzip DmorphOcto.zip (right-click the ZIP > Extract All > Extract).
+  2. Move the "DmorphOcto" folder from it into your game's AddOns folder,
+     so it ends up like this:
        OctoWoW\Interface\AddOns\DmorphOcto\DmorphOcto.toc
+     (Downloaded GitHub's "Code > Download ZIP" instead? Then the folder is
+     called "DmorphOcto-main": rename it to "DmorphOcto".)
 
 STEP 3: RUN THE INSTALLER (glows, real skin/face/hair, size)
   1. Close the game completely.
@@ -41,4 +42,5 @@ IF SOMETHING GOES WRONG
     "Remove DmorphHelper.bat".
   - You turned invisible: that model can't show. Press "Reset model".
 
+Newest version: https://github.com/bdot89/DmorphOcto/releases/latest/download/DmorphOcto.zip
 More help and screenshots: https://github.com/bdot89/DmorphOcto
