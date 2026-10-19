@@ -17,9 +17,9 @@ Unzip, drop the **DmorphOcto** folder into your AddOns, done. Full steps below �
 
 **8,157** creatures · **2,193** mounts · **48,889** weapons & armour · **915** sets · **33** glows, from **The Burning Crusade to Mists of Pandaria**, right inside DMorph. Free and optional, and friends with the pack see your ported looks too 👯
 
-### 💬 [**Join our Discord to get the Ported Pack**](https://discord.gg/EScgbGmBj)
+### 💬 [**DM benito9295 on Discord to get the Ported Pack**](https://discord.com/users/637439763040960564)
 
-The download links and help are on the Discord. How to install it: [Ported Pack](#-ported-pack-optional) below 👇
+Send **benito9295** a message on Discord for the download links and help. How to install it: [Ported Pack](#-ported-pack-optional) below 👇
 
 
 ## 🌟 What you get
@@ -232,11 +232,11 @@ Item slots: 1 head, 3 shoulder, 4 shirt, 5 chest, 6 waist, 7 legs, 8 feet, 9 wri
 
 ## 🚀 Ported Pack (optional)
 
-Want a LOT more models? DMorph has no later-expansion models, and doesn't need them. The Ported Pack adds them: extra patch files with **8,157 creature looks** (2,193 of them mounts), **12,798 weapons and shields**, **36,091 armour looks**, **915 armour sets** and **33 weapon glows**, converted from a newer WoW install, plus a list for DMorph (the DMorph_Ported addon). They show in DMorph's lists under **Ported (later expansions)**. These are Blizzard's files, so the pack isn't on GitHub: 💬 [**get the download links on our Discord**](https://discord.gg/EScgbGmBj).
+Want a LOT more models? DMorph has no later-expansion models, and doesn't need them. The Ported Pack adds them: extra patch files with **8,157 creature looks** (2,193 of them mounts), **12,798 weapons and shields**, **36,091 armour looks**, **915 armour sets** and **33 weapon glows**, converted from a newer WoW install, plus a list for DMorph (the DMorph_Ported addon). They show in DMorph's lists under **Ported (later expansions)**. These are Blizzard's files, so the pack isn't on GitHub: 💬 [**DM benito9295 on Discord**](https://discord.com/users/637439763040960564) for the download links.
 
 **✅ Before you start:** DMorph 2.19.0 or newer installed (see How to install), about **50 GB of free space** (the download is about 15 GB, most of it can be deleted afterwards), and the **game closed**.
 
-1. **Download BOTH parts** (Part 1 and Part 2) from the Discord. Pick one site, MEGA or File Insane: the files are the same.
+1. **Download BOTH parts** (Part 1 and Part 2) from the links **benito9295** sends you on Discord. Pick one site, MEGA or File Insane: the files are the same.
 2. **Unzip both parts into ONE folder.** Make a folder, for example **C:\DMorphPack**. Right-click **Part 1** → **Extract All**, change the path to **C:\DMorphPack** → **Extract**. Do the same with **Part 2**, into the **same** folder.
    > ⚠️ Windows adds the zip's name to the path: delete that part, so both parts land in the same folder. Don't unzip into the game folder. The folder then has **Install Ported.bat**, **manifest.txt**, **Ported.lua** and 17 patch files.
 3. **Install:** double-click **Install Ported.bat** in that folder ("Windows protected your PC": **More info**, then **Run anyway**). It finds your game, checks every file (a few minutes), never replaces OctoWoW's own patches, removes patches from an older pack, puts the list in its own addon folder (DMorph_Ported, which DMorph updates never touch) and installs DmorphHelper. Wait for **"The ported models are installed"**.
