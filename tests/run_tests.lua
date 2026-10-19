@@ -165,6 +165,11 @@ end
 function Mock.select10(a, b, c, d, e, f, g, h, i, j)
 	return j
 end
+-- The scale a preview gives a display (2.2 / the larger of height, width * 0.75).
+function Mock.fit(display)
+	local _, _, _, _, _, _, _, h, w = DmorphOcto.GetModelFrame(display)
+	return 2.2 / math.max(h, w * 0.75)
+end
 
 ------------------------------------------------------------------------------
 -- Chat commands
@@ -544,8 +549,7 @@ do
 	Mock.Tick(0.15)
 	Mock.Tick(0.5)
 	check(DmorphOctoStageModel:IsShown() and DmorphOctoStageModel.displayInfo == creature
-		and DmorphOctoStageModel.camera == (Mock.select10(DmorphOcto.GetModelFrame(creature)) and 1 or 0)
-		and math.abs(DmorphOctoStageModel.scale - 1) < 0.002
+		and DmorphOctoStageModel.camera == nil and math.abs(DmorphOctoStageModel.scale - Mock.fit(creature)) < 0.002
 		and not DmorphOctoModel1:IsShown() and not DmorphOctoModel2:IsShown(),
 		"a creature morph shows whole in the dressing room")
 	check(DmorphOctoLookName.text == (DmorphOcto.GetDisplayName(creature) or "Unlisted model")
@@ -623,8 +627,8 @@ check(DmorphOctoModelGrid:IsVisible() and not DmorphOctoModelListRow1:IsVisible(
 	"with ClassicAPI the models tab shows previews")
 check(DmorphOctoTile1Model.displayInfo == catalog.ids[1] and DmorphOctoTile1.title.text == catalog.names[1]
 	and DmorphOctoTile8Model.displayInfo == catalog.ids[8], "the tiles preview the first 8 models")
-check(DmorphOctoTile1Model.camera == (Mock.select10(DmorphOcto.GetModelFrame(catalog.ids[1])) and 1 or 0),
-	"previews use the model's full-body camera if it has one, else its portrait camera")
+check(DmorphOctoTile1Model.kind == "PlayerModel" and DmorphOctoTile1Model.camera == nil,
+	"previews are PlayerModels without a camera of the model's (it would lock them)")
 check(contains(DmorphOctoPagerText.text, "Page 1/2,0"), "the pager counts the pages")
 Mock.Click(DmorphOctoNextPage)
 check(DmorphOctoTile1Model.displayInfo == catalog.ids[9], "the next page shows the next 8")
@@ -859,11 +863,9 @@ do
 	for _ = 1, 5 do
 		Mock.Tick(1)
 	end
-	-- 2.21.7: no moving or scaling (the client ignores the move with a camera
-	-- set: /dmorph frametest in game), the full-body camera when there is one.
-	local full = Mock.select10(DmorphOcto.GetModelFrame(box.displayInfo))
-	check(box.displayInfo == tonumber(row.info.text) and box.camera == (full and 1 or 0)
-		and math.abs(box.scale - 1) < 0.001, "the box shows the model through its full-body camera, unscaled")
+	-- 2.21.9: no camera of the model's; scaled to a player's height.
+	check(box.displayInfo == tonumber(row.info.text) and box.camera == nil
+		and math.abs(box.scale - Mock.fit(box.displayInfo)) < 0.001, "the box scales the model to a player's height")
 	-- 2.21.8: a PlayerModel, so it turns and comes closer like the dressing room.
 	local turned = box.rotation
 	Mock.Tick(0.5)
@@ -873,13 +875,12 @@ do
 	check(math.abs(box.position[1] - 0.3) < 0.001, "+ brings it closer, as in the dressing room")
 	press(DmorphOctoModelsBoxZoomReset)
 	Mock.Tick(0.05)
-	local before = box.scale
 	press(DmorphOctoModelsBoxZoomIn)
 	Mock.Tick(0.1)
-	check(math.abs(box.scale / before - 1.25) < 0.001, "+ zooms the box in")
+	check(box.position[1] > 0, "+ zooms the box in")
 	press(DmorphOctoModelsBoxZoomReset)
 	Mock.Tick(0.1)
-	check(math.abs(box.scale - before) < 0.001, "Reset puts the box's view back")
+	check(box.position[1] == 0, "Reset puts the box's view back")
 	Mock.RunScript(row, "OnLeave")
 end
 -- /dmorph frametest draws one display five ways at two angles, for an in-game check.

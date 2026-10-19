@@ -720,6 +720,7 @@ function P.ViewCamera(displayID)
 	local _, _, _, _, _, _, _, _, _, full = M.GetModelFrame(displayID)
 	return full and 1 or 0
 end
+P.PLAYER_SIZE = 2.2 -- about a player's height in model units
 local function FrameView(view)
 	local zoom = math.pow(P.ZOOM_FACTOR, view.zoom or 0)
 	if view.fresh then
@@ -728,12 +729,24 @@ local function FrameView(view)
 			zoom = zoom * 1.001
 		end
 	end
-	view.model:SetModelScale(zoom)
-	-- A PlayerModel also comes closer and moves as the dressing room does
-	-- (zoom 0.3 a step, pan from the box's drag).
+	-- 2.21.9 (user: still no drag or zoom with 2.21.8): a PlayerModel gets no
+	-- camera of the model's (an explicit SetCamera locks it, as in the frame
+	-- test); like the dressing room it keeps its own player-sized view, where
+	-- moving and turning work. The model is scaled to a player's height
+	-- (P.PLAYER_SIZE) from Data/ModelFrames.lua, so it fits that view as you do
+	-- (a big creature morph filled the dressing room before), then zoom and
+	-- pan move it as the dressing room does.
 	if view.player then
-		view.model:SetPosition((view.zoom or 0) * 0.3, (view.panX or 0) * 3, (view.panY or 0) * 3)
+		local _, _, _, _, _, _, _, height, width = M.GetModelFrame(view.loaded)
+		local fit = 1
+		if height then
+			fit = P.PLAYER_SIZE / math.max(height, width * 0.75)
+		end
+		view.model:SetModelScale(fit * ((view.fresh and view.flip) and 1.001 or 1))
+		view.model:SetPosition((view.zoom or 0) * 0.3, (view.panX or 0) * 2, (view.panY or 0) * 2)
+		return
 	end
+	view.model:SetModelScale(zoom)
 end
 
 local function StartView(view, displayID)
@@ -747,8 +760,10 @@ local function StartView(view, displayID)
 	model:SetDisplayInfo(displayID)
 	-- Its full-body camera if it has one, else the portrait camera (P.ViewCamera);
 	-- a Model has no light of its own.
-	view.camera = P.ViewCamera(displayID)
-	pcall(model.SetCamera, model, view.camera)
+	if not view.player then
+		view.camera = P.ViewCamera(displayID)
+		pcall(model.SetCamera, model, view.camera)
+	end
 	pcall(model.SetLight, model, 1, 0, 0, -0.7, -0.7, 0.7, 1, 1, 1, 0.8, 1, 1, 1)
 	P.TurnView(view)
 	FrameView(view)
@@ -809,7 +824,9 @@ local function TickView(view, elapsed, spin)
 		if view.fresh <= 0 then
 			view.fresh = nil
 		end
-		pcall(view.model.SetCamera, view.model, view.camera or 0)
+		if not view.player then
+			pcall(view.model.SetCamera, view.model, view.camera or 0)
+		end
 	end
 	FrameView(view)
 	if spin and view.displayID and not view.manual then
