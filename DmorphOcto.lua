@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.21.6"
+local VERSION = "2.21.7"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1130,7 +1130,8 @@ end
 -- tools/build_frames.ps1): the half height the model's portrait camera sees
 -- at its target, the target (x, y, z), the middle of the model's vertices
 -- (x, y, z), its height and widest side, in model units. nil when the
--- display has no data.
+-- display has no data. Last: whether the model has a full-body ("character
+-- info", type 1) camera.
 local frameModels, frameDisplays
 local function ParseFrames(data, models, displays)
 	if type(data) ~= "table" or type(data.models) ~= "string" or type(data.displays) ~= "string" then
@@ -1143,11 +1144,14 @@ local function ParseFrames(data, models, displays)
 			n = n + 1
 			values[n] = tonumber(v)
 		end
-		if n == 9 then
+		if n == 10 then
+			table.insert(rows, values)
+		elseif n == 9 then
+			values[10] = 0
 			table.insert(rows, values)
 		elseif n == 7 then
 			-- 2.21.0's lines: no x / y middle (taken as the model's origin).
-			table.insert(rows, { values[1], values[2], values[3], values[4], 0, 0, values[5], values[6], values[7] })
+			table.insert(rows, { values[1], values[2], values[3], values[4], 0, 0, values[5], values[6], values[7], 0 })
 		else
 			table.insert(rows, false)
 		end
@@ -1179,7 +1183,7 @@ function M.GetModelFrame(displayID)
 	end
 	local f = frameDisplays[displayID or 0] and frameModels[frameDisplays[displayID]]
 	if f then
-		return f[1], f[2], f[3], f[4], f[5], f[6], f[7], f[8], f[9]
+		return f[1], f[2], f[3], f[4], f[5], f[6], f[7], f[8], f[9], f[10] == 1
 	end
 end
 

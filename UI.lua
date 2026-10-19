@@ -686,46 +686,34 @@ local function NewView(parent, name, low, high, aspect)
 end
 
 -- The whole model in view (2.21.0; user: the previews were "zoomed in too
--- much"). The camera is the model's portrait camera (camera 0, it frames
--- the head), and Data/ModelFrames.lua says what it sees and how big the
--- model is: the model is scaled to fit (P.FIT of the view) and moved so its
--- middle is where the camera looks. The camera's field of view is taken as
--- diagonal, as M2 cameras are documented (erring on the small side if not).
--- Without data the portrait stays, zoom scaling it. Unverified in game: that
--- SetModelScale / SetPosition leave the model's own camera where it is.
--- 2.21.3 (user: many ported models blank, cut off or off to one side until
--- zoomed in and out): sizes come from the vertices (headers of converted
--- models were nonsense), the model's real middle (not its origin) goes where
--- the camera looks, turning with it, and while a model loads (view.fresh)
--- the scale goes on a hair different every other frame: the game seems to
--- skip a value it already has, and loses it when the model finishes loading.
-P.FIT, P.ZOOM_FACTOR = 0.88, 1.25
+-- much"). Seen in game with /dmorph frametest (19 Oct): while a model camera
+-- is set, this client draws the model where the camera says and ignores
+-- SetPosition and SetFacing (only the scale shows), so 2.21.0-2.21.6's
+-- "scale to fit and move the middle to the camera" left models cut off or
+-- out of view. Now nothing is moved: a model with a full-body camera
+-- ("character info", type 1, Blizzard's own framing of the whole model:
+-- 2,918 of 2,984 ported models, 389 of 679 stock ones, Data/ModelFrames.lua)
+-- is shown through it; the rest keep the portrait camera (the head), as
+-- before 2.21. Zoom is the scale on top. While a model loads (view.fresh)
+-- the camera and the scale (a hair off every other frame) are sent again:
+-- the client seems to drop them when loading ends.
+P.ZOOM_FACTOR = 1.25
 -- The client's trig functions take degrees or radians depending on its build.
 P.ANGLE = math.sin(math.pi / 2) > 0.99 and 1 or 180 / math.pi
+-- The camera a display is shown through: 1 (full body) if it has one, else 0.
+function P.ViewCamera(displayID)
+	local _, _, _, _, _, _, _, _, _, full = M.GetModelFrame(displayID)
+	return full and 1 or 0
+end
 local function FrameView(view)
-	local model, id = view.model, view.loaded
 	local zoom = math.pow(P.ZOOM_FACTOR, view.zoom or 0)
-	local R, tx, ty, tz, cx, cy, cz, height, width = M.GetModelFrame(id)
-	local nudge = 1
 	if view.fresh then
 		view.flip = not view.flip
-		nudge = view.flip and 1.001 or 1
+		if view.flip then
+			zoom = zoom * 1.001
+		end
 	end
-	if not R then
-		model:SetModelScale(zoom * nudge)
-		model:SetPosition(0, 0, 0)
-		return
-	end
-	local a = view.aspect
-	local rv = R / math.sqrt(1 + a * a)
-	local scale = P.FIT * math.min(2 * rv / height, 2 * rv * a / width) * zoom
-	-- The middle turns with the model (SetFacing turns it round its origin).
-	local f = (view.facing or 0) * P.ANGLE
-	local c, s = math.cos(f), math.sin(f)
-	local mx, my = cx * c - cy * s, cx * s + cy * c
-	model:SetModelScale(scale * nudge)
-	model:SetPosition(tx - scale * mx, ty - scale * my + (view.panX or 0) * 2 * rv,
-		tz - scale * cz + (view.panY or 0) * 2 * rv)
+	view.model:SetModelScale(zoom)
 end
 
 local function StartView(view, displayID)
@@ -737,8 +725,10 @@ local function StartView(view, displayID)
 	-- Drop the old model and its skins first, so none carry over to the new one.
 	pcall(model.ClearModel, model)
 	model:SetDisplayInfo(displayID)
-	-- Camera 0 is the model's portrait camera; a Model has no light of its own.
-	pcall(model.SetCamera, model, 0)
+	-- Its full-body camera if it has one, else the portrait camera (P.ViewCamera);
+	-- a Model has no light of its own.
+	view.camera = P.ViewCamera(displayID)
+	pcall(model.SetCamera, model, view.camera)
 	pcall(model.SetLight, model, 1, 0, 0, -0.7, -0.7, 0.7, 1, 1, 1, 0.8, 1, 1, 1)
 	model:SetFacing(view.facing or 0)
 	FrameView(view)
@@ -799,7 +789,7 @@ local function TickView(view, elapsed, spin)
 		if view.fresh <= 0 then
 			view.fresh = nil
 		end
-		pcall(view.model.SetCamera, view.model, 0)
+		pcall(view.model.SetCamera, view.model, view.camera or 0)
 	end
 	FrameView(view)
 	if spin and view.displayID and not view.manual then
@@ -4259,20 +4249,16 @@ end
 
 M.RegisterListener(RefreshAll)
 
--- /dmorph frametest [displayID] (2.21.6): the user reported previews cut off
--- or empty twice after fixes made blind. This shows one display five ways,
--- at two angles, to see in game which way the client draws a framed model:
---   A: portrait camera, scale fits, middle moved in world units (FrameView)
---   B: as A, but the move given in the model's own units (divided by scale)
---   C: the portrait camera alone (scale 1, not moved)
---   D: no camera, scale 0.1 / height (as the Shenanigans addon), not moved
---   E: as A, without turning the middle with the model
--- Top row facing the camera, bottom row turned a quarter.
+-- /dmorph frametest [displayID] (2.21.6, simplified in 2.21.7): one display
+-- five ways, for an in-game check of how this client draws a framed model.
+-- The first run (19 Oct) showed that with a camera set, position and facing
+-- are ignored. Now: A the full-body camera (type 1), B the portrait camera,
+-- C / D the full-body camera zoomed out / in (scale 0.7 / 1.4), E no camera.
+-- Top row facing 0, bottom row facing a quarter turn.
 function P.FrameTest(args)
 	local display = M.ParseID(args[1] or "") or 63568
-	local R, tx, ty, tz, cx, cy, cz, height, width = M.GetModelFrame(display)
-	if not (ui.canPreview and R) then
-		DEFAULT_CHAT_FRAME:AddMessage("DMorph frame test: no 3D previews or no frame data for display " .. display .. ".")
+	if not ui.canPreview then
+		DEFAULT_CHAT_FRAME:AddMessage("DMorph frame test: 3D previews need ClassicAPI.")
 		return
 	end
 	local test = DmorphOctoFrameTest
@@ -4307,48 +4293,24 @@ function P.FrameTest(args)
 				table.insert(test.cells, { model = model, col = col, row = row })
 			end
 		end
+		local SCALES = { 1, 1, 0.7, 1.4, 1 }
+		local CAMERAS = { 1, 0, 1, 1 }
 		test:SetScript("OnUpdate", function()
-			local d = this.data
 			for i = 1, table.getn(this.cells) do
 				local c = this.cells[i]
-				local m = c.model
-				local f = c.row == 2 and 1.5708 or 0
-				local a = 140 / 142
-				local rv = d.R / math.sqrt(1 + a * a)
-				local s = 0.88 * math.min(2 * rv / d.height, 2 * rv * a / d.width)
-				local fa = f * P.ANGLE
-				local mx = d.cx * math.cos(fa) - d.cy * math.sin(fa)
-				local my = d.cx * math.sin(fa) + d.cy * math.cos(fa)
-				m:SetFacing(f)
-				if c.col == 1 then
-					m:SetModelScale(s)
-					m:SetPosition(d.tx - s * mx, d.ty - s * my, d.tz - s * d.cz)
-				elseif c.col == 2 then
-					m:SetModelScale(s)
-					m:SetPosition((d.tx - s * mx) / s, (d.ty - s * my) / s, (d.tz - s * d.cz) / s)
-				elseif c.col == 3 then
-					m:SetModelScale(1)
-					m:SetPosition(0, 0, 0)
-				elseif c.col == 4 then
-					m:SetModelScale(0.1 / d.height)
-					m:SetPosition(0, 0, 0)
-				else
-					m:SetModelScale(s)
-					m:SetPosition(d.tx - s * d.cx, d.ty - s * d.cy, d.tz - s * d.cz)
+				if CAMERAS[c.col] then
+					pcall(c.model.SetCamera, c.model, CAMERAS[c.col])
 				end
+				c.model:SetModelScale(SCALES[c.col])
+				c.model:SetFacing(c.row == 2 and 1.5708 or 0)
 			end
 		end)
 	end
-	test.data = { R = R, tx = tx, ty = ty, tz = tz, cx = cx, cy = cy, cz = cz, height = height, width = width }
-	test.title:SetText("DMorph frame test: display " .. display .. " (" .. (M.GetDisplayName(display) or "?")
-		.. "). Screenshot this and say which boxes show the whole model, centred.")
+	test.title:SetText("DMorph frame test: display " .. display .. " (" .. (M.GetDisplayName(display) or "?") .. ")")
 	for i = 1, table.getn(test.cells) do
 		local m = test.cells[i].model
 		pcall(m.ClearModel, m)
 		m:SetDisplayInfo(display)
-		if test.cells[i].col ~= 4 then
-			pcall(m.SetCamera, m, 0)
-		end
 		pcall(m.SetLight, m, 1, 0, 0, -0.7, -0.7, 0.7, 1, 1, 1, 0.8, 1, 1, 1)
 	end
 	test:Show()

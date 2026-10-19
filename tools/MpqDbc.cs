@@ -307,6 +307,9 @@ public class GameFiles {
       if (cams == null) return null;
       int pick = 0;
       for (int c = 0; c < count; c++) if (BitConverter.ToInt32(cams, c * 124) == 0) { pick = c; break; }
+      // A "character info" camera (type 1): Blizzard's own whole-model framing.
+      int full = 0;
+      for (int c = 0; c < count; c++) if (BitConverter.ToInt32(cams, c * 124) == 1) full = 1;
       int a = pick * 124;
       float fov = BitConverter.ToSingle(cams, a + 4);
       float px = BitConverter.ToSingle(cams, a + 44), py = BitConverter.ToSingle(cams, a + 48), pz = BitConverter.ToSingle(cams, a + 52);
@@ -316,8 +319,8 @@ public class GameFiles {
       if (!(fov > 0.05 && fov < 3) || !(dist > 0.01) || !(height > 0.01) || double.IsNaN(width)) return null;
       double half = dist * Math.Tan(fov / 2);
       var inv = System.Globalization.CultureInfo.InvariantCulture;
-      return string.Format(inv, "{0:0.##} {1:0.##} {2:0.##} {3:0.##} {4:0.##} {5:0.##} {6:0.##} {7:0.##} {8:0.##}",
-        half, tx, ty, tz, (box[0] + box[3]) / 2, (box[1] + box[4]) / 2, (box[2] + box[5]) / 2, height, width);
+      return string.Format(inv, "{0:0.##} {1:0.##} {2:0.##} {3:0.##} {4:0.##} {5:0.##} {6:0.##} {7:0.##} {8:0.##} {9}",
+        half, tx, ty, tz, (box[0] + box[3]) / 2, (box[1] + box[4]) / 2, (box[2] + box[5]) / 2, height, width, full);
     } catch (Exception) { return null; }
   }
   public bool Has(string name) {
