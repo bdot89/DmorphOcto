@@ -46,12 +46,29 @@ li b{color:var(--fel2);text-shadow:0 0 10px rgba(114,249,43,.55)}
 .pack .n b{color:var(--fel2);font-size:22px;text-shadow:0 0 10px rgba(114,249,43,.6)}
 .url{position:absolute;left:40px;bottom:20px;font-size:16px;color:#9d8fb8}
 .url b{color:var(--pur2)}
+/* The slogan plate on the ground under the group */
+.ground{position:absolute;left:360px;bottom:0;width:920px;height:150px;clip-path:polygon(28px 0,100% 0,100% 100%,0 100%);
+ background:linear-gradient(0deg,rgba(10,6,18,.88) 0%,rgba(10,6,18,.55) 45%,transparent 100%)}
+.forge{position:absolute;left:520px;bottom:14px;width:610px;text-align:center;padding:4px 18px 8px;border-radius:12px;border:2px solid transparent;
+ background:linear-gradient(rgba(14,8,24,.80),rgba(14,8,24,.86)) padding-box,
+            linear-gradient(90deg,var(--fel2),var(--teal) 45%,var(--pur2) 75%,var(--pur)) border-box;
+ box-shadow:-14px 0 26px -6px rgba(114,249,43,.55),14px 0 26px -6px rgba(180,76,255,.75),0 8px 24px rgba(0,0,0,.6)}
+.forge .big{font-family:"Segoe UI Black","Segoe UI",sans-serif;font-weight:900;font-size:44px;line-height:1.05;letter-spacing:1px;text-transform:uppercase;
+ background-image:linear-gradient(90deg,#d6ff7a 0%,var(--fel2) 18%,var(--teal) 48%,var(--pur3) 72%,var(--pur) 100%);
+ -webkit-background-clip:text;background-clip:text;color:transparent;
+ filter:drop-shadow(0 0 12px rgba(67,250,221,.45)) drop-shadow(0 0 18px rgba(180,76,255,.45))}
+.forge .small{font-size:18px;font-weight:600;color:#eee4ff;letter-spacing:.3px;margin-top:1px}
+.forge .small b{color:var(--fel2);font-weight:600}
+.forge .small i{font-style:normal;color:var(--pur3)}
 .badge{position:absolute;right:26px;top:22px;font-size:16px;font-weight:600;padding:6px 14px;border-radius:20px;
  background:linear-gradient(90deg,rgba(114,249,43,.25),rgba(180,76,255,.35));border:1px solid var(--fel2);color:#fff;
  box-shadow:0 0 16px rgba(114,249,43,.55),0 0 22px rgba(180,76,255,.35)}
 </style></head><body>
 <div class="pic"><img src="hero-group.jpg"></div>
+<div class="ground"></div>
 <div class="edge"></div>
+<div class="forge"><div class="big">Forge your illusion!</div>
+  <div class="small">👯 Share <b>DMorph</b> with your friends to <i>see each other's looks</i></div></div>
 <div class="badge">⬇️ Free on GitHub</div>
 <div class="left">
   <div class="kicker">MORPH ADDON · WOW 1.12 · OCTOWOW</div>
