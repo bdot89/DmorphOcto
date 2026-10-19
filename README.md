@@ -17,10 +17,10 @@ Unzip, drop the **DmorphOcto** folder into your AddOns, done. Full steps below �
 
 | | |
 |---|---|
-| 🐲 **16,000+ creature models** | Every model in the game, with turning 3D previews, search, and filters for bosses 👑, rares 💎 and mounts |
-| 🐎 **Mount skins** | Any model as the look of your mount, from Ashes of Al'ar 🔥🦅 to a giant crab. Mount and dismount with your own keys |
+| 🐲 **16,000+ creatures** | 13,000+ different models, every one in the game, with turning 3D previews, search, and filters for bosses 👑, rares 💎 and mounts |
+| 🐎 **950 mounts** | Any of 950 mount models (3,143 with the pack), or any other model, as the look of your mount, from Ashes of Al'ar 🔥🦅 to a giant crab. Mount and dismount with your own keys |
 | 🧝 **Every race and gender** | With real skin colours, faces, hair styles, hair colours and beards. You keep your own faction, languages, flight paths and reputation |
-| 🗡️ **12,000+ items & 352 sets** | Every weapon and armour piece, and whole sets in one click. Hover to try it on first |
+| 🗡️ **13,000+ items & 351 sets** | Every weapon and armour piece, and whole sets in one click. Hover to try it on first |
 | ✨ **Weapon glows** | Crusader, Fiery, Icy and every other enchant glow in the game, on any weapon |
 | 👙 **Slutmog** | Every revealing piece in one list, plus **Birthday suit** 🎂 and **Invisible** slots |
 | ⛈️ **Weather & time of day** | Rain, snow or a sandstorm 🌪️, dawn 🌅, noon ☀️, dusk 🌇 or midnight 🌙, in every zone |
@@ -39,12 +39,12 @@ One window, ten tabs, and your character front and centre: the dressing room on 
 ### 🐲 Models: become anything
 ![Models tab](docs/models.jpg)
 
-Every creature model in the game, 16,000+ of them, plus 8,000+ more from later expansions with a ported pack. Search by name, sort A-Z or by ID, filter for bosses, rares or mounts, and watch each one turn in the preview before you commit. Grow or shrink yourself from 25% to 300% with the size slider. Here: Supremus, at 125%. 😈
+16,000+ creatures to become (13,000+ different models, every one in the game), plus 8,157 more from later expansions with a ported pack. Search by name, sort A-Z or by ID, filter for bosses, rares or mounts, and watch each one turn in the preview before you commit. Grow or shrink yourself from 25% to 300% with the size slider. Here: Supremus, at 125%. 😈
 
 ### 🐎 Mounts: ride anything
 ![Mounts tab](docs/mounts.jpg)
 
-Pick any model as the skin for all your mounts, or for just one of them. It goes on the moment you mount and comes off when you get down, and you still use your own mount keys. Over 3,000 mount models with the pack, from Ashes of Al'ar to the Venomous Gladiator's Goredrake turning in the preview. 🐉
+Pick any model as the skin for all your mounts, or for just one of them. It goes on the moment you mount and comes off when you get down, and you still use your own mount keys. 950 mount models to choose from, and 3,143 with the pack (2,193 more), from Ashes of Al'ar to the Venomous Gladiator's Goredrake turning in the preview. 🐉
 
 ### 🧝 Races: any race, still you
 ![Races tab](docs/races.jpg)
@@ -59,7 +59,7 @@ Every weapon glow in the game for main hand, off hand and ranged. With the pack,
 ### 🗡️ Items: every weapon and armour piece
 ![Items tab](docs/items.jpg)
 
-12,000+ weapons and armour pieces, and tens of thousands more with the pack. Filter by slot, type, quality and source, hover to try it on, click to wear it. **Invisible** 👻 hides a slot completely. Here: the Scythe of Elune, on a dwarf.
+13,000+ weapons and armour pieces, and 48,889 more with the pack. Filter by slot, type, quality and source, hover to try it on, click to wear it. **Invisible** 👻 hides a slot completely. Here: the Scythe of Elune, on a dwarf.
 
 ### 👙 Slutmog: show some skin
 ![Slutmog tab](docs/slutmog.jpg)
@@ -69,7 +69,7 @@ Every revealing piece in one list: chests, shirts, legs and feet, measured from 
 ### 🛡️ Sets: a whole outfit in one click
 ![Sets tab](docs/sets.jpg)
 
-352 sets from 1.12, and 1,200+ with the pack. One click wears every piece, and the slots a set doesn't cover go bare, so your own gear never peeks through. Hover a set to see every piece on your character first.
+351 sets, and 1,266 with the pack. One click wears every piece, and the slots a set doesn't cover go bare, so your own gear never peeks through. Hover a set to see every piece on your character first.
 
 ### 👗 Wardrobe: save your looks
 ![Wardrobe tab](docs/wardrobe.jpg)
@@ -223,7 +223,7 @@ Item slots: 1 head, 3 shoulder, 4 shirt, 5 chest, 6 waist, 7 legs, 8 feet, 9 wri
 
 ## 🚀 Ported packs (optional)
 
-Want a LOT more models? DMorph from this page has no later-expansion models, and doesn't need them. A ported pack adds them: extra patch files with 6,399 creature looks, 949 mounts, 12,781 weapons, 36,014 armour looks, 915 armour sets and 33 weapon glows converted from a newer WoW install, plus a list for DMorph (Data\Ported.lua). They show in DMorph's lists under "Ported (later expansions)". These are Blizzard's files, so packs are never on GitHub: they're passed between friends privately.
+Want a LOT more models? DMorph from this page has no later-expansion models, and doesn't need them. A ported pack adds them: extra patch files with 8,157 creature looks (2,193 of them mounts), 12,798 weapons and shields, 36,091 armour looks, 915 armour sets and 33 weapon glows converted from a newer WoW install, plus a list for DMorph (the DMorph_Ported addon). They show in DMorph's lists under "Ported (later expansions)". These are Blizzard's files, so packs are never on GitHub: they're passed between friends privately.
 
 If someone sends you a pack:
 
