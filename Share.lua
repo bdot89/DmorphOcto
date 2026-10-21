@@ -37,6 +37,11 @@
 -- It goes last in L messages, so older DMorph reads only the first three
 -- parts and keeps showing the normal look; receivers use it only when their
 -- pack is the same (M.GetPortedPack). Fingerprints cover all four parts.
+-- Weapon glows (2.23.0) ride along like the size: a "g" token after the guid in
+-- L and H messages, a slot letter (p, q, r = 16, 17, 18) and an enchant ID in
+-- base 36 per glowing hand ("gp1CE", 0 = no glow), none without glows; older
+-- DMorph skips the token. Receivers put a glow on only if their game has it.
+--   G <glows|->           my weapon glows changed, the rest didn't
 --   M <mount>             my mount skin changed, the rest didn't
 --   H <fingerprint> <guid|->  my look is still the one with this fingerprint
 --   Q <name>[:<fingerprint>],...  what do these players look like now?
@@ -73,7 +78,7 @@ local audience = {} -- name -> when they last showed they see us
 local inGroup, inGuild = {}, {} -- names
 local replies = {} -- way -> "L" (full look) or "H" (fingerprint)
 local timers = {} -- clock times: join, ready, send, first, mount, reply, replied, query, scan, guild, next
-local sent = { d = "0", m = "0", it = "-", s = "", p = "" } -- what the others were last told
+local sent = { d = "0", m = "0", it = "-", s = "", p = "", g = "" } -- what the others were last told
 local cache -- DmorphOctoAccount.peerCache for this realm
 local guidWorks -- whether VanillaHelpers took a GUID as a unit token (nil: not tried)
 local counts = { channel = 0, hidden = 0 }
@@ -501,6 +506,43 @@ local function Call(fn, token, a, b)
 	return pcall(fn, token, a)
 end
 
+-- A player's weapon glows, through DmorphHelper (the enchant field of each
+-- weapon slot, like your own glows). Checked on every scan, not only when their
+-- look changes: the server resends the field when they change weapons, which
+-- takes the glow off. Their real enchant is kept to put back when the glow goes.
+local function KeepGlows(token, want, done)
+	if type(DmorphHelper_SetItemEnchants) ~= "function" or type(DmorphHelper_GetItemEnchants) ~= "function" then
+		return
+	end
+	local wantGlows = want.glows or {}
+	done.glows, done.glowReal = done.glows or {}, done.glowReal or {}
+	for slot = 16, 18 do
+		local glow = wantGlows[slot]
+		if glow or done.glows[slot] then
+			local ok, p, t = pcall(DmorphHelper_GetItemEnchants, token, slot)
+			if ok and type(p) == "number" then
+				if glow then
+					if p ~= glow or t ~= 0 then
+						if p ~= glow then
+							done.glowReal[slot] = { p, t or 0 } -- theirs (again, after a resend)
+						end
+						if pcall(DmorphHelper_SetItemEnchants, token, slot, glow, 0) then
+							done.glows[slot] = glow
+						end
+					else
+						done.glows[slot] = glow
+					end
+				else
+					local real = done.glowReal[slot]
+					if not real or pcall(DmorphHelper_SetItemEnchants, token, slot, real[1], real[2]) then
+						done.glows[slot], done.glowReal[slot] = nil, nil
+					end
+				end
+			end
+		end
+	end
+end
+
 -- Puts a player's look on them. `force` sets every part again, for a player
 -- the game has just built afresh (their morph is gone on our screen).
 local function ApplyTo(name, token)
@@ -517,6 +559,7 @@ local function ApplyTo(name, token)
 	local force = not done or done.away or (ok and want.display and shown ~= want.display)
 	if not force and done.version == want.version then
 		done.scan = scanID
+		KeepGlows(token, want, done)
 		return
 	end
 	done = done or { items = {} }
@@ -559,8 +602,10 @@ local function ApplyTo(name, token)
 			done.scale = scale
 		end
 	end
+	KeepGlows(token, want, done)
 	done.version, done.scan, done.away = want.version, scanID, nil
-	if want == NONE and not done.display and not done.mount and not next(done.items) and not done.scale then
+	if want == NONE and not done.display and not done.mount and not next(done.items) and not done.scale
+		and not (done.glows and next(done.glows)) then
 		applied[name] = nil
 	else
 		applied[name] = done
@@ -599,6 +644,7 @@ local function SetPeer(name, look, guid, confirmed)
 	end
 	look.guid = guid or (peer and peer.guid)
 	look.scale = peer and peer.scale -- a full look message sets it again after
+	look.glows = peer and peer.glows -- (the same for weapon glows)
 	look.version = (peer and peer.version or 0) + 1
 	look.heard = confirmed and clock or -1000
 	look.confirmed = confirmed
@@ -743,6 +789,38 @@ local function SizeOf(token)
 	end
 end
 
+-- A player's weapon glows from a "g..." token: slot -> enchant ID, only the ones
+-- this PC can show (M.IsKnownGlow), and a key to compare them by; nil for none.
+local function GlowsOf(token)
+	local _, _, list = strfind(token or "", "^g([p-r0-9A-Z]+)$")
+	if not list then
+		return nil
+	end
+	local glowsOut, keyParts = {}, {}
+	for letter, id in string.gfind(list, "([p-r])([0-9A-Z]+)") do
+		local enchant = Decode(id)
+		if enchant and enchant < 1000000 and M.IsKnownGlow and M.IsKnownGlow(enchant) then
+			local slot = string.byte(letter) - 96
+			glowsOut[slot] = enchant
+			table.insert(keyParts, slot .. ":" .. enchant)
+		end
+	end
+	if table.getn(keyParts) == 0 then
+		return nil
+	end
+	glowsOut.key = table.concat(keyParts, ",")
+	return glowsOut
+end
+
+local function SetPeerGlows(name, glowsIn)
+	local peer = peers[name]
+	if peer and (peer.glows and peer.glows.key) ~= (glowsIn and glowsIn.key) then
+		peer.glows = glowsIn
+		peer.version = peer.version + 1
+		Scan()
+	end
+end
+
 local function SetPeerSize(name, scale)
 	local peer = peers[name]
 	if peer and peer.scale ~= scale then
@@ -754,14 +832,17 @@ end
 
 local function ReadLook(sender, rest)
 	local _, _, d, m, it, guid, more = strfind(rest, "^(%S+) (%S+) (%S+) ?(%S*) ?(.*)$")
-	local size, ported
+	local size, ported, glowToken
 	for token in string.gfind(more or "", "%S+") do
 		if strfind(token, "^s%d+$") then
 			size = token
 		elseif strfind(token, "^P") then
 			ported = token
+		elseif strfind(token, "^g") then
+			glowToken = token
 		end
 	end
+	local glowsIn = GlowsOf(glowToken)
 	local look = MakeLook(d, m, it, ported)
 	if not look then
 		return
@@ -781,10 +862,12 @@ local function ReadLook(sender, rest)
 			Cache()[sender] = { look = peer.look, guid = peer.guid, seen = time() }
 		end
 		SetPeerSize(sender, scale)
+		SetPeerGlows(sender, glowsIn)
 		return
 	end
 	if SetPeer(sender, look, guid, true) then
 		look.scale = scale
+		look.glows = glowsIn
 		Scan()
 	end
 end
@@ -803,7 +886,7 @@ local function ReadMount(sender, m)
 end
 
 -- "Nothing changed": confirms what we remember, else we ask for it all.
-local function ReadPrint(sender, print, guid, size)
+local function ReadPrint(sender, print, guid, size, glowToken)
 	Unask(sender)
 	Answered(sender)
 	asked[sender] = clock
@@ -811,6 +894,7 @@ local function ReadPrint(sender, print, guid, size)
 	if peer and peer.print == print then
 		peer.heard = clock
 		SetPeerSize(sender, SizeOf(size))
+		SetPeerGlows(sender, GlowsOf(glowToken))
 		if strfind(guid or "", "^0x%x+$") then
 			peer.guid = guid
 		end
@@ -863,9 +947,23 @@ local function Receive(sender, text, way)
 	elseif kind == "M" then
 		ReadMount(sender, rest)
 	elseif kind == "H" then
-		local _, _, print, guid, size = strfind(rest, "^(%S+) ?(%S*) ?(%S*)")
+		local _, _, print, guid, more = strfind(rest, "^(%S+) ?(%S*) ?(.*)$")
 		if print then
-			ReadPrint(sender, print, guid, size)
+			local size, glowToken
+			for token in string.gfind(more or "", "%S+") do
+				if strfind(token, "^s%d+$") then
+					size = token
+				elseif strfind(token, "^g") then
+					glowToken = token
+				end
+			end
+			ReadPrint(sender, print, guid, size, glowToken)
+		end
+	elseif kind == "G" then
+		-- Only the weapon glows changed ("-": none any more).
+		local peer = peers[sender]
+		if peer and peer.confirmed then
+			SetPeerGlows(sender, GlowsOf(rest))
 		end
 	elseif kind == "S" then
 		-- Only the size changed.
@@ -890,8 +988,28 @@ local function OwnSize()
 	return "s" .. pct
 end
 
+-- Your weapon glows as a message token: "gp1CE...", or "" with none picked.
+local function OwnGlows()
+	if not (Sharing() and M.GetSharedGlows) then
+		return ""
+	end
+	local picked, parts = M.GetSharedGlows(), {}
+	for slot = 16, 18 do
+		if picked[slot] then
+			table.insert(parts, string.char(96 + slot) .. Encode(picked[slot]))
+		end
+	end
+	if table.getn(parts) == 0 then
+		return ""
+	end
+	return "g" .. table.concat(parts)
+end
+
 local function OnChange()
 	local d, m, it = OwnParts()
+	if OwnGlows() ~= sent.g then
+		timers.glow = timers.glow or clock + SETTLE
+	end
 	-- Mounting and dismounting go out at once; other changes wait until
 	-- they stand still a moment.
 	if m ~= sent.m then
@@ -914,10 +1032,16 @@ local function OnChange()
 	end
 end
 
+-- The size and glow tokens after the guid (size first: DMorph before 2.23 reads
+-- the token after an H message's guid as the size, and skips one it can't read).
 local function WithSize(text)
 	local size = OwnSize()
 	if size ~= "" then
-		return text .. " " .. size
+		text = text .. " " .. size
+	end
+	local glow = OwnGlows()
+	if glow ~= "" then
+		text = text .. " " .. glow
 	end
 	return text
 end
@@ -936,7 +1060,8 @@ local function SendLook(ways)
 	sent.d, sent.m, sent.it = OwnParts()
 	sent.s = OwnSize()
 	sent.p = OwnPorted()
-	timers.send, timers.first, timers.mount, timers.size = nil, nil, nil, nil
+	sent.g = OwnGlows()
+	timers.send, timers.first, timers.mount, timers.size, timers.glow = nil, nil, nil, nil, nil
 	local text = LookText()
 	for way in pairs(ways) do
 		Send(text, way)
@@ -970,6 +1095,15 @@ local function SendNext()
 			sent.s = size
 			for way in pairs(ChangeWays()) do
 				Send("S " .. (size == "" and "100" or strsub(size, 2)), way)
+			end
+		end
+	elseif timers.glow and clock >= timers.glow then
+		timers.glow = nil
+		local glow = OwnGlows()
+		if glow ~= sent.g then
+			sent.g = glow
+			for way in pairs(ChangeWays()) do
+				Send("G " .. (glow == "" and "-" or glow), way)
 			end
 		end
 	elseif timers.reply and clock >= timers.reply then

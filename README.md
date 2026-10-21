@@ -4,7 +4,7 @@
 
 ### Become anything. Ride anything. Wear anything. ✨
 
-**DMorph** is a free morph addon for WoW 1.12 (OctoWoW), **version 2.22.0**. Turn into a dragon 🐉, ride a mechanical chicken 🐔, swap your race 🧝, light your blade on fire 🔥, make it snow in Orgrimmar ❄️, and dress up in any armour set in the game 🛡️, all from one slick purple window.
+**DMorph** is a free morph addon for WoW 1.12 (OctoWoW), **version 2.23.0**. Turn into a dragon 🐉, ride a mechanical chicken 🐔, swap your race 🧝, light your blade on fire 🔥, make it snow in Orgrimmar ❄️, and dress up in any armour set in the game 🛡️, all from one slick purple window.
 
 > 🔒 **100% client-side and safe:** morphs only change what *you* and other DMorph users see. Everyone else, and the server, sees your real character.
 
@@ -224,7 +224,7 @@ Item slots: 1 head, 3 shoulder, 4 shirt, 5 chest, 6 waist, 7 legs, 8 feet, 9 wri
 - During a race morph your faction, languages, skills, flight paths, spells and reputation stay those of your own character (with DmorphHelper v16): NPCs of your faction stay friendly and every flight path you know shows, even as a race of the other faction. Your model, skin and hair stay the other race's.
 - With a race portrait you keep your own face and hair. If the other race doesn't have one of your values (say a Tauren hair style on a Gnome), the closest one that race has is used instead, so nothing shows up green.
 - Mount skins go on when you mount and come off when you dismount. Flight master birds keep their own look.
-- Glows and picked faces are only on your own screen for now.
+- Picked faces are only on your own screen for now. Weapon glows show to other DMorph users with 2.23 or newer (glows from the Ported Pack only to friends who have it).
 - Shapeshifting shows your morph instead of the form. Reset your model first if you want the form.
 - Models, glows and races from The Burning Crusade onwards aren't in the 1.12 game files. A ported pack (below) adds many models, items and glows; later races can't be added.
 - A ported item borrows a normal item while it's on you. The first time you wear one after logging in, the game may still be loading that item: click it again a second later.

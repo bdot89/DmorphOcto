@@ -2734,7 +2734,7 @@ local function BuildGlowsPage(page)
 	Button(page, "My own glow", 110, 102, -346, function()
 		Morph(M.SetGlow, glowSlot, nil)
 	end, "DmorphOctoGlowOwn")
-	Label(page, "Only you see it, like every morph.", "GameFontDisableSmall", 222, -351)
+	Label(page, "DMorph users (2.23+) see it too.", "GameFontDisableSmall", 222, -351)
 end
 
 -- Items tab -------------------------------------------------------------------------
@@ -3416,6 +3416,67 @@ StaticPopupDialogs["DMORPHOCTO_DELETE_OUTFIT"] = {
 	whileDead = 1,
 	hideOnEscape = 1,
 }
+
+-- Setup reminder (user, 21 Oct: "if someone has an outdated version or hasn't
+-- run the DmorphHelper installer, a pop-up when logging in or reloading"): once
+-- per login or /reload, a few seconds in, when VanillaHelpers isn't running or
+-- DmorphHelper is missing or older than this DMorph's. "Don't remind me" holds
+-- until DMorph comes with a newer DmorphHelper.
+local SETUP_NAG_DELAY = 5
+function P.SetupProblem()
+	if not M.HasMorphAPI() then
+		return "DMorph can't morph anything: VanillaHelpers isn't running.\n\n" .. M.MissingAPI()
+	end
+	local running, wanted = M.GetHelperVersion()
+	if not running then
+		return "DmorphHelper isn't running, so weapon glows, size, your real skin, face and hair, weather and "
+			.. "keeping your own faction during race morphs don't work.\n\nClose the game, double-click "
+			.. "\"Install DmorphHelper.bat\" in Interface\\AddOns\\DmorphOcto, then start the game from OctoLauncher."
+	end
+	if running < wanted then
+		return "Your DmorphHelper is out of date: v" .. running .. " is running, this DMorph needs v" .. wanted
+			.. ".\n\nClose the game, double-click \"Install DmorphHelper.bat\" in Interface\\AddOns\\DmorphOcto, "
+			.. "then start the game from OctoLauncher."
+	end
+end
+
+StaticPopupDialogs["DMORPHOCTO_SETUP"] = {
+	text = "DMorph: %s",
+	button1 = "OK",
+	button2 = "Don't remind me",
+	-- (No hideOnEscape: Escape would count as "Don't remind me".)
+	OnCancel = function()
+		local _, wanted = M.GetHelperVersion()
+		DmorphOctoAccount.setupNagOff = wanted
+	end,
+	timeout = 0,
+	whileDead = 1,
+}
+
+local setupNag = CreateFrame("Frame")
+setupNag:RegisterEvent("PLAYER_ENTERING_WORLD")
+setupNag:SetScript("OnEvent", function()
+	this:UnregisterEvent("PLAYER_ENTERING_WORLD") -- once per login or /reload
+	this.wait = SETUP_NAG_DELAY
+end)
+setupNag:SetScript("OnUpdate", function()
+	if not this.wait then
+		return
+	end
+	this.wait = this.wait - arg1
+	if this.wait > 0 then
+		return
+	end
+	this.wait = nil
+	local _, wanted = M.GetHelperVersion()
+	if DmorphOctoAccount and DmorphOctoAccount.setupNagOff == wanted and M.HasMorphAPI() then
+		return
+	end
+	local problem = P.SetupProblem()
+	if problem then
+		StaticPopup_Show("DMORPHOCTO_SETUP", problem)
+	end
+end)
 
 -- Weather tab ---------------------------------------------------------------------
 

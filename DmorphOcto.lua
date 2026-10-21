@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.22.0"
+local VERSION = "2.23.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -2087,6 +2087,36 @@ function M.GetSharedLook()
 		end
 	end
 	return display, items, mount
+end
+
+-- Your picked weapon glows for other DMorph users (2.23.0, user: "weapon glows
+-- are not sharing"): slot (16-18) -> enchant ID, 0 for "No glow". A glow only
+-- hovered in the Glows tab isn't sent.
+function M.GetSharedGlows()
+	InitDB()
+	local glowsOut = {}
+	for slot in pairs(GLOW_SLOT) do
+		if db.glows[slot] then
+			glowsOut[slot] = db.glows[slot]
+		end
+	end
+	return glowsOut
+end
+
+-- Whether this PC can show a glow someone sent: 0 (no glow) or an enchant in
+-- the glow list (a ported one only with the ported pack's glows).
+function M.IsKnownGlow(enchantID)
+	if enchantID == 0 then
+		return true
+	end
+	local all = M.GetGlows()
+	if not all.byEnchant then
+		all.byEnchant = {}
+		for i = 1, all.count do
+			all.byEnchant[all.enchant[i]] = true
+		end
+	end
+	return all.byEnchant[enchantID] or false
 end
 
 -- The ported parts of your look (display, items, mount), which only DMorph

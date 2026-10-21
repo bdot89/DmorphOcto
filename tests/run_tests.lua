@@ -1709,6 +1709,66 @@ check(channelSays(" s200"), "and with your look when someone asks")
 DmorphOctoDB.scale = nil
 say(".item head 0")
 wait(3)
+-- 2.23.0: weapon glows are shared too (user: "weapon glows are not sharing").
+;(function()
+	local others = {} -- guid -> slot -> { permanent, temporary }
+	local ownGet, ownSet = DmorphHelper_GetItemEnchants, DmorphHelper_SetItemEnchants
+	function DmorphHelper_GetItemEnchants(unit, slot)
+		local u = Mock.Unit(unit)
+		if not u then
+			error("Unit not found.")
+		end
+		local e = (others[u.guid] or {})[slot] or { 7, 0 } -- their real enchant: 7
+		return e[1], e[2], 0
+	end
+	function DmorphHelper_SetItemEnchants(unit, slot, permanent, temporary)
+		local u = Mock.Unit(unit)
+		if not u then
+			error("Unit not found.")
+		end
+		others[u.guid] = others[u.guid] or {}
+		others[u.guid][slot] = { permanent, temporary }
+	end
+	local function b36(n)
+		local digits, text = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", ""
+		while n > 0 do
+			text = string.sub(digits, math.mod(n, 36) + 1, math.mod(n, 36) + 1) .. text
+			n = math.floor(n / 36)
+		end
+		return text == "" and "0" or text
+	end
+	local glow = DmorphOcto.GetGlows().enchant[1]
+	local function shown(slot)
+		local e = (others[ally] or {})[slot]
+		return e and e[1]
+	end
+	hear("Ally", "L 3HR 0 - " .. ally .. " gp" .. b36(glow))
+	check(shown(16) == glow and morphOf(ally).display == 4527, "a DMorph user's weapon glow shows on them")
+	others[ally][16] = { 7, 0 } -- the server resends their weapon (a weapon swap)
+	wait(0.5)
+	check(shown(16) == glow, "and goes back on when the game puts their own enchant back")
+	hear("Ally", "G -")
+	wait(0.5)
+	check(shown(16) == 7, "a G message without glows puts their own enchant back")
+	hear("Ally", "G gp" .. b36(999999))
+	wait(0.5)
+	check(shown(16) == 7, "a glow this game doesn't have (another ported pack) isn't put on")
+	hear("Ally", "L 3HR 0 - " .. ally .. " s150 gq" .. b36(glow))
+	check(shown(17) == glow, "a glow token after the size token is read too")
+	quiet()
+	DmorphOctoDB.glows[16] = glow
+	say(".item head 0") -- any change tells the sharing code
+	wait(3)
+	check(channelSays("DMO2 G gp" .. b36(glow)), "your weapon glow goes out to DMorph users around you")
+	quiet()
+	hear("Someone", "Q Tester")
+	wait(4)
+	check(channelSays(" gp" .. b36(glow)), "and with your look when someone asks")
+	DmorphOctoDB.glows[16] = nil
+	say(".item head 0")
+	wait(3)
+	DmorphHelper_GetItemEnchants, DmorphHelper_SetItemEnchants = ownGet, ownSet
+end)()
 hear("Ally", "L 3HR 3HR - " .. ally) -- Ally's look as the tests below remember it
 DmorphHelper_SetScale, DmorphHelper_GetScale = nil, nil
 Mock.units.target = nil
@@ -2987,6 +3047,39 @@ removeHelper()
 Mock.portedData = nil
 loadUI()
 check(not DmorphOcto.GetCreatureCatalog().byID[60001], "without Data/Ported.lua there are no ported models")
+
+-- 2.23.0 (user): a pop-up at login or /reload when DmorphHelper is missing or out of date.
+;(function()
+	local function setupPopup()
+		for _, p in ipairs(Mock.popups) do
+			if p.which == "DMORPHOCTO_SETUP" then
+				return p.arg
+			end
+		end
+	end
+	Mock.Tick(6)
+	check(contains(setupPopup() or "", "DmorphHelper isn't running"), "logging in without DmorphHelper shows a pop-up")
+	installHelper({ 1, 2, 3, 4, 5 })
+	local newest = DmorphHelper_Version
+	function DmorphHelper_Version()
+		return 15
+	end
+	loadUI()
+	Mock.Tick(2)
+	check(setupPopup() == nil, "not straight away: a few seconds after the loading screen")
+	Mock.Tick(4)
+	check(contains(setupPopup() or "", "v15 is running"), "an older DmorphHelper shows a pop-up with both versions")
+	StaticPopupDialogs.DMORPHOCTO_SETUP.OnCancel()
+	loadUI()
+	Mock.Tick(6)
+	check(setupPopup() == nil, "Don't remind me keeps it away after a /reload")
+	DmorphOctoAccount.setupNagOff = nil
+	DmorphHelper_Version = newest
+	loadUI()
+	Mock.Tick(6)
+	check(setupPopup() == nil, "with the right DmorphHelper there's no pop-up")
+	removeHelper()
+end)()
 
 -- 2.18.0 Slutmog (user, 18 Oct): an Items source listing Data/Slutmog.lua's revealing
 -- pieces (measured from the body textures) and OctoWoW's invisible Unseen Fashion items.
