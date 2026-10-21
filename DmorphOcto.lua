@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.21.9"
+local VERSION = "2.22.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -4043,24 +4043,26 @@ end
 -- reports (bags, loot, food, every arrow, bullet or throw): rebuilding the
 -- model while you move left you running on the spot or frozen, and on every
 -- shot made a hunter blink and broke the shooting animation (users, 15-17 Oct).
+--
+-- 2.22.0 (user, 21 Oct: items still changed when losing durability, after a
+-- spirit res or being revived, and after repairing): 1.12 doesn't fire
+-- UNIT_INVENTORY_CHANGED for a durability change, so those redraws went
+-- unseen. The morphed slots' durability is now also read once a second
+-- (GEAR_POLL), and dying, releasing, being resurrected and closing a vendor
+-- (repairs) check at once; coming back to life rebuilds twice (now and
+-- RES_AGAIN seconds later), as the game builds your living model again after
+-- the events.
+local GEAR_POLL, RES_AGAIN = 1, 1.5
 local itemFrame = CreateFrame("Frame")
-itemFrame:RegisterEvent("UNIT_INVENTORY_CHANGED")
-itemFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-itemFrame:SetScript("OnEvent", function()
-	if event == "PLAYER_ENTERING_WORLD" then
+-- What you have on (GearState) against the last look: a change gets the
+-- morphs checked and, a fifth of a second later, the model rebuilt.
+local function GearCheck(force)
+	if not next(db.items) then
 		itemCheck.gear, itemCheck.counts = GearState()
-		-- The game can build your model before it has the items your morphs
-		-- show (a ported piece needs its template from the server), which
-		-- leaves you invisible, white in previews: then rebuilt once they're
-		-- all in (or after LOGIN_WAIT seconds), see below.
-		itemCheck.loginWait = not MorphedItemsLoaded() and 0 or nil
-		return
-	end
-	if arg1 ~= "player" then
 		return
 	end
 	local gear, counts = GearState()
-	local changed = gear ~= itemCheck.gear
+	local changed = force or gear ~= itemCheck.gear
 	itemCheck.gear, itemCheck.counts = gear, counts
 	if itemCheck.clock < (itemCheck.ignoreUntil or -1) then
 		-- Right after our own rebuild (which changes none of this): a real
@@ -4072,10 +4074,55 @@ itemFrame:SetScript("OnEvent", function()
 	end
 	CheckItems()
 	if changed then
-		this.wait = 0.2
+		itemFrame.wait = 0.2
 	end
+end
+M.GearCheck = GearCheck
+itemFrame:RegisterEvent("UNIT_INVENTORY_CHANGED")
+itemFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+itemFrame:RegisterEvent("PLAYER_DEAD")
+itemFrame:RegisterEvent("PLAYER_ALIVE")
+itemFrame:RegisterEvent("PLAYER_UNGHOST")
+itemFrame:RegisterEvent("MERCHANT_CLOSED")
+itemFrame:RegisterEvent("UPDATE_INVENTORY_ALERTS")
+itemFrame:SetScript("OnEvent", function()
+	if event == "PLAYER_ENTERING_WORLD" then
+		itemCheck.gear, itemCheck.counts = GearState()
+		-- The game can build your model before it has the items your morphs
+		-- show (a ported piece needs its template from the server), which
+		-- leaves you invisible, white in previews: then rebuilt once they're
+		-- all in (or after LOGIN_WAIT seconds), see below.
+		itemCheck.loginWait = not MorphedItemsLoaded() and 0 or nil
+		return
+	end
+	if event == "PLAYER_ALIVE" or event == "PLAYER_UNGHOST" then
+		-- Back to life (a spirit healer, a res, back at your body): rebuilt
+		-- now and once more when the game has built your living model.
+		GearCheck(true)
+		this.again = RES_AGAIN
+		return
+	end
+	if event == "UNIT_INVENTORY_CHANGED" and arg1 ~= "player" then
+		return
+	end
+	GearCheck()
 end)
 itemFrame:SetScript("OnUpdate", function()
+	-- Durability changes have no event: read them once a second.
+	this.poll = (this.poll or 0) + arg1
+	if this.poll >= GEAR_POLL then
+		this.poll = 0
+		if sessionReady and itemCheck.on and next(db.items) then
+			GearCheck()
+		end
+	end
+	if this.again then
+		this.again = this.again - arg1
+		if this.again <= 0 then
+			this.again = nil
+			GearCheck(true)
+		end
+	end
 	if itemCheck.loginWait then
 		itemCheck.loginWait = itemCheck.loginWait + arg1
 		if itemCheck.loginWait >= 1.5 and sessionReady and (MorphedItemsLoaded() or itemCheck.loginWait >= LOGIN_WAIT) then
