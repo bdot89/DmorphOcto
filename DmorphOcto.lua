@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.23.0"
+local VERSION = "2.24.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1424,6 +1424,17 @@ function InitDB()
 		end
 		db[key] = v
 	end
+	-- Hold as (main and off hand): "one", "two" or nothing.
+	local weaponStyle = {}
+	if type(db.weaponStyle) == "table" then
+		for _, slot in ipairs({ 16, 17 }) do
+			local s = db.weaponStyle[slot]
+			if s == "one" or s == "two" then
+				weaponStyle[slot] = s
+			end
+		end
+	end
+	db.weaponStyle = weaponStyle
 	for _, key in ipairs({ "glowReal", "glowWritten" }) do
 		local kept = {}
 		if type(db[key]) == "table" then
@@ -1835,6 +1846,64 @@ local function PortedTemplate(p)
 	return nil
 end
 
+-- Hold as (2.24.0, Khijazi: "a toggle for the one-handed or two-handed
+-- animation"; "sheathe on your side or your back"): the game takes the stance
+-- and where a weapon is sheathed from its item record, so a weapon "held as"
+-- the other kind is worn as a virtual item (DmorphHelper) that copies a known
+-- item of the matching kind with this weapon's look. One-hand: side, two-hand:
+-- back. Per slot, db.weaponStyle[16/17] = "one" / "two" (nil: as it is).
+local styleData = { worn = {}, ids = {}, count = 0 } -- worn: slot -> the item it wears (the copy when styled)
+styleData.kind = {
+	one = { [208] = 207, [201] = 200, [205] = 204, [206] = 207, [210] = 204, [217] = 207 },
+	two = { [207] = 208, [200] = 201, [204] = 205, [215] = 208, [213] = 201, [214] = 205 },
+}
+styleData.first = 880001 -- virtual item numbers, below the ported ones (900001+)
+local function WeaponDisplay(itemID)
+	local ported = PortedItems()[itemID]
+	if ported then
+		return ported.display
+	end
+	if not styleData.displays then
+		styleData.displays = {}
+		for id, display in string.gfind(DmorphOcto_WeaponDisplays or "", "(%d+):(%d+)") do
+			styleData.displays[tonumber(id)] = tonumber(display)
+		end
+		DmorphOcto_WeaponDisplays = nil
+	end
+	return styleData.displays[itemID]
+end
+
+-- The item a weapon slot actually wears: the morph, or its "held as" copy.
+-- nil and a reason when the style can't be done for it.
+local function StyledID(slot, itemID)
+	local style = db.weaponStyle and db.weaponStyle[slot]
+	if not (style and itemID and itemID > 0) then
+		return itemID
+	end
+	local target = styleData.kind[style][M.GetItemType(itemID) or 0]
+	if not target then
+		return itemID -- already that kind, or one with no other (bows, shields...)
+	end
+	local display = WeaponDisplay(itemID)
+	if not (display and HasVirtualItems()) then
+		return itemID, "isn't in DMorph's weapon list"
+	end
+	local template = PortedTemplate({ kind = target })
+	if not template then
+		return itemID, "waits for the game to load an item to copy"
+	end
+	local key = itemID .. ":" .. style
+	local vid = styleData.ids[key]
+	if not vid then
+		vid = styleData.first + styleData.count
+		styleData.count = styleData.count + 1
+		styleData.ids[key] = vid
+	end
+	pcall(DmorphHelper_SetVirtualItem, vid, template, display)
+	return vid
+end
+M.StyledID = StyledID
+
 -- Whether a ported item can go on another player here: DmorphHelper knows
 -- the virtual items and the game knows a template to copy.
 function M.CanShowPortedItem(itemID)
@@ -1896,7 +1965,17 @@ local function ApplyItem(slot)
 			pcall(DmorphHelper_SetVirtualItem, id, template, p.display)
 		end
 	end
-	return Morph(SetUnitVisibleItemID, "player", slot, id)
+	-- A weapon held as the other kind wears its copy (StyledID).
+	local worn, why = id, nil
+	if slot == 16 or slot == 17 then
+		worn, why = StyledID(slot, id)
+	end
+	styleData.worn[slot] = worn
+	local ok, err = Morph(SetUnitVisibleItemID, "player", slot, worn)
+	if ok and why then
+		return true, (SLOT_NAMES[slot] or "Weapon") .. ": this weapon " .. why .. ", so it's held as it is."
+	end
+	return ok, err
 end
 
 -- Mount morphs need VanillaHelpers' SetUnitMountDisplayID (v1.1.0 has it).
@@ -2437,6 +2516,16 @@ local function HasScale()
 end
 M.HasScale = HasScale
 
+-- How much bigger the server makes a race's players (cmangos' default Tauren
+-- scales; every other race 1), by its player display ID.
+local function RaceScale(display)
+	local race = DisplayRace(display or 0)
+	if race == 6 then
+		return display == RACES[6].female and 1.25 or 1.35
+	end
+	return 1
+end
+
 -- Puts the picked size on (the server sends the real one again now and
 -- then), and the real one back once nothing is picked.
 local function WatchScale()
@@ -2451,11 +2540,24 @@ local function WatchScale()
 	if not (written and math.abs(current - written) < 0.001) then
 		db.scaleReal = current
 	end
-	local want = db.scale or (written and db.scaleReal)
+	-- 2.24.0 (Khijazi): the server makes Tauren 1.35 (male) / 1.25 (female)
+	-- times bigger, and that stayed on in a race morph ("as a Tauren, other
+	-- races are unnecessarily big"). With no size picked, a race morph gets
+	-- the size the other race has: your real size times their ratio.
+	local auto
+	local morph = MorphRace()
+	if not db.scale and morph and db.scaleReal then
+		local own = RACES[nativeRace][nativeGender == 1 and "female" or "male"]
+		local ratio = RaceScale(BodyDisplayID()) / RaceScale(own)
+		if math.abs(ratio - 1) >= 0.001 then
+			auto = math.floor(db.scaleReal * ratio * 100 + 0.5) / 100
+		end
+	end
+	local want = db.scale or auto or (written and db.scaleReal)
 	if want and math.abs(current - want) >= 0.001 and pcall(DmorphHelper_SetScale, "player", want) then
 		db.scaleWritten = want
 	end
-	if not db.scale then
+	if not db.scale and not auto then
 		db.scaleWritten = nil
 	end
 end
@@ -2483,7 +2585,7 @@ local function CheckItems()
 	local now = itemCheck.clock
 	for slot, item in pairs(db.items) do
 		local ok, _, _, shown = pcall(DmorphHelper_GetItemEnchants, "player", slot)
-		if ok and type(shown) == "number" and shown ~= item and (itemCheck.pausedUntil[slot] or -1) <= now then
+		if ok and type(shown) == "number" and shown ~= (styleData.worn[slot] or item) and (itemCheck.pausedUntil[slot] or -1) <= now then
 			local recent, kept = itemCheck.recent[slot] or {}, {}
 			for i = 1, table.getn(recent) do
 				if now - recent[i] < 10 then
@@ -3141,6 +3243,40 @@ function M.HideItem(slot)
 	db.items[slot] = 0
 	local ok, err = ApplyItem(slot)
 	return Result(ok, err, SLOT_NAMES[slot] .. ": invisible.")
+end
+
+-- How a morphed weapon is held (main hand 16, off hand 17): "one" (one-hand
+-- stance, sheathed at your side), "two" (two-hand stance, on your back) or
+-- nil (as the weapon is).
+M.WEAPON_STYLES = { { key = nil, text = "Hold: as it is" }, { key = "one", text = "Hold: one-hand" }, { key = "two", text = "Hold: two-hand" } }
+function M.GetWeaponStyle(slot)
+	InitDB()
+	return db.weaponStyle[slot]
+end
+function M.SetWeaponStyle(slot, style)
+	if not Begin() then
+		return false, MissingAPI()
+	end
+	if slot ~= 16 and slot ~= 17 then
+		return false, "Only the main hand and off hand can be held another way."
+	end
+	if style ~= nil and style ~= "one" and style ~= "two" then
+		return false, "Hold as: one, two or nothing (as the weapon is)."
+	end
+	if style and not HasVirtualItems() then
+		return false, "Holding a weapon another way needs DmorphHelper. " .. INSTALL_HELPER
+	end
+	db.weaponStyle[slot] = style
+	local text = style == "one" and "one-hand (sheathed at your side)" or style == "two" and "two-hand (on your back)"
+		or "as the weapon is"
+	if not db.items[slot] or db.items[slot] == 0 then
+		return true, SLOT_NAMES[slot] .. ": held " .. text .. " once you morph a weapon there."
+	end
+	local ok, err = ApplyItem(slot)
+	if ok and err then
+		return Result(true, nil, err) -- held as it is, and why
+	end
+	return Result(ok, err, SLOT_NAMES[slot] .. ": held " .. text .. ".")
 end
 
 -- Birthday suit (user, 18 Oct): every armour slot shows nothing, to build a look

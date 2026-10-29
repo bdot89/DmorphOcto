@@ -2383,6 +2383,46 @@ check(game.scale == 1.5 and DmorphOctoSizeLabel.text == "Size in game 150%", "dr
 Mock.RunScript(DmorphOctoSize, "OnMouseUp", "RightButton")
 Mock.Tick(0.4)
 check(game.scale == 1 and DmorphOcto.GetScale() == nil, "right-click puts your own size back")
+-- 2.24.0 (Khijazi): 1% steps and the mouse wheel; Tauren size follows race morphs.
+Mock.RunScript(DmorphOctoSize, "OnMouseWheel", 1)
+Mock.Tick(0.4)
+check(game.scale == 1.01 and DmorphOctoSizeLabel.text == "Size in game 101%", "the mouse wheel moves the size 1% at a time")
+Mock.RunScript(DmorphOctoSize, "OnMouseUp", "RightButton")
+Mock.Tick(0.4)
+;(function()
+	DmorphOcto.SetRace(6, 0) -- a Human as a Tauren
+	Mock.Tick(1.1)
+	local asTauren = game.scale
+	DmorphOcto.ResetModel()
+	Mock.Tick(1.1)
+	check(math.abs(asTauren - 1.35) < 0.001 and game.scale == 1,
+		"a race morph gets that race's size (Tauren are 1.35 times bigger), and your own size comes back after")
+	DmorphOcto.SetScale(1.2)
+	DmorphOcto.SetRace(6, 0)
+	Mock.Tick(1.1)
+	check(game.scale == 1.2, "a size you picked stays as it is")
+	DmorphOcto.ResetModel()
+	DmorphOcto.SetScale(nil)
+	Mock.Tick(1.1)
+end)()
+-- Hold as (Khijazi): a two-handed sword worn as a one-hander copies a known one-handed sword.
+;(function()
+	Mock.serverItems[25] = { "Worn Shortsword", 1, "INVTYPE_WEAPONMAINHAND" }
+	DmorphOcto.SetItem(16, 647)
+	local ok = DmorphOcto.SetWeaponStyle(16, "one")
+	local worn = vh.items[16]
+	check(ok and worn and worn >= 880001 and worn < 900000 and game.virtual[worn]
+		and game.virtual[worn][1] == 25 and game.virtual[worn][2] == 20190,
+		"Hold: one-hand wears a copy of a one-handed sword with the two-hander's look")
+	local repairs = DmorphOcto.itemCheck.count[16] or 0
+	Mock.Tick(2.2)
+	check(vh.items[16] == worn and (DmorphOcto.itemCheck.count[16] or 0) == repairs,
+		"the item check doesn't 'repair' the copy back to the morph")
+	DmorphOcto.SetWeaponStyle(16, nil)
+	check(vh.items[16] == 647, "Hold: as it is wears the morph itself again")
+	DmorphOcto.SetItem(16, 0)
+	Mock.serverItems[25] = nil
+end)()
 DmorphOctoSize:SetValue(2)
 Mock.Tick(0.4)
 Mock.Click(DmorphOctoSizeReset)

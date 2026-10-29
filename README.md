@@ -4,7 +4,7 @@
 
 ### Become anything. Ride anything. Wear anything. ✨
 
-**DMorph** is a free morph addon for WoW 1.12 (OctoWoW), **version 2.23.0**. Turn into a dragon 🐉, ride a mechanical chicken 🐔, swap your race 🧝, light your blade on fire 🔥, make it snow in Orgrimmar ❄️, and dress up in any armour set in the game 🛡️, all from one slick purple window.
+**DMorph** is a free morph addon for WoW 1.12 (OctoWoW), **version 2.24.0**. Turn into a dragon 🐉, ride a mechanical chicken 🐔, swap your race 🧝, light your blade on fire 🔥, make it snow in Orgrimmar ❄️, and dress up in any armour set in the game 🛡️, all from one slick purple window.
 
 > 🔒 **100% client-side and safe:** morphs only change what *you* and other DMorph users see. Everyone else, and the server, sees your real character.
 
@@ -182,7 +182,7 @@ A ported pack (see below) keeps its list in its own folder, Interface\AddOns\DMo
 Open the window with the minimap button, /dmorph, or a key under Key Bindings > DMorph. Escape closes it.
 
 - **Every list tab** has a preview box on the right: it shows what you hover (else what you have on). Mouse wheel or **- / +** zooms, drag turns it, right-drag moves it, **Reset** puts it back. **Previous / Next** under it put on the one above or below in the list.
-- **Dressing room (left):** your character. Drag to turn, mouse wheel to zoom, right-drag to move. The Size slider under it changes your size (right-click: normal size).
+- **Dressing room (left):** your character. Drag to turn, mouse wheel to zoom, right-drag to move. The Size slider under it changes your size in 1% steps (mouse wheel over it for one step; right-click: normal size). A race morph gets that race's size by itself (a Tauren as a Human is human-sized) unless you picked one.
 - **Item slots around the model:** left-click for items for that slot, right-click for your own gear. A purple frame marks a morphed slot; a hidden slot shows the empty-slot picture.
 - **Reset model / Reset everything:** your own body back / clear every morph.
 - **Models tab:** every model. Click one to become it. Right-click to add it to Favourites. **Grid view** shows 8 turning models at a time instead of the list.
@@ -190,7 +190,7 @@ Open the window with the minimap button, /dmorph, or a key under Key Bindings > 
 - **Favourites tab:** your starred models and mount skins.
 - **Races tab:** click a portrait to become that race with your own face. The arrow rows change skin colour, face, hair and facial hair. The dice picks a random look.
 - **Glows tab:** pick main hand, off hand or ranged, then click a glow. Glows from a ported pack say "TBC-MoP"; type "ported" in the search box to list only those.
-- **Items and Sets tabs:** filter by type, quality and source (ported items and sets have their own "Ported" filter). Hover an item or set to see your character wearing it, then click to wear it. **Invisible** (Items tab) shows nothing in that slot. **Own gear: hidden / shown** (Sets tab) picks whether the slots a set has no piece for show nothing (the default) or your own gear.
+- **Items and Sets tabs:** filter by type, quality and source (ported items and sets have their own "Ported" filter). Hover an item or set to see your character wearing it, then click to wear it. **Invisible** (Items tab) shows nothing in that slot. **Hold** (Items tab, main and off hand) wears a weapon as a one-hander (one-hand stance, sheathed at your side) or a two-hander (two-hand stance, on your back), whatever it really is. The preview keeps your zoom from item to item. **Own gear: hidden / shown** (Sets tab) picks whether the slots a set has no piece for show nothing (the default) or your own gear.
 - **Slutmog tab:** revealing pieces of every slot; the buttons narrow it to chest, shirt, legs, feet or OctoWoW's Unseen Fashion items. **Birthday suit** (also at the top of the dressing room) shows no armour at all.
 - **Wardrobe tab:** save and load whole outfits.
 - **Weather tab:** pick clear skies or light, normal or heavy rain, snow or sandstorm; the Strength slider fine-tunes it. Time of day: Dawn, Noon, Dusk, Midnight or the Time slider. Server's weather and Real time give the real ones back. Only you see them; weather shows outdoors only.

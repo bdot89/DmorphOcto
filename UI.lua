@@ -1345,6 +1345,7 @@ function P.TryOnAll(box)
 			end
 			if GetItemInfo(id) then
 				pcall(box.model.TryOn, box.model, id)
+				P.ApplyBoxView(box) -- trying on resets the model's place: keep your zoom (Khijazi)
 				box.on[id] = true
 			else
 				missing = missing + 1
@@ -1450,6 +1451,9 @@ function P.BoxShowItems(box, items, title, color, info)
 	end
 	box.dressed = true
 	box.model:Dress()
+	-- Dressing again put the model back where it started; your zoom, turn and
+	-- move stay from item to item and set to set (Khijazi, 29 Oct).
+	P.ApplyBoxView(box)
 	box.items, box.on, box.waited, box.retry = items, {}, 0, 0.25
 	P.TryOnAll(box)
 end
@@ -2797,6 +2801,17 @@ local function FilterItems(keep)
 	ui.itemQualityButton:SetText(QualityText(prefs.itemQuality))
 	ui.itemSourceButton:SetText(M.ITEM_FILTERS[prefs.itemFilter].text)
 	ui.itemSlotLabel:SetText(M.SLOT_NAMES[itemSlot])
+	if itemSlot == 16 or itemSlot == 17 then
+		local style = M.GetWeaponStyle(itemSlot)
+		for i = 1, table.getn(M.WEAPON_STYLES) do
+			if M.WEAPON_STYLES[i].key == style then
+				ui.itemHoldButton:SetText(M.WEAPON_STYLES[i].text)
+			end
+		end
+		ui.itemHoldButton:Show()
+	else
+		ui.itemHoldButton:Hide()
+	end
 	local note = Count(count, "item")
 	if itemSlot >= 16 and itemSlot <= 18 then
 		note = note .. ", NPC weapons included"
@@ -2896,7 +2911,24 @@ local function BuildItemsPage(page)
 	ui.itemSlotIcon:SetPoint("TOPLEFT", slotButton, "TOPLEFT", 2, -2)
 	ui.itemSlotLabel = Label(slotButton, "", "GameFontNormal", 34, -3, "DmorphOctoItemSlotLabel")
 	ui.itemCount = Label(slotButton, "", "GameFontDisableSmall", 34, -18, "DmorphOctoItemCount")
-	ui.itemLookup = Label(page, "", "GameFontDisableSmall", 244, -14, "DmorphOctoItemLookup")
+	ui.itemLookup = Label(page, "", "GameFontDisableSmall", 244, -24, "DmorphOctoItemLookup")
+	-- Hold as (main and off hand only): one-hand at your side, two-hand on your back.
+	ui.itemHoldButton = Button(page, "Hold: as it is", 112, PAGE_W - 178, -8, function()
+		local styles, now = M.WEAPON_STYLES, M.GetWeaponStyle(itemSlot)
+		local nextKey
+		for i = 1, table.getn(styles) do
+			if styles[i].key == now then
+				nextKey = styles[math.mod(i, table.getn(styles)) + 1].key
+			end
+		end
+		Morph(M.SetWeaponStyle, itemSlot, nextKey)
+		FilterItems(true)
+	end, "DmorphOctoItemHold")
+	ui.itemHoldButton:SetScript("OnEnter", function()
+		Tooltip(this, "Hold as", "Click: as the weapon is, one-hand (sheathed at your side) or two-hand (on your back).",
+			"The stance and the sheathe follow it. Needs DmorphHelper; only you see it.")
+	end)
+	ui.itemHoldButton:SetScript("OnLeave", HideTooltip)
 	Button(page, "<", 24, PAGE_W - 60, -8, function()
 		CycleSlot(-1)
 	end)
@@ -3883,13 +3915,18 @@ local function BuildStage()
 		thumb:SetVertexColor(C.accent[1], C.accent[2], C.accent[3], 1)
 	end
 	size:SetMinMaxValues(0.25, 3)
-	size:SetValueStep(0.05)
+	-- 1% steps, and the mouse wheel for a single one (Khijazi: finer steps).
+	size:SetValueStep(0.01)
+	size:EnableMouseWheel(true)
+	size:SetScript("OnMouseWheel", function()
+		this:SetValue(math.max(0.25, math.min(3, this:GetValue() + (arg1 > 0 and 0.01 or -0.01))))
+	end)
 	ui.sizeLabel = Font(size:CreateFontString("DmorphOctoSizeLabel", "OVERLAY", "GameFontHighlightSmall"), 11)
 	ui.sizeLabel:SetPoint("RIGHT", size, "LEFT", -8, 0)
 	-- "in game": it changes your character in the world, not only here (user, 18 Oct).
 	ui.sizeLabel:SetText("Size in game 100%")
 	size:SetScript("OnValueChanged", function()
-		local value = math.floor(this:GetValue() * 20 + 0.5) / 20
+		local value = math.floor(this:GetValue() * 100 + 0.5) / 100
 		ui.sizeLabel:SetText("Size in game " .. math.floor(value * 100 + 0.5) .. "%")
 		if ui.sizeSync then
 			return
