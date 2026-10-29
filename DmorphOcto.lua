@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.24.0"
+local VERSION = "2.25.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -671,7 +671,24 @@ function M.GetItemCatalog(slot)
 			end
 		end
 		table.sort(ported, Before)
-		local catalog = Fill(NewCatalog(), Merge(all, total, ported, p))
+		local merged, mergedCount = Merge(all, total, ported, p)
+		-- The off hand also lists the main hand's two-handers (user, 29 Oct: two
+		-- two-handers, held as one-handers): worn there, they're held one-handed.
+		if slot == 17 then
+			local main, extra, e, have = M.GetItemCatalog(16), {}, 0, {}
+			for i = 1, mergedCount do
+				have[merged[i][1]] = true
+			end
+			for i = 1, main.count do
+				local id = main.ids[i]
+				if not have[id] and M.TWO_HANDED[main.types[i] or M.GetItemType(id) or 0] then
+					e = e + 1
+					extra[e] = { id, main.names[i], main.lower[i], main.quality[i], main.kind[i] }
+				end
+			end
+			merged, mergedCount = Merge(merged, mergedCount, extra, e)
+		end
+		local catalog = Fill(NewCatalog(), merged, mergedCount)
 		catalog.types = {}
 		for i = 1, catalog.count do
 			catalog.types[i] = M.GetItemType(catalog.ids[i])
@@ -1875,9 +1892,45 @@ end
 
 -- The item a weapon slot actually wears: the morph, or its "held as" copy.
 -- nil and a reason when the style can't be done for it.
+M.TWO_HANDED = { [201] = true, [205] = true, [208] = true, [206] = true, [210] = true, [217] = true }
+-- Where a template can be worn: a copy only shows in a hand its record fits.
+styleData.equip = {
+	[16] = { one = { INVTYPE_WEAPON = true, INVTYPE_WEAPONMAINHAND = true }, two = { INVTYPE_2HWEAPON = true } },
+	[17] = { one = { INVTYPE_WEAPON = true, INVTYPE_WEAPONOFFHAND = true }, two = { INVTYPE_2HWEAPON = true } },
+}
+-- A known item of that kind the game lets you wear in that hand that way.
+local function StyleTemplate(kind, slot, style)
+	local fits = styleData.equip[slot][style]
+	local key = kind .. ":" .. slot .. ":" .. style
+	local function Fits(id)
+		local ok, name, _, _, _, _, _, _, equip = pcall(GetItemInfo, id)
+		return ok and name and fits[equip or ""]
+	end
+	local cached = styleData[key]
+	if cached and Fits(cached) then
+		return cached
+	end
+	if not itemTypes then
+		ReadItemTypes()
+	end
+	for id, k in pairs(itemTypes) do
+		if k == kind and Fits(id) then
+			styleData[key] = id
+			return id
+		end
+	end
+end
+
 local function StyledID(slot, itemID)
 	local style = db.weaponStyle and db.weaponStyle[slot]
-	if not (style and itemID and itemID > 0) then
+	if not (itemID and itemID > 0) then
+		return itemID
+	end
+	-- A two-hander in the off hand can only be held one-handed.
+	if slot == 17 and M.TWO_HANDED[M.GetItemType(itemID) or 0] then
+		style = "one"
+	end
+	if not style then
 		return itemID
 	end
 	local target = styleData.kind[style][M.GetItemType(itemID) or 0]
@@ -1888,7 +1941,7 @@ local function StyledID(slot, itemID)
 	if not (display and HasVirtualItems()) then
 		return itemID, "isn't in DMorph's weapon list"
 	end
-	local template = PortedTemplate({ kind = target })
+	local template = StyleTemplate(target, slot, style)
 	if not template then
 		return itemID, "waits for the game to load an item to copy"
 	end

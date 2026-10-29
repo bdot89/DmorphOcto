@@ -2407,7 +2407,7 @@ Mock.Tick(0.4)
 end)()
 -- Hold as (Khijazi): a two-handed sword worn as a one-hander copies a known one-handed sword.
 ;(function()
-	Mock.serverItems[25] = { "Worn Shortsword", 1, "INVTYPE_WEAPONMAINHAND" }
+	Mock.serverItems[25] = { "Worn Shortsword", 1, "INVTYPE_WEAPON" }
 	DmorphOcto.SetItem(16, 647)
 	local ok = DmorphOcto.SetWeaponStyle(16, "one")
 	local worn = vh.items[16]
@@ -2420,6 +2420,13 @@ end)()
 		"the item check doesn't 'repair' the copy back to the morph")
 	DmorphOcto.SetWeaponStyle(16, nil)
 	check(vh.items[16] == 647, "Hold: as it is wears the morph itself again")
+	-- Two two-handers (user, 29 Oct): the off hand lists them and holds them one-handed.
+	check(DmorphOcto.GetItemCatalog(17).byID[647] ~= nil, "the off hand lists two-handed weapons too")
+	DmorphOcto.SetItem(17, 647)
+	local off = vh.items[17]
+	check(off and off >= 880001 and off < 900000 and game.virtual[off] and game.virtual[off][1] == 25
+		and DmorphOcto.GetWeaponStyle(17) == nil, "a two-hander in the off hand is held one-handed by itself")
+	DmorphOcto.SetItem(17, 0)
 	DmorphOcto.SetItem(16, 0)
 	Mock.serverItems[25] = nil
 end)()
@@ -2811,7 +2818,7 @@ local glaive = mh.byID[900001]
 check(glaive and mh.names[glaive] == "Warglaive of Azzinoth" and mh.kind[glaive] == DmorphOcto.KIND_PORTED
 	and mh.byID[900002] and not mh.byID[900003], "ported weapons are in the slots their kind fits")
 check(DmorphOcto.GetItemCatalog(17).byID[900001] and DmorphOcto.GetItemCatalog(17).byID[900003]
-	and not DmorphOcto.GetItemCatalog(17).byID[900002], "one-handers and shields in the off hand, not two-handers")
+	and DmorphOcto.GetItemCatalog(17).byID[900002], "one-handers and shields in the off hand, and (since 2.25, held one-handed) two-handers")
 check(DmorphOcto.GetItemType(900001) == 207 and DmorphOcto.IsPortedItem(900001), "they know their kind")
 check(mh.quality[glaive] == 5 and mh.quality[mh.byID[900002]] == 4,
 	"a ported item has its Retail quality (slot 0 = by kind), epic without one")
