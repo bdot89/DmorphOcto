@@ -3193,7 +3193,8 @@ end
 P.EXTRA_CATS = {
 	{ text = "All" }, { text = "Wings", prefix = "Wings: " }, { text = "Bags", prefix = "Bag: " },
 	{ text = "Quivers", prefix = "Quiver: " }, { text = "Banners", prefix = "Banner: " },
-	{ text = "Cloaks", prefix = "Cloak: " }, { text = "Shadow", prefix = "Shadow: " }, { text = "Spells", spells = true },
+	{ text = "Cloaks", prefix = "Cloak: " }, { text = "Shadow", prefix = "Shadow: " }, { text = "Trails", prefix = "Trail: " },
+	{ text = "Spells", spells = true },
 }
 P.extraCat = 1
 function P.FilterExtra(keep)
@@ -3225,7 +3226,7 @@ function P.BuildExtraPage(page)
 	ui.extraCats = {}
 	for i = 1, table.getn(P.EXTRA_CATS) do
 		local index = i
-		ui.extraCats[i] = Button(page, P.EXTRA_CATS[i].text, 64, 8 + (i - 1) * 67, -8, function()
+		ui.extraCats[i] = Button(page, P.EXTRA_CATS[i].text, 57, 8 + (i - 1) * 60, -8, function()
 			P.extraCat = index
 			for k = 1, table.getn(ui.extraCats) do
 				if k == index then ui.extraCats[k]:LockHighlight() else ui.extraCats[k]:UnlockHighlight() end

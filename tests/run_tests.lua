@@ -2576,7 +2576,7 @@ end)()
 	Mock.Click(DmorphOctoExtraCat2)
 	Mock.Tick(0.3)
 	check(row.text.text == "Wings: Guardian Spirit" and not DmorphOctoExtraListRow2:IsVisible(), "the Wings button lists only wings")
-	Mock.Click(DmorphOctoExtraCat8)
+	Mock.Click(DmorphOctoExtraCat9)
 	Mock.Tick(0.3)
 	check(row:IsVisible() and strsub(row.text.text, 1, 7) ~= "Wings: " and strsub(row.text.text, 1, 6) ~= "Back: ",
 		"the Spells button lists the client's own spell looks")
