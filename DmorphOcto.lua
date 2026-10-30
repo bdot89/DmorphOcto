@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.27.1"
+local VERSION = "2.28.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1454,6 +1454,17 @@ function InitDB()
 		end
 	end
 	db.weaponStyle = weaponStyle
+	-- Sheathed on: "back", "side" or nothing (as the weapon is).
+	local weaponSheath = {}
+	if type(db.weaponSheath) == "table" then
+		for _, slot in ipairs({ 16, 17 }) do
+			local s = db.weaponSheath[slot]
+			if s == "back" or s == "side" then
+				weaponSheath[slot] = s
+			end
+		end
+	end
+	db.weaponSheath = weaponSheath
 	for _, key in ipairs({ "glowReal", "glowWritten" }) do
 		local kept = {}
 		if type(db[key]) == "table" then
@@ -1964,11 +1975,21 @@ local function StyleTemplate(kind, slot, style)
 	end
 end
 
-local function StyledID(slot, itemID)
-	if styleData.pending then
-		styleData.pending[slot] = nil -- set again below while it still waits
-	end
-	local style = db.weaponStyle and db.weaponStyle[slot]
+-- Sheathed on (2.28.0, user: "CHOOSE WHERE YOU PUT YOUR WEAPONS AND SHARE WHERE
+-- THEY ARE! ON YOUR BACK OR BY YOUR SIDE"): the record's sheath type (Item.dbc
+-- 1 two-hand on the back, 3 one-hand at the side), which DmorphHelper v17 sets
+-- on a virtual item's copy (DmorphHelper_SetVirtualItem's 4th value).
+styleData.sheaths = { back = 1, side = 3 }
+local function CanSheathe()
+	local version = M.GetHelperVersion()
+	return HasVirtualItems() and (version or 0) >= 17
+end
+M.CanSheathe = CanSheathe
+
+-- The item a weapon slot wears for a weapon held (style) and sheathed (sheath)
+-- some way: the weapon, a virtual copy, or nil while the copy waits for the
+-- game (wait = true). A second value says why the way can't be done.
+local function StyledCopy(slot, itemID, style, sheath)
 	if not (itemID and itemID > 0) then
 		return itemID
 	end
@@ -1976,33 +1997,77 @@ local function StyledID(slot, itemID)
 	if slot == 17 and M.TWO_HANDED[M.GetItemType(itemID) or 0] then
 		style = "one"
 	end
-	if not style then
-		return itemID
+	if not CanSheathe() then
+		sheath = nil
 	end
-	local target = styleData.kind[style][M.GetItemType(itemID) or 0]
-	if not target then
+	local target = style and styleData.kind[style][M.GetItemType(itemID) or 0]
+	if not (target or sheath) then
 		return itemID -- already that kind, or one with no other (bows, shields...)
 	end
-	local display = WeaponDisplay(itemID)
-	if not (display and HasVirtualItems()) then
-		return itemID, "isn't in DMorph's weapon list"
+	local template, display
+	if target then
+		display = WeaponDisplay(itemID)
+		if not (display and HasVirtualItems()) then
+			return itemID, "isn't in DMorph's weapon list"
+		end
+		template = StyleTemplate(target, slot, style)
+		if not template then
+			-- Your own weapon meanwhile: a two-hander as it is in the off hand broke the model.
+			return nil, "waits for the game to load a weapon to copy (a second or two)", true
+		end
+	else
+		-- Only sheathed elsewhere: a copy of the weapon itself (a ported one's
+		-- template, with its look).
+		local p = PortedItems()[itemID]
+		if p then
+			template, display = PortedTemplate(p), p.display
+		else
+			local ok, name = pcall(GetItemInfo, itemID)
+			template, display = ok and name and itemID, 0
+		end
+		if not template then
+			if type(C_Item) == "table" and type(C_Item.RequestLoadItemDataByID) == "function" then
+				pcall(C_Item.RequestLoadItemDataByID, p and p.template or itemID)
+			end
+			return nil, "waits for the game to load this weapon (a second or two)", true
+		end
 	end
-	local template = StyleTemplate(target, slot, style)
-	if not template then
-		styleData.pending = styleData.pending or {}
-		styleData.pending[slot] = true
-		-- Your own weapon meanwhile: a two-hander as it is in the off hand broke the model.
-		return nil, "waits for the game to load a weapon to copy (a second or two)"
-	end
-	local key = itemID .. ":" .. style
+	local key = itemID .. ":" .. (target and style or "-") .. ":" .. (sheath or "-")
 	local vid = styleData.ids[key]
 	if not vid then
 		vid = styleData.first + styleData.count
 		styleData.count = styleData.count + 1
 		styleData.ids[key] = vid
 	end
-	pcall(DmorphHelper_SetVirtualItem, vid, template, display)
+	if sheath then
+		pcall(DmorphHelper_SetVirtualItem, vid, template, display, styleData.sheaths[sheath])
+	else
+		pcall(DmorphHelper_SetVirtualItem, vid, template, display)
+	end
 	return vid
+end
+
+-- Another DMorph user's weapon held and sheathed their way (Share.lua);
+-- their own weapon while a copy waits.
+function M.PeerWeaponID(slot, itemID, style, sheath)
+	local id, _, wait = StyledCopy(slot, itemID, style, sheath)
+	if wait then
+		return itemID, true
+	end
+	return id
+end
+
+local function StyledID(slot, itemID)
+	if styleData.pending then
+		styleData.pending[slot] = nil -- set again below while it still waits
+	end
+	local id, why, wait = StyledCopy(slot, itemID, db.weaponStyle and db.weaponStyle[slot],
+		db.weaponSheath and db.weaponSheath[slot])
+	if wait then
+		styleData.pending = styleData.pending or {}
+		styleData.pending[slot] = true
+	end
+	return id, why
 end
 M.StyledID = StyledID
 
@@ -2345,7 +2410,7 @@ local MISSING_HELPER = "DmorphHelper.dll isn't loaded, so weapon glows, your siz
 M.MISSING_HELPER = MISSING_HELPER
 -- The DmorphHelper_Version() the DLL in helper\ reports. An older one in the
 -- game folder (DMorph was updated, the DLL wasn't copied again) is flagged.
-local HELPER_VERSION = 16
+local HELPER_VERSION = 17
 -- Rows 1-5 of the Races tab, in DmorphHelper_GetLook's order.
 local OWN_LOOK_NPC = { "npcSkin", "npcFace", "npcHairStyle", "npcHairColour" }
 
@@ -3383,6 +3448,53 @@ function M.SetWeaponStyle(slot, style)
 		return Result(true, nil, err) -- held as it is, and why
 	end
 	return Result(ok, err, SLOT_NAMES[slot] .. ": held " .. text .. ".")
+end
+
+-- Where a morphed weapon is sheathed (main hand 16, off hand 17): "back",
+-- "side" or nil (as the weapon is). Needs DmorphHelper v17.
+M.WEAPON_SHEATHS = { { key = nil, text = "Sheathe: as it is" }, { key = "back", text = "Sheathe: back" }, { key = "side", text = "Sheathe: side" } }
+function M.GetWeaponSheath(slot)
+	InitDB()
+	return db.weaponSheath[slot]
+end
+function M.SetWeaponSheath(slot, sheath)
+	if not Begin() then
+		return false, MissingAPI()
+	end
+	if slot ~= 16 and slot ~= 17 then
+		return false, "Only the main hand and off hand can be sheathed another way."
+	end
+	if sheath ~= nil and sheath ~= "back" and sheath ~= "side" then
+		return false, "Sheathe on: back, side or nothing (as the weapon is)."
+	end
+	if sheath and not CanSheathe() then
+		return false, "Choosing where a weapon is sheathed needs DmorphHelper v17. " .. INSTALL_HELPER
+	end
+	db.weaponSheath[slot] = sheath
+	local text = sheath == "back" and "on your back" or sheath == "side" and "at your side" or "as the weapon is"
+	if not db.items[slot] or db.items[slot] == 0 then
+		return true, SLOT_NAMES[slot] .. ": sheathed " .. text .. " once you morph a weapon there."
+	end
+	local ok, err = ApplyItem(slot)
+	if ok and err then
+		return Result(true, nil, err)
+	end
+	return Result(ok, err, SLOT_NAMES[slot] .. ": sheathed " .. text .. ".")
+end
+
+-- How your morphed weapons are held and sheathed, for sharing: slot ->
+-- { style, sheath } for the hands that have a morphed weapon and a way.
+function M.GetSharedWeapons()
+	InitDB()
+	local out = {}
+	for _, slot in ipairs({ 16, 17 }) do
+		local item = db.items[slot]
+		local style, sheath = db.weaponStyle[slot], db.weaponSheath[slot]
+		if item and item > 0 and (style or sheath) then
+			out[slot] = { style, sheath }
+		end
+	end
+	return out
 end
 
 -- Birthday suit (user, 18 Oct): every armour slot shows nothing, to build a look

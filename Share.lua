@@ -41,7 +41,13 @@
 -- L and H messages, a slot letter (p, q, r = 16, 17, 18) and an enchant ID in
 -- base 36 per glowing hand ("gp1CE", 0 = no glow), none without glows; older
 -- DMorph skips the token. Receivers put a glow on only if their game has it.
+-- How weapons are held and sheathed (2.28.0) ride along the same way: a "w"
+-- token, per hand a slot letter (p, q) then o / t / - (held one-hand,
+-- two-hand, as it is) and b / s / - (sheathed on the back, at the side, as
+-- it is): "wp-bqos". Receivers wear a copy held and sheathed that way
+-- (DmorphHelper v17).
 --   G <glows|->           my weapon glows changed, the rest didn't
+--   W <ways|->            how my weapons are held/sheathed changed, the rest didn't
 --   M <mount>             my mount skin changed, the rest didn't
 --   H <fingerprint> <guid|->  my look is still the one with this fingerprint
 --   Q <name>[:<fingerprint>],...  what do these players look like now?
@@ -78,7 +84,7 @@ local audience = {} -- name -> when they last showed they see us
 local inGroup, inGuild = {}, {} -- names
 local replies = {} -- way -> "L" (full look) or "H" (fingerprint)
 local timers = {} -- clock times: join, ready, send, first, mount, reply, replied, query, scan, guild, next
-local sent = { d = "0", m = "0", it = "-", s = "", p = "", g = "" } -- what the others were last told
+local sent = { d = "0", m = "0", it = "-", s = "", p = "", g = "", w = "" } -- what the others were last told
 local cache -- DmorphOctoAccount.peerCache for this realm
 local guidWorks -- whether VanillaHelpers took a GUID as a unit token (nil: not tried)
 local counts = { channel = 0, hidden = 0 }
@@ -557,7 +563,7 @@ local function ApplyTo(name, token)
 	end
 	local ok, shown = pcall(UnitDisplayInfo, token)
 	local force = not done or done.away or (ok and want.display and shown ~= want.display)
-	if not force and done.version == want.version then
+	if not force and done.version == want.version and not done.weaponWait then
 		done.scan = scanID
 		KeepGlows(token, want, done)
 		return
@@ -573,8 +579,18 @@ local function ApplyTo(name, token)
 		end
 		done.display = want.display
 	end
+	done.weaponWait = nil
 	for slot = 1, 19 do
 		local item = want.items[slot]
+		-- A weapon held or sheathed their way: a copy (their weapon while it waits).
+		local way = want.weapons and want.weapons[slot]
+		if item and way and M.PeerWeaponID then
+			local wait
+			item, wait = M.PeerWeaponID(slot, item, way[1], way[2])
+			if wait then
+				done.weaponWait = true
+			end
+		end
 		if item ~= done.items[slot] or (force and item) then
 			if Call(SetUnitVisibleItemID, token, slot, item) then
 				done.items[slot] = item
@@ -645,6 +661,7 @@ local function SetPeer(name, look, guid, confirmed)
 	look.guid = guid or (peer and peer.guid)
 	look.scale = peer and peer.scale -- a full look message sets it again after
 	look.glows = peer and peer.glows -- (the same for weapon glows)
+	look.weapons = peer and peer.weapons
 	look.version = (peer and peer.version or 0) + 1
 	look.heard = confirmed and clock or -1000
 	look.confirmed = confirmed
@@ -821,6 +838,37 @@ local function SetPeerGlows(name, glowsIn)
 	end
 end
 
+-- How a player's weapons are held and sheathed, from a "w..." token: slot ->
+-- { style, sheath }, and a key to compare by; nil for none.
+local WAY_STYLE, WAY_SHEATH = { o = "one", t = "two" }, { b = "back", s = "side" }
+local function WeaponsOf(token)
+	local _, _, list = strfind(token or "", "^w([pqots%-b]+)$")
+	if not list then
+		return nil
+	end
+	local out, keyParts = {}, {}
+	for letter, style, sheath in string.gfind(list, "([pq])([ot%-])([bs%-])") do
+		if style ~= "-" or sheath ~= "-" then
+			out[string.byte(letter) - 96] = { WAY_STYLE[style], WAY_SHEATH[sheath] }
+			table.insert(keyParts, letter .. style .. sheath)
+		end
+	end
+	if table.getn(keyParts) == 0 then
+		return nil
+	end
+	out.key = table.concat(keyParts)
+	return out
+end
+
+local function SetPeerWeapons(name, weaponsIn)
+	local peer = peers[name]
+	if peer and (peer.weapons and peer.weapons.key) ~= (weaponsIn and weaponsIn.key) then
+		peer.weapons = weaponsIn
+		peer.version = peer.version + 1
+		Scan()
+	end
+end
+
 local function SetPeerSize(name, scale)
 	local peer = peers[name]
 	if peer and peer.scale ~= scale then
@@ -832,7 +880,7 @@ end
 
 local function ReadLook(sender, rest)
 	local _, _, d, m, it, guid, more = strfind(rest, "^(%S+) (%S+) (%S+) ?(%S*) ?(.*)$")
-	local size, ported, glowToken
+	local size, ported, glowToken, wayToken
 	for token in string.gfind(more or "", "%S+") do
 		if strfind(token, "^s%d+$") then
 			size = token
@@ -840,9 +888,11 @@ local function ReadLook(sender, rest)
 			ported = token
 		elseif strfind(token, "^g") then
 			glowToken = token
+		elseif strfind(token, "^w") then
+			wayToken = token
 		end
 	end
-	local glowsIn = GlowsOf(glowToken)
+	local glowsIn, weaponsIn = GlowsOf(glowToken), WeaponsOf(wayToken)
 	local look = MakeLook(d, m, it, ported)
 	if not look then
 		return
@@ -863,11 +913,13 @@ local function ReadLook(sender, rest)
 		end
 		SetPeerSize(sender, scale)
 		SetPeerGlows(sender, glowsIn)
+		SetPeerWeapons(sender, weaponsIn)
 		return
 	end
 	if SetPeer(sender, look, guid, true) then
 		look.scale = scale
 		look.glows = glowsIn
+		look.weapons = weaponsIn
 		Scan()
 	end
 end
@@ -886,7 +938,7 @@ local function ReadMount(sender, m)
 end
 
 -- "Nothing changed": confirms what we remember, else we ask for it all.
-local function ReadPrint(sender, print, guid, size, glowToken)
+local function ReadPrint(sender, print, guid, size, glowToken, wayToken)
 	Unask(sender)
 	Answered(sender)
 	asked[sender] = clock
@@ -895,6 +947,7 @@ local function ReadPrint(sender, print, guid, size, glowToken)
 		peer.heard = clock
 		SetPeerSize(sender, SizeOf(size))
 		SetPeerGlows(sender, GlowsOf(glowToken))
+		SetPeerWeapons(sender, WeaponsOf(wayToken))
 		if strfind(guid or "", "^0x%x+$") then
 			peer.guid = guid
 		end
@@ -949,21 +1002,29 @@ local function Receive(sender, text, way)
 	elseif kind == "H" then
 		local _, _, print, guid, more = strfind(rest, "^(%S+) ?(%S*) ?(.*)$")
 		if print then
-			local size, glowToken
+			local size, glowToken, wayToken
 			for token in string.gfind(more or "", "%S+") do
 				if strfind(token, "^s%d+$") then
 					size = token
 				elseif strfind(token, "^g") then
 					glowToken = token
+				elseif strfind(token, "^w") then
+					wayToken = token
 				end
 			end
-			ReadPrint(sender, print, guid, size, glowToken)
+			ReadPrint(sender, print, guid, size, glowToken, wayToken)
 		end
 	elseif kind == "G" then
 		-- Only the weapon glows changed ("-": none any more).
 		local peer = peers[sender]
 		if peer and peer.confirmed then
 			SetPeerGlows(sender, GlowsOf(rest))
+		end
+	elseif kind == "W" then
+		-- Only how the weapons are held/sheathed changed ("-": as they are).
+		local peer = peers[sender]
+		if peer and peer.confirmed then
+			SetPeerWeapons(sender, WeaponsOf(rest))
 		end
 	elseif kind == "S" then
 		-- Only the size changed.
@@ -1005,8 +1066,31 @@ local function OwnGlows()
 	return "g" .. table.concat(parts)
 end
 
+-- How your weapons are held and sheathed as a message token: "wp-bqos",
+-- or "" when they're as they are.
+local WAY_CHAR = { one = "o", two = "t", back = "b", side = "s" }
+local function OwnWeapons()
+	if not (Sharing() and M.GetSharedWeapons) then
+		return ""
+	end
+	local ways, parts = M.GetSharedWeapons(), {}
+	for slot = 16, 17 do
+		local way = ways[slot]
+		if way then
+			table.insert(parts, string.char(96 + slot) .. (WAY_CHAR[way[1] or ""] or "-") .. (WAY_CHAR[way[2] or ""] or "-"))
+		end
+	end
+	if table.getn(parts) == 0 then
+		return ""
+	end
+	return "w" .. table.concat(parts)
+end
+
 local function OnChange()
 	local d, m, it = OwnParts()
+	if OwnWeapons() ~= sent.w then
+		timers.ways = timers.ways or clock + SETTLE
+	end
 	if OwnGlows() ~= sent.g then
 		timers.glow = timers.glow or clock + SETTLE
 	end
@@ -1043,6 +1127,10 @@ local function WithSize(text)
 	if glow ~= "" then
 		text = text .. " " .. glow
 	end
+	local ways = OwnWeapons()
+	if ways ~= "" then
+		text = text .. " " .. ways
+	end
 	return text
 end
 
@@ -1061,7 +1149,8 @@ local function SendLook(ways)
 	sent.s = OwnSize()
 	sent.p = OwnPorted()
 	sent.g = OwnGlows()
-	timers.send, timers.first, timers.mount, timers.size, timers.glow = nil, nil, nil, nil, nil
+	sent.w = OwnWeapons()
+	timers.send, timers.first, timers.mount, timers.size, timers.glow, timers.ways = nil, nil, nil, nil, nil, nil
 	local text = LookText()
 	for way in pairs(ways) do
 		Send(text, way)
@@ -1104,6 +1193,15 @@ local function SendNext()
 			sent.g = glow
 			for way in pairs(ChangeWays()) do
 				Send("G " .. (glow == "" and "-" or glow), way)
+			end
+		end
+	elseif timers.ways and clock >= timers.ways then
+		timers.ways = nil
+		local ways = OwnWeapons()
+		if ways ~= sent.w then
+			sent.w = ways
+			for way in pairs(ChangeWays()) do
+				Send("W " .. (ways == "" and "-" or ways), way)
 			end
 		end
 	elseif timers.reply and clock >= timers.reply then

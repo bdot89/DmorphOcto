@@ -2810,8 +2810,16 @@ local function FilterItems(keep)
 			end
 		end
 		ui.itemHoldButton:Show()
+		local sheath = M.GetWeaponSheath(itemSlot)
+		for i = 1, table.getn(M.WEAPON_SHEATHS) do
+			if M.WEAPON_SHEATHS[i].key == sheath then
+				ui.itemSheathButton:SetText(M.WEAPON_SHEATHS[i].text)
+			end
+		end
+		ui.itemSheathButton:Show()
 	else
 		ui.itemHoldButton:Hide()
+		ui.itemSheathButton:Hide()
 	end
 	local note = Count(count, "item")
 	if itemSlot >= 16 and itemSlot <= 18 then
@@ -2927,9 +2935,26 @@ local function BuildItemsPage(page)
 	end, "DmorphOctoItemHold")
 	ui.itemHoldButton:SetScript("OnEnter", function()
 		Tooltip(this, "Hold as", "Click: as the weapon is, one-hand (sheathed at your side) or two-hand (on your back).",
-			"The stance and the sheathe follow it. Needs DmorphHelper; only you see it.")
+			"The sheathe follows it unless Sheathe picks one. Needs DmorphHelper; DMorph users (2.28+) see it too.")
 	end)
 	ui.itemHoldButton:SetScript("OnLeave", HideTooltip)
+	-- Sheathe on (2.28.0): your back or your side, whatever the stance.
+	ui.itemSheathButton = Button(page, "Sheathe: as it is", 120, 262, -39, function()
+		local ways, now = M.WEAPON_SHEATHS, M.GetWeaponSheath(itemSlot)
+		local nextKey
+		for i = 1, table.getn(ways) do
+			if ways[i].key == now then
+				nextKey = ways[math.mod(i, table.getn(ways)) + 1].key
+			end
+		end
+		Morph(M.SetWeaponSheath, itemSlot, nextKey)
+		FilterItems(true)
+	end, "DmorphOctoItemSheath")
+	ui.itemSheathButton:SetScript("OnEnter", function()
+		Tooltip(this, "Sheathe on", "Click: as the weapon is, on your back or at your side.",
+			"DMorph users (2.28+) with DmorphHelper v17 see it too.")
+	end)
+	ui.itemSheathButton:SetScript("OnLeave", HideTooltip)
 	Button(page, "<", 24, PAGE_W - 60, -8, function()
 		CycleSlot(-1)
 	end)

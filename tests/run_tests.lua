@@ -1168,6 +1168,11 @@ Mock.Click(DmorphOctoSlot1)
 Mock.Type(DmorphOctoItemID, "2955")
 press(Mock.FindButton("Apply"))
 check(vh.items[1] == 2955, "typing an item ID and pressing Apply works")
+check(not DmorphOctoItemSheath:IsVisible(), "armour slots have no Sheathe button")
+Mock.Click(DmorphOctoSlot16)
+check(DmorphOctoItemSheath:IsVisible() and DmorphOctoItemSheath.text == "Sheathe: as it is",
+	"the main hand has a Sheathe button")
+Mock.Click(DmorphOctoSlot1)
 
 -- Slutmog tab (2.19.0): revealing pieces of every slot; slot buttons narrow it.
 Mock.Click(DmorphOctoTabSlutmog)
@@ -2067,7 +2072,7 @@ local function installHelper(look)
 		return type(v) == "number" and v >= 0 and v <= max and v == math.floor(v)
 	end
 	function DmorphHelper_Version()
-		return 16
+		return 17
 	end
 	-- v14: riders of some mount displays get another pose (game.posesWork: the
 	-- helper could patch the game).
@@ -2137,11 +2142,12 @@ local function installHelper(look)
 	-- Virtual items: item IDs only this PC has (ported weapons).
 	game.virtual = {}
 	Mock.virtualItems = game.virtual
-	function DmorphHelper_SetVirtualItem(id, template, display)
-		if not (whole(id, 2147483647) and whole(template, 2147483647) and whole(display, 2147483647)) then
-			error("Usage: DmorphHelper_SetVirtualItem(itemID, templateItemID, displayID)")
+	function DmorphHelper_SetVirtualItem(id, template, display, sheath)
+		if not (whole(id, 2147483647) and whole(template, 2147483647) and type(display) == "number" and display >= 0
+			and (sheath == nil or (type(sheath) == "number" and sheath >= 0 and sheath <= 6))) then
+			error("Usage: DmorphHelper_SetVirtualItem(itemID, templateItemID, displayID[, sheath])")
 		end
-		game.virtual[id] = { template, display }
+		game.virtual[id] = { template, display, sheath or 0 }
 	end
 	function DmorphHelper_GetScale(unit)
 		return game.scale
@@ -2253,16 +2259,16 @@ DmorphOctoDB, DmorphOctoAccount = nil, nil
 loadWithHelper()
 Mock.Tick(1.1)
 slash("dmorph status")
-check(contains(allChat(), "DmorphHelper v16 is loaded"), "status shows the helper's version")
+check(contains(allChat(), "DmorphHelper v17 is loaded"), "status shows the helper's version")
 slash("dmorph check")
 check(contains(allChat(), "DmorphHelper: |cff33ff99OK"), "the check says the helper runs")
-check(contains(allChat(), "Running v16 (this DMorph comes with v16)"), "and which version runs")
+check(contains(allChat(), "Running v17 (this DMorph comes with v17)"), "and which version runs")
 local openedForSetup = not (DmorphOctoFrame and DmorphOctoFrame:IsVisible())
 if openedForSetup then
 	slash("")
 end
 Mock.Click(DmorphOctoSetupButton)
-check(contains(DmorphOctoSetupButton.text, "Helper v16") and contains(DmorphOctoSetupText2.text, "Running v16"),
+check(contains(DmorphOctoSetupButton.text, "Helper v17") and contains(DmorphOctoSetupText2.text, "Running v17"),
 	"the Setup button and panel show the helper version")
 Mock.Click(DmorphOctoSetupClose)
 local currentVersion = DmorphHelper_Version
@@ -2444,6 +2450,37 @@ end)()
 	DmorphOcto.SetItem(17, 0)
 	DmorphOcto.SetItem(16, 0)
 	Mock.serverItems[25] = nil
+end)()
+-- Sheathe on your back or side (user, 30 Oct), DmorphHelper v17: a copy of the
+-- weapon itself with the sheath type set (1 back, 3 side), also with Hold.
+;(function()
+	Mock.serverItems[647] = { "Destiny", 4, "INVTYPE_2HWEAPON" }
+	Mock.serverItems[25] = { "Worn Shortsword", 1, "INVTYPE_WEAPON" }
+	DmorphOcto.SetItem(16, 647)
+	local ok = DmorphOcto.SetWeaponSheath(16, "side")
+	local worn = vh.items[16]
+	check(ok and worn and worn >= 880001 and worn < 900000 and game.virtual[worn][1] == 647
+		and game.virtual[worn][2] == 0 and game.virtual[worn][3] == 3,
+		"Sheathe: side wears a copy of the weapon itself, sheathed at the side")
+	DmorphOcto.SetWeaponSheath(16, "back")
+	check(game.virtual[vh.items[16]][3] == 1 and vh.items[16] ~= worn, "Sheathe: back sheathes it on the back")
+	DmorphOcto.SetWeaponStyle(16, "one")
+	local both = vh.items[16]
+	check(game.virtual[both][1] == 25 and game.virtual[both][2] == 20190 and game.virtual[both][3] == 1,
+		"held one-handed and sheathed on the back together")
+	local shared = DmorphOcto.GetSharedWeapons()
+	check(shared[16] and shared[16][1] == "one" and shared[16][2] == "back" and not shared[17],
+		"the way it's held and sheathed is shared")
+	DmorphOcto.SetWeaponStyle(16, nil)
+	DmorphOcto.SetWeaponSheath(16, nil)
+	check(vh.items[16] == 647, "Sheathe: as it is wears the morph itself again")
+	local oldVersion = DmorphHelper_Version
+	DmorphHelper_Version = function() return 16 end
+	local refused = DmorphOcto.SetWeaponSheath(16, "back")
+	check(not refused and vh.items[16] == 647, "with an older helper the sheath can't be picked")
+	DmorphHelper_Version = oldVersion
+	DmorphOcto.SetItem(16, 0)
+	Mock.serverItems[647], Mock.serverItems[25] = nil, nil
 end)()
 DmorphOctoSize:SetValue(2)
 Mock.Tick(0.4)
@@ -2921,6 +2958,39 @@ check(morphOf(pally).items[16] == nil, "with another pack, their ported parts do
 hear("Porter", "L 0 0 - " .. pally .. " s150 P" .. pack .. "_0_0_p" .. b36(900002))
 wait(1.5)
 check(morphOf(pally).items[16] == 900002, "the ported part is read after a size too")
+-- 2.28.0: how weapons are held and sheathed is shared ("w" token, "W" message).
+;(function()
+	local kept647, kept25 = Mock.serverItems[647], Mock.serverItems[25]
+	Mock.serverItems[647] = { "Destiny", 4, "INVTYPE_2HWEAPON" }
+	Mock.serverItems[25] = { "Worn Shortsword", 1, "INVTYPE_WEAPON" }
+	local ownWeapon = DmorphOctoDB.items[16]
+	hear("Porter", "L 0 0 p" .. b36(647) .. " " .. pally .. " wp-b")
+	wait(1.5)
+	local theirs = morphOf(pally).items[16]
+	check(theirs and theirs >= 880001 and theirs < 900000 and game.virtual[theirs][1] == 647
+		and game.virtual[theirs][3] == 1, "a DMorph user's weapon sheathed on their back shows that way")
+	hear("Porter", "W -")
+	wait(1.5)
+	check(morphOf(pally).items[16] == 647, "a W message without ways shows their weapon as it is")
+	hear("Porter", "W wpos")
+	wait(1.5)
+	local held = morphOf(pally).items[16]
+	check(held and held >= 880001 and held < 900000 and game.virtual[held][3] == 3,
+		"a W message changes how it's held and sheathed")
+	quiet()
+	DmorphOcto.SetItem(16, 647)
+	DmorphOcto.SetWeaponSheath(16, "back")
+	wait(3)
+	check(channelSays(" wp-b"), "how your weapon is sheathed goes out to DMorph users around you")
+	quiet()
+	hear("Porter", "Q Tester")
+	wait(4)
+	check(channelSays(" wp-b"), "and with your look when someone asks")
+	DmorphOcto.SetWeaponSheath(16, nil)
+	DmorphOcto.SetItem(16, ownWeapon or 0)
+	Mock.serverItems[647], Mock.serverItems[25] = kept647, kept25
+	wait(3)
+end)()
 quiet()
 hear("Porter", "Q Tester:" .. fingerprint(base))
 wait(4)

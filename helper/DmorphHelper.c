@@ -27,8 +27,9 @@
 //   DmorphHelper_GetWeather()                                -> type, intensity, yours (1/0), server type, intensity
 //   DmorphHelper_SetTime(minutes)                            (0-1439 after midnight; -1: the real time)
 //   DmorphHelper_GetTime()                                   -> minutes shown, yours (1/0), real minutes
-//   DmorphHelper_SetVirtualItem(itemID, templateItemID, displayID) (an item only this PC has)
-//   DmorphHelper_GetVirtualItem(itemID)                       -> templateItemID, displayID
+//   DmorphHelper_SetVirtualItem(itemID, templateItemID, displayID[, sheath]) (an item only this PC has;
+//                                                            display 0 = the template's; v17: sheath 1-6, 0 = the template's)
+//   DmorphHelper_GetVirtualItem(itemID)                       -> templateItemID, displayID, sheath
 //   DmorphHelper_SetAmmo(itemID)                             (your own ammo field; 0 = none)
 //   DmorphHelper_GetAmmo()                                   -> ammo item ID
 //   DmorphHelper_SetRiderPose(displayID, animation)          (v14; riders of that mount display: 120 stand, 97 sit; 91 usual)
@@ -53,7 +54,7 @@
 #define GAME_FASTCALL __attribute__((fastcall))
 #define GAME_THISCALL __attribute__((thiscall))
 
-#define HELPER_VERSION 16
+#define HELPER_VERSION 17
 
 // Game functions, build 5875 (from VanillaHelpers' Offsets.h).
 #define FUN_INVALID_FUNCTION_PTR_CHECK 0x42A320
@@ -115,6 +116,10 @@
 #define FUN_DBCACHE_ITEM_STATS_GET_RECORD 0x55BA30
 #define ITEM_STATS_DISPLAY_ID 0x18
 #define ITEM_STATS_SIZE 468
+// Where the weapon is sheathed (Item.dbc: 1 two-hand on the back, 2 staff on
+// the back, 3 one-hand at the side, 4 shield on the back, 5 rod, 6 off hand);
+// the game's getters 0x5DA170 and 0x62EC00 read it from here.
+#define ITEM_STATS_SHEATH 0x1B4
 #define HIGHEST_ADDRESS 0xC962D0
 
 // Descriptor fields, as indexes into a unit's uint32 field array.
@@ -716,7 +721,7 @@ static GetItemRecord_t GetItemRecord_o = NULL;
 #define MAX_VIRTUAL_ITEMS 131072
 #define VIRTUAL_HASH_SIZE 262144               // a power of two, twice the most items
 typedef struct {
-    uint32_t id, templateId, displayId;
+    uint32_t id, templateId, displayId, sheath; // displayId / sheath 0: the template's
     uint8_t *record;                      // our copy, made when the game first asks; kept
 } VirtualItem;
 static VirtualItem g_virtual[MAX_VIRTUAL_ITEMS];
@@ -771,17 +776,23 @@ static void *GAME_FASTCALL GetItemRecord_h(void *cache, void *edx, uint32_t id, 
         }
     }
     memcpy(v->record, t, ITEM_STATS_SIZE);
-    memcpy(v->record + ITEM_STATS_DISPLAY_ID, &v->displayId, 4);
+    if (v->displayId) {
+        memcpy(v->record + ITEM_STATS_DISPLAY_ID, &v->displayId, 4);
+    }
+    if (v->sheath) {
+        memcpy(v->record + ITEM_STATS_SHEATH, &v->sheath, 4);
+    }
     return v->record;
 }
 
-static const char *VIRTUAL_USAGE = "Usage: DmorphHelper_SetVirtualItem(itemID, templateItemID, displayID)";
+static const char *VIRTUAL_USAGE = "Usage: DmorphHelper_SetVirtualItem(itemID, templateItemID, displayID[, sheath])";
 
 // Registers (or changes) a virtual item.
 static int GAME_FASTCALL Script_SetVirtualItem(void *L) {
     uint32_t id = NumberArg(L, 1, 1, 2147483647.0, VIRTUAL_USAGE);
     uint32_t templateId = NumberArg(L, 2, 1, 2147483647.0, VIRTUAL_USAGE);
-    uint32_t displayId = NumberArg(L, 3, 1, 2147483647.0, VIRTUAL_USAGE);
+    uint32_t displayId = NumberArg(L, 3, 0, 2147483647.0, VIRTUAL_USAGE);
+    uint32_t sheath = LuaIsNumber(L, 4) ? NumberArg(L, 4, 0, 6, VIRTUAL_USAGE) : 0;
     if (!GetItemRecord_o) {
         LuaError(L, "DmorphHelper couldn't hook the game's item cache.");
         return 0;
@@ -796,6 +807,7 @@ static int GAME_FASTCALL Script_SetVirtualItem(void *L) {
     }
     v->templateId = templateId;
     v->displayId = displayId;
+    v->sheath = sheath;
     return 0;
 }
 
@@ -807,7 +819,8 @@ static int GAME_FASTCALL Script_GetVirtualItem(void *L) {
     }
     LuaPushNumber(L, v->templateId);
     LuaPushNumber(L, v->displayId);
-    return 2;
+    LuaPushNumber(L, v->sheath);
+    return 3;
 }
 
 // Rider poses (v14). Some mounts in later expansions change their rider's pose
