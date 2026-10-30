@@ -2024,6 +2024,7 @@ installMorphAPI()
 Mock.ResetUI()
 -- A ported pack's extra wear (DMorph_Ported\Ported.lua sets it before DMorph loads).
 Mock.portedExtraWear = "950040\tWings: Guardian Spirit\t\tpriest_guardianspirit_wings\n"
+	.. "950200\tBack: Test Cloak [hu m]\t\tcape_hu_m\n950201\tBack: Test Cloak [ni m]\t\tcape_ni_m\n"
 DmorphOcto_PortedExtraWear = Mock.portedExtraWear
 Mock.LoadAddon("DmorphOcto.toc")
 DmorphOcto_HiddenModels, DmorphOcto_HiddenItems = "4527,18088", "2955"
@@ -2517,6 +2518,23 @@ end)()
 	local pc = DmorphOcto.GetExtraWearCatalog()
 	check(pc.byID[950040] and pc.ported[pc.byID[950040]] and pc.names[pc.byID[950040]] == "Wings: Guardian Spirit",
 		"the ported pack's looks are in the list, marked as ported")
+	-- Per-race cloaks (user, 30 Oct): one row, the copy for the body you show.
+	local cloakRow = pc.byID[950200]
+	check(cloakRow and pc.byID[950201] == cloakRow and pc.names[cloakRow] == "Back: Test Cloak",
+		"a cloak's race copies are one row")
+	check(DmorphOcto.ExtraForBody(950200, 4, 0) == 950201 and DmorphOcto.ExtraForBody(950201, 6, 0) == 950200,
+		"the Night Elf copy for a Night Elf, the Human one for a race without its own")
+	DmorphOcto.ToggleExtraWear(950201)
+	DmorphOcto.SetRace(4, 0)
+	Mock.Tick(1.1)
+	local onElf = me[31]
+	DmorphOcto.SetRace(6, 0)
+	Mock.Tick(1.1)
+	check(onElf == 950201 and me[31] == 950200, "changing race morph swaps the cloak to that race's copy")
+	DmorphOcto.ClearExtraWear()
+	DmorphOcto.ResetModel()
+	Mock.Tick(1.1)
+	me[31] = 0
 	local ok = DmorphOcto.ToggleExtraWear(15473)
 	check(ok and me[31] == 15473, "wearing Shadowform puts it in the top buff field")
 	me[30] = 1234 -- a real buff the server put there

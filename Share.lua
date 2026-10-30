@@ -563,7 +563,7 @@ local function KeepExtra(token, want, done)
 	end
 	local wanted = {}
 	for i = 1, table.getn(want.extra or {}) do
-		wanted[want.extra[i]] = true
+		wanted[M.ExtraForBody and M.ExtraForBody(want.extra[i]) or want.extra[i]] = true
 	end
 	done.extraSlots = done.extraSlots or {}
 	for index, spell in pairs(done.extraSlots) do
@@ -579,7 +579,7 @@ local function KeepExtra(token, want, done)
 	end
 	local index = EXTRA_TOP
 	for i = 1, table.getn(want.extra or {}) do
-		local spell = want.extra[i]
+		local spell = M.ExtraForBody and M.ExtraForBody(want.extra[i]) or want.extra[i]
 		if wanted[spell] == true then
 			while index >= 0 do
 				local ok, now = pcall(DmorphHelper_GetAura, token, index)

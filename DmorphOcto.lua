@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.30.0"
+local VERSION = "2.31.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -2452,18 +2452,31 @@ function M.GetExtraWearCatalog()
 	if extraData.catalog then
 		return extraData.catalog
 	end
-	local c = { count = 0, ids = {}, names = {}, others = {}, models = {}, byID = {}, ported = {} }
+	local c = { count = 0, ids = {}, names = {}, others = {}, models = {}, byID = {}, ported = {}, variants = {} }
 	-- The ported pack's looks (Retail wings, backpacks, cloaks: DMorph_Ported's
 	-- Ported.lua, same line format) first, then the client's own.
 	for k, data in ipairs({ DmorphOcto_PortedExtraWear or "", DmorphOcto_ExtraWearData or "" }) do
 		for line in string.gfind(data, "[^\n]+") do
 			local _, _, id, name, others, models = strfind(line, "^(%d+)\t([^\t]*)\t([^\t]*)\t?([^\t]*)$")
 			id = tonumber(id)
-			if id and not c.byID[id] then
+			-- Retail cloaks come per race and gender ("Back: ... [ni f]"): one row per
+			-- cloak, the copies kept in c.variants[row]["ni f"] (user, 30 Oct: "if i
+			-- change to a night elf then they should be the ones showing").
+			local _, _, base, code = strfind(name or "", "^(.-) %[(%a%a [mf])%]$")
+			local row = base and c.byBase and c.byBase[base]
+			if id and row then
+				c.variants[row][code] = id
+				c.byID[id] = row
+			elseif id and not c.byID[id] then
 				c.count = c.count + 1
-				c.ids[c.count], c.names[c.count], c.others[c.count], c.models[c.count] = id, name, others, models
+				c.ids[c.count], c.names[c.count], c.others[c.count], c.models[c.count] = id, base or name, others, models
 				c.byID[id] = c.count
 				c.ported[c.count] = k == 1 or nil
+				if base then
+					c.byBase = c.byBase or {}
+					c.byBase[base] = c.count
+					c.variants[c.count] = { [code] = id }
+				end
 			end
 		end
 	end
@@ -2497,15 +2510,32 @@ function M.DescribeExtra(spell)
 	return i and c.names[i] or ("Spell " .. tostring(spell))
 end
 
+-- The spell to wear for a look on a body: a per-race cloak's copy for that
+-- race and gender (Human's if it has none), else the look itself.
+local EXTRA_RACE_CODES = { "hu", "or", "dw", "ni", "sc", "ta", "gn", "tr", "go", "be" }
+function M.ExtraForBody(spell, race, gender)
+	local c = M.GetExtraWearCatalog()
+	local row = c.byID[spell]
+	local v = row and c.variants[row]
+	if not v then
+		return spell
+	end
+	local g = gender == 1 and "f" or "m"
+	return v[(EXTRA_RACE_CODES[race or 1] or "hu") .. " " .. g] or v["hu " .. g] or v["hu m"] or c.ids[row]
+end
+
 -- Puts db.extra on in free buff fields and takes off what isn't wanted any
 -- more; run every second by the helper watcher and right after a change.
 local function WatchExtra()
 	if not (sessionReady and M.CanWearExtra()) then
 		return
 	end
-	local want = {}
+	-- Each look as the spell for the body you show (per-race cloaks change with it).
+	local race, gender = M.GetBodyRace()
+	local worn, want = {}, {}
 	for i = 1, table.getn(db.extra) do
-		want[db.extra[i]] = true
+		worn[i] = M.ExtraForBody(db.extra[i], race, gender)
+		want[worn[i]] = true
 	end
 	-- After a /reload our looks are still in the fields: adopt them once.
 	if not extraData.adopted then
@@ -2533,7 +2563,7 @@ local function WatchExtra()
 	-- Put on what's missing, in empty fields from the top down.
 	local index = extraData.top
 	for i = 1, table.getn(db.extra) do
-		local spell = db.extra[i]
+		local spell = worn[i]
 		if want[spell] == true then
 			while index >= 0 do
 				local ok, now = pcall(DmorphHelper_GetAura, "player", index)
@@ -2563,6 +2593,8 @@ function M.ToggleExtraWear(spell)
 	if not (spell and M.GetExtraWearCatalog().byID[spell]) then
 		return false, "That isn't a look DMorph knows."
 	end
+	-- A per-race cloak is one look whatever copy was asked for.
+	spell = M.GetExtraWearCatalog().ids[M.GetExtraWearCatalog().byID[spell]]
 	if not M.CanWearExtra() then
 		return false, "Extra wear needs DmorphHelper v17. " .. INSTALL_HELPER
 	end
