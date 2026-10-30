@@ -22,7 +22,7 @@
 //   DmorphHelper_SetRace(unit, race)                         (no rebuild)
 //   DmorphHelper_SetOwnRace(race)                            (0 = off; see Race morphs)
 //   DmorphHelper_Rebuild(unit)
-//   DmorphHelper_SetAura(unit, index, spellID)               (v17 experiment: aura field 0-47, then a rebuild)
+//   DmorphHelper_SetAura(unit, index, spellID)               (v17 experiment: aura field 0-47, through the game's add/remove)
 //   DmorphHelper_GetAura(unit, index)                        -> spell ID in that aura field
 //   DmorphHelper_SetWeather(type, intensity)                 (0 clear, 1 rain, 2 snow, 3 sandstorm; 0-1)
 //   DmorphHelper_ClearWeather()                              (the server's weather again)
@@ -554,6 +554,8 @@ static int GAME_FASTCALL Script_Rebuild(void *L) {
 #define FUN_AURA_REMOVED 0x6123F0
 typedef void(GAME_THISCALL *AuraRemoved_t)(void *unit, uint32_t index, uint32_t oldSpell);
 #define AuraRemoved ((AuraRemoved_t)FUN_AURA_REMOVED)
+#define FUN_AURA_ADDED 0x612320 // thiscall: unit, aura index, spell; ret 8
+#define AuraAdded ((AuraRemoved_t)FUN_AURA_ADDED)
 static const char *AURA_USAGE = "Usage: DmorphHelper_SetAura(unit, index 0-47, spellID or 0)";
 static int GAME_FASTCALL Script_SetAura(void *L) {
     void *unit = PlayerArg(L, 1, AURA_USAGE);
@@ -571,7 +573,11 @@ static int GAME_FASTCALL Script_SetAura(void *L) {
         AuraRemoved(unit, index, *aura);
     }
     *aura = spell;
-    Reload(unit);
+    // Putting one on the way the update-block code (0x604DC9) does, so the game
+    // tracks its looks and the removal above can stop them again.
+    if (spell) {
+        AuraAdded(unit, index, spell);
+    }
     return 0;
 }
 static int GAME_FASTCALL Script_GetAura(void *L) {
