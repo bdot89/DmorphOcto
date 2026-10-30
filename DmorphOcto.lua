@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.26.0"
+local VERSION = "2.27.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -4260,37 +4260,12 @@ local function MorphedItemsLoaded()
 	return true
 end
 
--- The durability of the item in a slot ("" for none or none shown), from a
--- hidden tooltip: 1.12 has neither UPDATE_INVENTORY_DURABILITY nor a function
--- that says it.
-local durabilityTip, durabilityPattern
-local function Durability(slot)
-	if not durabilityTip then
-		durabilityTip = CreateFrame("GameTooltip", "DmorphOctoDurabilityTip", nil, "GameTooltipTemplate")
-		durabilityPattern = string.gsub(DURABILITY_TEMPLATE or "Durability %d / %d", "%%d", "(%%d+)")
-	end
-	durabilityTip:SetOwner(UIParent, "ANCHOR_NONE")
-	durabilityTip:ClearLines()
-	durabilityTip:SetInventoryItem("player", slot)
-	for i = 2, durabilityTip:NumLines() do
-		local line = getglobal("DmorphOctoDurabilityTipTextLeft" .. i)
-		local _, _, now = strfind(line and line:GetText() or "", durabilityPattern)
-		if now then
-			return now
-		end
-	end
-	return ""
-end
-
--- What you have on: the item in each slot (1-19) and the durability of the
--- morphed ones; and how much ammo and how many thrown weapons are left.
+-- What you have on: the item in each slot (1-19); and how much ammo and how
+-- many thrown weapons are left. Durability isn't part of it any more (2.27.0).
 local function GearState()
 	local parts = {}
 	for slot = 1, 19 do
 		parts[slot] = GetInventoryItemLink("player", slot) or ""
-		if db.items[slot] then
-			parts[slot] = parts[slot] .. "@" .. Durability(slot)
-		end
 	end
 	return table.concat(parts, ";"), (GetInventoryItemCount("player", 0) or 0) .. "/" .. (GetInventoryItemCount("player", 18) or 0)
 end
@@ -4311,7 +4286,15 @@ end
 -- (repairs) check at once; coming back to life rebuilds twice (now and
 -- RES_AGAIN seconds later), as the game builds your living model again after
 -- the events.
-local GEAR_POLL, RES_AGAIN = 1, 1.5
+--
+-- 2.27.0 (user, 30 Oct: "popping"): DmorphHelper's test build logged every
+-- slot redraw and model rebuild while the user died, was resurrected and
+-- repaired: the game redrew no slot from the real items at all, and the pop
+-- the user saw ("the whole character blinks, then looks the same") was this
+-- rebuild itself. So durability, deaths, resurrections and repairs only check
+-- the morphs (CheckItems, which changes nothing while they hold); only a real
+-- item change rebuilds.
+local GEAR_POLL = 1
 local itemFrame = CreateFrame("Frame")
 -- What you have on (GearState) against the last look: a change gets the
 -- morphs checked and, a fifth of a second later, the model rebuilt.
@@ -4354,38 +4337,27 @@ itemFrame:SetScript("OnEvent", function()
 		itemCheck.loginWait = not MorphedItemsLoaded() and 0 or nil
 		return
 	end
-	if event == "PLAYER_ALIVE" or event == "PLAYER_UNGHOST" then
-		-- Back to life (a spirit healer, a res, back at your body): rebuilt
-		-- now and once more when the game has built your living model.
-		GearCheck(true)
-		this.again = RES_AGAIN
+	if event == "UNIT_INVENTORY_CHANGED" then
+		if arg1 == "player" then
+			GearCheck()
+		end
 		return
 	end
-	if event == "UNIT_INVENTORY_CHANGED" and arg1 ~= "player" then
-		return
+	-- Death, back to life, repairs, durability alerts: the morphs are only
+	-- checked (no rebuild; see 2.27.0 above).
+	if sessionReady and itemCheck.on and next(db.items) then
+		CheckItems()
 	end
-	GearCheck()
 end)
 itemFrame:SetScript("OnUpdate", function()
-	-- Durability changes have no event: read them once a second.
 	this.poll = (this.poll or 0) + arg1
 	if this.poll >= GEAR_POLL then
 		this.poll = 0
-		if sessionReady and itemCheck.on and next(db.items) then
-			GearCheck()
-		end
 		-- A weapon held another way whose copy waited for the game (StyledID).
 		if sessionReady and styleData.pending then
 			for slot in pairs(styleData.pending) do
 				ApplyItem(slot)
 			end
-		end
-	end
-	if this.again then
-		this.again = this.again - arg1
-		if this.again <= 0 then
-			this.again = nil
-			GearCheck(true)
 		end
 	end
 	if itemCheck.loginWait then

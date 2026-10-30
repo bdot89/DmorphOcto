@@ -226,6 +226,9 @@ static int GAME_FASTCALL Script_Version(void *L) {
 // bow morph) fires nothing. The field is only yours: the addon writes the
 // ammo it wants and puts it back when the server resends the real one.
 static void *Me(void);
+#ifdef DMORPH_DIAG
+static void DiagLog(const char *what, void *caller, uint32_t a, uint32_t b);
+#endif
 
 static int GAME_FASTCALL Script_SetAmmo(void *L) {
     uint32_t item = NumberArg(L, 1, 0, 2147483647.0, "Usage: DmorphHelper_SetAmmo(itemID or 0)");
@@ -445,6 +448,9 @@ static void BuildReputation_h(void) {
     BuildReputation_o();
     ReleaseOwnRace(hold);
     g_builtRace = own;
+#ifdef DMORPH_DIAG
+    DiagLog("reputation", __builtin_return_address(0), own, Fields(me)[UNIT_FIELD_BYTES_0] & 0xFF);
+#endif
 }
 
 // Flight paths (v16): the routes are worked out with your own race, so a race
@@ -1028,6 +1034,68 @@ static BOOL VanillaHelpersHooked(void) {
     return IsJump(FUN_INVALID_FUNCTION_PTR_CHECK) && IsJump(FUN_LOAD_SCRIPT_FUNCTIONS);
 }
 
+
+#ifdef DMORPH_DIAG
+// Diagnostic build only (build.sh diag): logs your own model's slot redraws,
+// full rebuilds and reputation builds to DmorphHelper.log in the game folder,
+// each with the game code that asked for it.
+#include <stdio.h>
+#define FUN_VISIBLE_ITEM_CHANGED 0x5DEE30
+static void DiagLog(const char *what, void *caller, uint32_t a, uint32_t b) {
+    FILE *f = fopen("DmorphHelper.log", "a");
+    if (!f) {
+        return;
+    }
+    fprintf(f, "%10lu %-10s %08lx %08lx  ", (unsigned long)GetTickCount(), what, (unsigned long)a,
+            (unsigned long)b);
+    // The call chain as module+offset (other DLLs load at changing addresses).
+    void *frames[10];
+    USHORT n = RtlCaptureStackBackTrace(1, 10, frames, NULL);
+    (void)caller;
+    for (USHORT i = 0; i < n; i++) {
+        HMODULE mod = NULL;
+        char path[MAX_PATH] = "?";
+        if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                               (LPCSTR)frames[i], &mod) && mod) {
+            GetModuleFileNameA(mod, path, sizeof(path));
+        }
+        const char *name = strrchr(path, '\\');
+        name = name ? name + 1 : path;
+        if (_stricmp(name, "WoW.exe") == 0) {
+            fprintf(f, " %08lx", (unsigned long)(uintptr_t)frames[i]);
+        } else {
+            fprintf(f, " %s+%lx", name, (unsigned long)((uintptr_t)frames[i] - (uintptr_t)mod));
+        }
+    }
+    fputc('\n', f);
+    fclose(f);
+}
+typedef void(GAME_THISCALL *ItemChanged_t)(void *unit, uint32_t a, uint32_t b);
+static ItemChanged_t ItemChanged_o = NULL;
+static void GAME_THISCALL ItemChanged_h(void *unit, uint32_t a, uint32_t b) {
+    if (unit == Me()) {
+        DiagLog("slot", __builtin_return_address(0), a, b);
+    }
+    ItemChanged_o(unit, a, b);
+}
+static UpdateDisplayInfo_t DisplayInfo_o = NULL;
+static void GAME_THISCALL DisplayInfo_h(void *unit) {
+    if (unit == Me()) {
+        DiagLog("rebuild", __builtin_return_address(0), 0, 0);
+    }
+    DisplayInfo_o(unit);
+}
+static void DiagInstall(void) {
+    DiagLog("start", NULL, HELPER_VERSION, 0);
+    if (MH_CreateHook((LPVOID)FUN_VISIBLE_ITEM_CHANGED, (LPVOID)&ItemChanged_h, (LPVOID *)&ItemChanged_o) == MH_OK) {
+        MH_EnableHook((LPVOID)FUN_VISIBLE_ITEM_CHANGED);
+    }
+    if (MH_CreateHook((LPVOID)FUN_CGUNIT_C_UPDATE_DISPLAY_INFO, (LPVOID)&DisplayInfo_h, (LPVOID *)&DisplayInfo_o) == MH_OK) {
+        MH_EnableHook((LPVOID)FUN_CGUNIT_C_UPDATE_DISPLAY_INFO);
+    }
+}
+#endif
+
 static void InstallHook(void) {
     if (MH_Initialize() != MH_OK) {
         return;
@@ -1082,6 +1150,9 @@ static void InstallHook(void) {
         MH_EnableHook((LPVOID)FUN_DBCACHE_ITEM_STATS_GET_RECORD) != MH_OK) {
         GetItemRecord_o = NULL;
     }
+#ifdef DMORPH_DIAG
+    DiagInstall();
+#endif
 }
 
 static BOOL Ready(void) {

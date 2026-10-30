@@ -2547,30 +2547,29 @@ check(vh.items[1] == 4321, "/dmorph itemcheck off stops the repairs")
 slash("dmorph itemcheck on")
 Mock.Tick(1.1)
 check(vh.items[1] == 2955, "and on starts them again")
--- Durability changes make the game redraw body parts from your real items while
--- the morphs stay on (users: only switching an item or set brought the look back):
--- the model is rebuilt with the morphs, at most once a second, without looping.
--- 1.12 reports them only as UNIT_INVENTORY_CHANGED; DMorph reads the durability
--- from a tooltip, and rebuilds for nothing else (bags, loot: running on the spot).
+-- Putting on another item can make the game redraw the slot from it while the
+-- morph stays on: the model is rebuilt with the morphs, at most once a second,
+-- without looping. Nothing else in UNIT_INVENTORY_CHANGED rebuilds (bags, loot,
+-- food: running on the spot).
 Mock.gear[1] = { 7000, 1, 60, 60 } -- your real helmet, 60 / 60
 Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
 Mock.Tick(2)
 local rebuilt = game.rebuilds
-Mock.gear[1][3] = 59
+Mock.gear[1] = { 7001, 1, 60, 60 }
 Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
 Mock.Tick(0.3)
-check(game.rebuilds == rebuilt + 1, "a durability change rebuilds the model with the item morphs")
+check(game.rebuilds == rebuilt + 1, "another real item put on rebuilds the model with the item morphs")
 Mock.Tick(1.1)
 Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
 Mock.Tick(0.3)
 check(game.rebuilds == rebuilt + 1, "an inventory change that isn't your gear (bags, loot, food) doesn't")
-Mock.gear[1][3] = 58
+Mock.gear[1] = { 7002, 1, 60, 60 }
 Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
 Mock.Tick(0.3)
 Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
 Mock.Tick(0.1)
 check(game.rebuilds == rebuilt + 2, "an event from our own rebuild doesn't start another (no loop)")
-Mock.gear[1][3] = 57
+Mock.gear[1] = { 7003, 1, 60, 60 }
 Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
 Mock.Tick(0.3)
 check(game.rebuilds == rebuilt + 2, "a second change within a second waits")
@@ -2605,44 +2604,38 @@ check(beforeShots + 1 == afterSwap and game.rebuilds == afterSwap,
 Mock.gear[18], Mock.gear[0] = nil, nil
 end
 slash("dmorph itemcheck off")
-Mock.gear[1][3] = 50
+Mock.gear[1] = { 7004, 1, 60, 60 }
 Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
 Mock.Tick(0.3)
 check(game.rebuilds == rebuilt + 5, "/dmorph itemcheck off stops the rebuilds too")
 Mock.gear[1] = nil
 slash("dmorph itemcheck on")
--- 2.22.0 (user, 21 Oct: items changed when losing durability, after a spirit res
--- or a revive, and after repairing): 1.12 has no event for a durability change,
--- so it's read once a second; coming back to life and closing a vendor check at once.
+-- 2.27.0 (user, 30 Oct: "popping"): the helper's test build showed the game
+-- redraws no slot from the real items on durability loss, death, res or repair;
+-- the blink was DMorph's own rebuild. Those now never rebuild.
 do
 Mock.gear[1] = { 7000, 1, 60, 60 }
 Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
 Mock.Tick(2)
-local worn = game.rebuilds
-Mock.gear[1][3] = 55 -- worn down in a fight: no event
-Mock.Tick(0.6)
-Mock.Tick(0.6)
-Mock.Tick(0.3)
-check(game.rebuilds == worn + 1, "a durability change with no event is found within a second and rebuilds the model")
-Mock.Tick(2)
-local dead = game.rebuilds
+local before = game.rebuilds
+Mock.gear[1][3] = 55 -- worn down in a fight
+Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
+Mock.Tick(1.1)
+Mock.Tick(1.1)
+check(game.rebuilds == before, "losing durability doesn't rebuild the model (no pop)")
+Mock.Fire("PLAYER_DEAD")
 Mock.Fire("PLAYER_UNGHOST")
-Mock.Tick(0.3)
-local revived = game.rebuilds
-Mock.Tick(0.7)
-Mock.Tick(0.7)
-Mock.Tick(0.3)
-check(revived == dead + 1 and game.rebuilds == dead + 2,
-	"coming back to life rebuilds the model now and once more a moment later")
-Mock.Tick(2)
-local beforeRepair = game.rebuilds
+Mock.Fire("PLAYER_ALIVE")
+Mock.Tick(1.1)
+Mock.Tick(1.1)
+check(game.rebuilds == before, "dying and coming back to life don't rebuild it")
 Mock.gear[1][3] = 60
 Mock.Fire("MERCHANT_CLOSED")
-Mock.Tick(0.3)
-check(game.rebuilds == beforeRepair + 1, "a repair rebuilds the model when the vendor closes")
 Mock.Tick(1.1)
-Mock.Tick(1.1)
-check(game.rebuilds == beforeRepair + 1, "and the once-a-second check finds nothing new to rebuild")
+check(game.rebuilds == before, "nor does a repair")
+vh.items[1] = 4321 -- the morph field really went back: still put right
+Mock.Fire("PLAYER_ALIVE")
+check(vh.items[1] == 2955, "coming back to life still checks the morphs and puts a lost one back")
 Mock.gear[1] = nil
 end
 -- After a loading screen the game may have built your model before it had the
