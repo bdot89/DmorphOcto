@@ -559,6 +559,8 @@ typedef void(GAME_THISCALL *AuraRemoved_t)(void *unit, uint32_t index, uint32_t 
 #define FUN_AURA_VISUAL 0x5FF350 // thiscall: unit, aura index; ret 4
 typedef void(GAME_THISCALL *AuraVisual_t)(void *unit, uint32_t index);
 #define AuraVisual ((AuraVisual_t)FUN_AURA_VISUAL)
+#define FUN_AURA_STOP_VISUAL 0x5FF290 // thiscall: unit, aura index; ret 4
+#define AuraStopVisual ((AuraVisual_t)FUN_AURA_STOP_VISUAL)
 static const char *AURA_USAGE = "Usage: DmorphHelper_SetAura(unit, index 0-47, spellID or 0)";
 static int GAME_FASTCALL Script_SetAura(void *L) {
     void *unit = PlayerArg(L, 1, AURA_USAGE);
@@ -575,6 +577,10 @@ static int GAME_FASTCALL Script_SetAura(void *L) {
     // field must already be empty then, else it starts the old look again
     // (user, 30 Oct: Shadowform's see-through body stayed until a relog);
     // the add 0x612320 (unit, index, spell; ret 8) doesn't start the visual.
+    // 0x5FF290 (thiscall: unit, index; ret 4) stops the looks of the spell
+    // cached for that slot and clears the cache; neither the removal nor
+    // 0x5FF350 calls it, so it goes first (the add calls it itself).
+    AuraStopVisual(unit, index);
     uint32_t old = *aura;
     *aura = spell;
     if (old && old != spell) {
