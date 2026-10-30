@@ -1004,9 +1004,10 @@ local function UpdateSlots()
 		if itemID == 0 then
 			-- Shows nothing (Invisible, Birthday suit, own gear hidden under a set):
 			-- the empty slot, purple. It showed a question mark (user, 18 Oct).
-			local _, empty = GetInventorySlotInfo(SLOT_KEYS[slot])
-			button.icon:SetTexture(empty)
-			button.icon:SetVertexColor(C.accent[1], C.accent[2], C.accent[3])
+			-- 2.26.0 (user: "icons on the item slots"): the game's Lesser
+			-- Invisibility icon, so invisible slots read at a glance.
+			button.icon:SetTexture("Interface\\Icons\\Spell_Magic_LesserInvisibilty")
+			button.icon:SetVertexColor(1, 1, 1)
 			button.glow:Show()
 		elseif itemID then
 			local ok, _, _, _, _, _, _, _, _, texture = pcall(GetItemInfo, itemID)

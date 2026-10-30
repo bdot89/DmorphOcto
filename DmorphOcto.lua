@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.25.0"
+local VERSION = "2.26.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1313,7 +1313,9 @@ local function SanitizeOutfit(outfit)
 	end
 	for slot, itemID in pairs(outfit.items) do
 		itemID = ParseID(itemID)
-		if not SLOT_NAMES[slot] or itemID == 0 then
+		-- 0 = Invisible / hidden by a set (armour slots): kept, so it's still
+		-- invisible after a relog (user, 30 Oct). Weapons have no 0.
+		if not SLOT_NAMES[slot] or (itemID == 0 and (slot == 16 or slot == 17 or slot == 18)) then
 			itemID = nil
 		end
 		outfit.items[slot] = itemID
@@ -1602,7 +1604,7 @@ local function CaptureNative()
 		table.insert(languages, name)
 	end
 	if table.getn(languages) > 0 then
-		local got, default = pcall(GetDefaultLanguage)
+		local got, default = pcall(M.gameDefaultLanguage or GetDefaultLanguage)
 		db.languages = languages
 		db.defaultLanguage = got and default or nil
 	end
@@ -1913,15 +1915,32 @@ local function StyleTemplate(kind, slot, style)
 	if not itemTypes then
 		ReadItemTypes()
 	end
+	local ask = {}
 	for id, k in pairs(itemTypes) do
-		if k == kind and Fits(id) then
-			styleData[key] = id
-			return id
+		if k == kind then
+			if Fits(id) then
+				styleData[key] = id
+				return id
+			end
+			if table.getn(ask) < 6 then
+				table.insert(ask, id)
+			end
+		end
+	end
+	-- None loaded yet (just after logging in): a few of that kind are asked for,
+	-- and the slot is tried again once a second (styleData.pending).
+	if not styleData["asked" .. key] and type(C_Item) == "table" and type(C_Item.RequestLoadItemDataByID) == "function" then
+		styleData["asked" .. key] = true
+		for i = 1, table.getn(ask) do
+			pcall(C_Item.RequestLoadItemDataByID, ask[i])
 		end
 	end
 end
 
 local function StyledID(slot, itemID)
+	if styleData.pending then
+		styleData.pending[slot] = nil -- set again below while it still waits
+	end
 	local style = db.weaponStyle and db.weaponStyle[slot]
 	if not (itemID and itemID > 0) then
 		return itemID
@@ -1943,7 +1962,10 @@ local function StyledID(slot, itemID)
 	end
 	local template = StyleTemplate(target, slot, style)
 	if not template then
-		return itemID, "waits for the game to load an item to copy"
+		styleData.pending = styleData.pending or {}
+		styleData.pending[slot] = true
+		-- Your own weapon meanwhile: a two-hander as it is in the off hand broke the model.
+		return nil, "waits for the game to load a weapon to copy (a second or two)"
 	end
 	local key = itemID .. ":" .. style
 	local vid = styleData.ids[key]
@@ -2024,6 +2046,9 @@ local function ApplyItem(slot)
 		worn, why = StyledID(slot, id)
 	end
 	styleData.worn[slot] = worn
+	if worn ~= nil and styleData.pending then
+		styleData.pending[slot] = nil
+	end
 	local ok, err = Morph(SetUnitVisibleItemID, "player", slot, worn)
 	if ok and why then
 		return true, (SLOT_NAMES[slot] or "Weapon") .. ": this weapon " .. why .. ", so it's held as it is."
@@ -2638,7 +2663,8 @@ local function CheckItems()
 	local now = itemCheck.clock
 	for slot, item in pairs(db.items) do
 		local ok, _, _, shown = pcall(DmorphHelper_GetItemEnchants, "player", slot)
-		if ok and type(shown) == "number" and shown ~= (styleData.worn[slot] or item) and (itemCheck.pausedUntil[slot] or -1) <= now then
+		if ok and type(shown) == "number" and not (styleData.pending and styleData.pending[slot])
+			and shown ~= (styleData.worn[slot] or item) and (itemCheck.pausedUntil[slot] or -1) <= now then
 			local recent, kept = itemCheck.recent[slot] or {}, {}
 			for i = 1, table.getn(recent) do
 				if now - recent[i] < 10 then
@@ -3989,6 +4015,20 @@ local SPOKEN = {
 -- So chat goes out in a language your own character speaks (read with your
 -- own race showing, see CaptureNative): the one asked for if you speak it,
 -- else your own default, else your faction's (Orcish / Common), else the first.
+-- 2.26.0 (user, 30 Oct: "fix the Orcish text"): the chat window labels every
+-- message not in GetDefaultLanguage() with its language, and the game takes
+-- that default from the race byte, so during a race morph your own Orcish read
+-- "[Orcish] yo" and the chat box spoke the morph race's language. During a race
+-- morph GetDefaultLanguage() answers your own character's default.
+DmorphOcto_GameDefaultLanguage = DmorphOcto_GameDefaultLanguage or GetDefaultLanguage
+M.gameDefaultLanguage = DmorphOcto_GameDefaultLanguage
+GetDefaultLanguage = function(unit)
+	if db and db.defaultLanguage and (unit == nil or unit == "player") and MorphRace() then
+		return db.defaultLanguage
+	end
+	return M.gameDefaultLanguage(unit)
+end
+
 local function SpeakableLanguage(language)
 	local list, default = db and db.languages, db and db.defaultLanguage
 	if not list then
@@ -4333,6 +4373,12 @@ itemFrame:SetScript("OnUpdate", function()
 		this.poll = 0
 		if sessionReady and itemCheck.on and next(db.items) then
 			GearCheck()
+		end
+		-- A weapon held another way whose copy waited for the game (StyledID).
+		if sessionReady and styleData.pending then
+			for slot in pairs(styleData.pending) do
+				ApplyItem(slot)
+			end
 		end
 	end
 	if this.again then

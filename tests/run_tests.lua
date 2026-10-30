@@ -1077,8 +1077,8 @@ end
 -- Hidden slots (Invisible, Birthday suit) show the empty slot, purple, not a question mark.
 DmorphOcto.HideItem(6)
 Mock.Tick(1.1)
-check(DmorphOctoSlot6.icon.texture == "Interface\\Paperdoll\\UI-PaperDoll-Slot-WaistSlot" and DmorphOctoSlot6.glow.shown,
-	"a hidden slot shows the empty slot picture, framed")
+check(DmorphOctoSlot6.icon.texture == "Interface\\Icons\\Spell_Magic_LesserInvisibilty" and DmorphOctoSlot6.glow.shown,
+	"a hidden slot shows the invisibility icon, framed")
 DmorphOcto.SetItem(6, 0)
 press(DmorphOctoItemListRow3)
 local locked = {}
@@ -1915,6 +1915,9 @@ say(".race human")
 SendChatMessage("hello", "SAY")
 check(Mock.lastLanguage == "Orcish" and Mock.sent[table.getn(Mock.sent)] == "hello",
 	"as a Human morph, /say goes out in Orcish instead of Common")
+-- 2.26.0 (user: "[Orcish] yo"): the chat window labels what isn't your default language.
+check(GetDefaultLanguage() == "Orcish" and GetDefaultLanguage("player") == "Orcish",
+	"during a race morph your default language is your own (no [Orcish] label on your own chat)")
 SendChatMessage("hello", "GUILD", "Common")
 check(Mock.lastLanguage == "Orcish", "a language you don't know is swapped for one you do")
 say(".race gnome")
@@ -2426,6 +2429,18 @@ end)()
 	local off = vh.items[17]
 	check(off and off >= 880001 and off < 900000 and game.virtual[off] and game.virtual[off][1] == 25
 		and DmorphOcto.GetWeaponStyle(17) == nil, "a two-hander in the off hand is held one-handed by itself")
+	DmorphOcto.SetItem(17, 0)
+	-- After a relog the game may not have a weapon to copy yet (user, 30 Oct: the
+	-- off-hand two-hander "doesn't show and bugs out"): your own off hand meanwhile,
+	-- and the copy once one has loaded.
+	Mock.serverItems[25] = nil
+	DmorphOcto.SetItem(17, 647)
+	local waiting = vh.items[17]
+	Mock.serverItems[25] = { "Worn Shortsword", 1, "INVTYPE_WEAPON" }
+	Mock.Tick(1.2)
+	local later = vh.items[17]
+	check(waiting == nil and later and later >= 880001 and later < 900000,
+		"a two-hander in the off hand waits with your own weapon, then shows once a weapon to copy is in")
 	DmorphOcto.SetItem(17, 0)
 	DmorphOcto.SetItem(16, 0)
 	Mock.serverItems[25] = nil
@@ -3095,6 +3110,11 @@ Mock.portedData = nil
 loadUI()
 check(not DmorphOcto.GetCreatureCatalog().byID[60001], "without Data/Ported.lua there are no ported models")
 
+-- 2.26.0 (user, 30 Oct: "the invisible items are back" after a relog).
+DmorphOcto.HideItem(6)
+loadUI()
+check(DmorphOctoDB.items[6] == 0 and DmorphOcto.GetState().items[6] == 0, "an invisible slot stays invisible after a /reload")
+DmorphOcto.SetItem(6, 0)
 -- 2.23.0 (user): a pop-up at login or /reload when DmorphHelper is missing or out of date.
 ;(function()
 	local function setupPopup()
