@@ -556,6 +556,9 @@ typedef void(GAME_THISCALL *AuraRemoved_t)(void *unit, uint32_t index, uint32_t 
 #define AuraRemoved ((AuraRemoved_t)FUN_AURA_REMOVED)
 #define FUN_AURA_ADDED 0x612320 // thiscall: unit, aura index, spell; ret 8
 #define AuraAdded ((AuraRemoved_t)FUN_AURA_ADDED)
+#define FUN_AURA_VISUAL 0x5FF350 // thiscall: unit, aura index; ret 4
+typedef void(GAME_THISCALL *AuraVisual_t)(void *unit, uint32_t index);
+#define AuraVisual ((AuraVisual_t)FUN_AURA_VISUAL)
 static const char *AURA_USAGE = "Usage: DmorphHelper_SetAura(unit, index 0-47, spellID or 0)";
 static int GAME_FASTCALL Script_SetAura(void *L) {
     void *unit = PlayerArg(L, 1, AURA_USAGE);
@@ -565,18 +568,21 @@ static int GAME_FASTCALL Script_SetAura(void *L) {
         return 0;
     }
     uint32_t *aura = &Fields(unit)[UNIT_FIELD_AURA + index];
-    // Taking a spell off: a rebuild left Shadowform's see-through body on until
-    // a relog (user, 30 Oct). The game's own removal 0x6123F0 (thiscall: unit,
-    // aura index, old spell; ret 8), which the update-block code 0x604E73 calls
-    // while the field still holds the old spell, stops its looks.
-    if (*aura && *aura != spell) {
-        AuraRemoved(unit, index, *aura);
-    }
+    // The game's aura code (seen in the update-block code 0x604Dxx):
+    // 0x5FF350 (thiscall: unit, index; ret 4) reads the spell in the field,
+    // caches it (unit +0xB58) and starts its state visual (0x60EDF0); the
+    // removal 0x6123F0 (unit, index, old spell; ret 8) runs it too, so the
+    // field must already be empty then, else it starts the old look again
+    // (user, 30 Oct: Shadowform's see-through body stayed until a relog);
+    // the add 0x612320 (unit, index, spell; ret 8) doesn't start the visual.
+    uint32_t old = *aura;
     *aura = spell;
-    // Putting one on the way the update-block code (0x604DC9) does, so the game
-    // tracks its looks and the removal above can stop them again.
+    if (old && old != spell) {
+        AuraRemoved(unit, index, old);
+    }
     if (spell) {
         AuraAdded(unit, index, spell);
+        AuraVisual(unit, index);
     }
     return 0;
 }
