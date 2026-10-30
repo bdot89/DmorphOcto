@@ -22,6 +22,8 @@
 //   DmorphHelper_SetRace(unit, race)                         (no rebuild)
 //   DmorphHelper_SetOwnRace(race)                            (0 = off; see Race morphs)
 //   DmorphHelper_Rebuild(unit)
+//   DmorphHelper_SetAura(unit, index, spellID)               (v17 experiment: aura field 0-47, then a rebuild)
+//   DmorphHelper_GetAura(unit, index)                        -> spell ID in that aura field
 //   DmorphHelper_SetWeather(type, intensity)                 (0 clear, 1 rain, 2 snow, 3 sandstorm; 0-1)
 //   DmorphHelper_ClearWeather()                              (the server's weather again)
 //   DmorphHelper_GetWeather()                                -> type, intensity, yours (1/0), server type, intensity
@@ -542,6 +544,32 @@ static int GAME_FASTCALL Script_Rebuild(void *L) {
     return 0;
 }
 
+// Aura fields (v17, an experiment for "Extra wear"): UNIT_FIELD_AURA holds the
+// spell ID of each aura a unit has (0-31 buffs, 32-47 debuffs); the game draws
+// a spell's state visual (SpellVisual's state kit: shadow form, wings...) for
+// the auras it finds there. Writes one, then rebuilds the model so the game
+// looks at the auras again. Only on this screen; the server's next write of
+// that slot replaces it.
+#define UNIT_FIELD_AURA 0x2F
+static const char *AURA_USAGE = "Usage: DmorphHelper_SetAura(unit, index 0-47, spellID or 0)";
+static int GAME_FASTCALL Script_SetAura(void *L) {
+    void *unit = PlayerArg(L, 1, AURA_USAGE);
+    uint32_t index = NumberArg(L, 2, 0, 47, AURA_USAGE);
+    uint32_t spell = NumberArg(L, 3, 0, 2147483647.0, AURA_USAGE);
+    if (!unit) {
+        return 0;
+    }
+    Fields(unit)[UNIT_FIELD_AURA + index] = spell;
+    Reload(unit);
+    return 0;
+}
+static int GAME_FASTCALL Script_GetAura(void *L) {
+    void *unit = PlayerArg(L, 1, "Usage: DmorphHelper_GetAura(unit, index 0-47)");
+    uint32_t index = NumberArg(L, 2, 0, 47, "Usage: DmorphHelper_GetAura(unit, index 0-47)");
+    LuaPushNumber(L, unit ? Fields(unit)[UNIT_FIELD_AURA + index] : 0);
+    return 1;
+}
+
 // Weather. The server sends it (SMSG_WEATHER: type, intensity, sound) and the
 // handler hands it to the world's weather object, CWeather::SetWeather
 // (0x67BAF0: type 0 clear, 1 rain, 2 snow, 3 sandstorm; intensity 0-1; then
@@ -1012,6 +1040,8 @@ static void GAME_FASTCALL LoadScriptFunctions_h(void) {
     RegisterFunction("DmorphHelper_SetRace", (uintptr_t)&Script_SetRace);
     RegisterFunction("DmorphHelper_SetOwnRace", (uintptr_t)&Script_SetOwnRace);
     RegisterFunction("DmorphHelper_Rebuild", (uintptr_t)&Script_Rebuild);
+    RegisterFunction("DmorphHelper_SetAura", (uintptr_t)&Script_SetAura);
+    RegisterFunction("DmorphHelper_GetAura", (uintptr_t)&Script_GetAura);
     RegisterFunction("DmorphHelper_SetWeather", (uintptr_t)&Script_SetWeather);
     RegisterFunction("DmorphHelper_ClearWeather", (uintptr_t)&Script_ClearWeather);
     RegisterFunction("DmorphHelper_GetWeather", (uintptr_t)&Script_GetWeather);
