@@ -3225,7 +3225,7 @@ function P.BuildExtraPage(page)
 		local catalog = M.GetExtraWearCatalog()
 		local i = ui.extraResult[index]
 		row.text:SetText(catalog.names[i])
-		row.info:SetText(catalog.others[i])
+		row.info:SetText(catalog.ported[i] and "Retail (ported pack)" or catalog.others[i])
 		if M.IsWearingExtra(catalog.ids[i]) then
 			row:LockHighlight()
 			row.tick:Show()

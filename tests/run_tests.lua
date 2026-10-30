@@ -131,6 +131,7 @@ end
 -- Loads the addon like a fresh UI (login or /reload) and enters the world.
 local function loadUI()
 	Mock.ResetUI()
+	DmorphOcto_PortedExtraWear = Mock.portedExtraWear -- DMorph_Ported\Ported.lua loads with every UI
 	Mock.LoadAddon("DmorphOcto.toc")
 	Mock.Fire("VARIABLES_LOADED")
 	Mock.Fire("PLAYER_ENTERING_WORLD")
@@ -2021,6 +2022,9 @@ check(contains(DmorphOctoFrameStatus.text, "VanillaHelpers"), "clicking a model 
 newClient(49)
 installMorphAPI()
 Mock.ResetUI()
+-- A ported pack's extra wear (DMorph_Ported\Ported.lua sets it before DMorph loads).
+Mock.portedExtraWear = "950040\tWings: Guardian Spirit\t\tpriest_guardianspirit_wings\n"
+DmorphOcto_PortedExtraWear = Mock.portedExtraWear
 Mock.LoadAddon("DmorphOcto.toc")
 DmorphOcto_HiddenModels, DmorphOcto_HiddenItems = "4527,18088", "2955"
 local shown = DmorphOcto.GetCreatureCatalog()
@@ -2510,6 +2514,9 @@ end)()
 	game.auras.player = me
 	check(DmorphOcto.GetExtraWearCatalog().count > 300 and DmorphOcto.DescribeExtra(15473) == "Shadowform",
 		"the extra wear list has the client's spell looks (Shadowform by name)")
+	local pc = DmorphOcto.GetExtraWearCatalog()
+	check(pc.byID[950040] and pc.ported[pc.byID[950040]] and pc.names[pc.byID[950040]] == "Wings: Guardian Spirit",
+		"the ported pack's looks are in the list, marked as ported")
 	local ok = DmorphOcto.ToggleExtraWear(15473)
 	check(ok and me[31] == 15473, "wearing Shadowform puts it in the top buff field")
 	me[30] = 1234 -- a real buff the server put there

@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.29.0"
+local VERSION = "2.30.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -2452,17 +2452,22 @@ function M.GetExtraWearCatalog()
 	if extraData.catalog then
 		return extraData.catalog
 	end
-	local c = { count = 0, ids = {}, names = {}, others = {}, models = {}, byID = {} }
-	for line in string.gfind(DmorphOcto_ExtraWearData or "", "[^\n]+") do
-		local _, _, id, name, others, models = strfind(line, "^(%d+)\t([^\t]*)\t([^\t]*)\t?([^\t]*)$")
-		id = tonumber(id)
-		if id then
-			c.count = c.count + 1
-			c.ids[c.count], c.names[c.count], c.others[c.count], c.models[c.count] = id, name, others, models
-			c.byID[id] = c.count
+	local c = { count = 0, ids = {}, names = {}, others = {}, models = {}, byID = {}, ported = {} }
+	-- The ported pack's looks (Retail wings, backpacks, cloaks: DMorph_Ported's
+	-- Ported.lua, same line format) first, then the client's own.
+	for k, data in ipairs({ DmorphOcto_PortedExtraWear or "", DmorphOcto_ExtraWearData or "" }) do
+		for line in string.gfind(data, "[^\n]+") do
+			local _, _, id, name, others, models = strfind(line, "^(%d+)\t([^\t]*)\t([^\t]*)\t?([^\t]*)$")
+			id = tonumber(id)
+			if id and not c.byID[id] then
+				c.count = c.count + 1
+				c.ids[c.count], c.names[c.count], c.others[c.count], c.models[c.count] = id, name, others, models
+				c.byID[id] = c.count
+				c.ported[c.count] = k == 1 or nil
+			end
 		end
 	end
-	DmorphOcto_ExtraWearData = nil
+	DmorphOcto_ExtraWearData, DmorphOcto_PortedExtraWear = nil, nil
 	extraData.catalog = c
 	return c
 end
