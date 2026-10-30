@@ -47,6 +47,10 @@
 -- it is): "wp-bqos". Receivers wear a copy held and sheathed that way
 -- (DmorphHelper v17).
 --   G <glows|->           my weapon glows changed, the rest didn't
+-- Picked missiles (2.36.0): a "b" token, the spell visual your ranged attacks
+-- fire in base 36 ("b2GC"); "B <visual|0>" when only that changed. Receivers
+-- put it on through DmorphHelper_SetUnitShotVisual (v19), if their client
+-- flies that visual as a missile.
 -- Extra wear (2.29.0): an "x" token, the spell IDs worn in base 36 with "-"
 -- between ("xBXT-H"); receivers put the looks they know on through
 -- DmorphHelper_SetAura (v17).
@@ -671,8 +675,14 @@ local function ApplyTo(name, token)
 	end
 	KeepGlows(token, want, done)
 	KeepExtra(token, want, done)
+	-- Their picked missile (DmorphHelper v19 keeps one per player GUID).
+	if (want.shot ~= done.shot or (force and want.shot)) and type(DmorphHelper_SetUnitShotVisual) == "function" then
+		if Call(DmorphHelper_SetUnitShotVisual, token, want.shot or 0) then
+			done.shot = want.shot
+		end
+	end
 	done.version, done.scan, done.away = want.version, scanID, nil
-	if want == NONE and not done.display and not done.mount and not next(done.items) and not done.scale
+	if want == NONE and not done.display and not done.mount and not next(done.items) and not done.scale and not done.shot
 		and not (done.glows and next(done.glows)) and not (done.extraSlots and next(done.extraSlots)) then
 		applied[name] = nil
 	else
@@ -715,6 +725,7 @@ local function SetPeer(name, look, guid, confirmed)
 	look.glows = peer and peer.glows -- (the same for weapon glows)
 	look.weapons = peer and peer.weapons
 	look.extra = peer and peer.extra
+	look.shot = peer and peer.shot
 	look.version = (peer and peer.version or 0) + 1
 	look.heard = confirmed and clock or -1000
 	look.confirmed = confirmed
@@ -961,11 +972,40 @@ local function SetPeerSize(name, scale)
 	end
 end
 
+-- A player's picked missile from a "b..." token (2.36.0): the spell visual in
+-- base 36, only one this PC's client flies as a missile; nil for none.
+local function ShotOf(token)
+	local _, _, id = strfind(token or "", "^b([0-9A-Z]+)$")
+	local visual = Decode(id)
+	if not visual or visual == 0 or not M.GetShotCatalog then
+		return nil
+	end
+	local catalog = M.GetShotCatalog()
+	if not catalog.byID then
+		catalog.byID = {}
+		for i = 1, catalog.count do
+			catalog.byID[catalog.ids[i]] = true
+		end
+	end
+	return catalog.byID[visual] and visual or nil
+end
+
+local function SetPeerShot(name, shot)
+	local peer = peers[name]
+	if peer and peer.shot ~= shot then
+		peer.shot = shot
+		peer.version = peer.version + 1
+		Scan()
+	end
+end
+
 local function ReadLook(sender, rest)
 	local _, _, d, m, it, guid, more = strfind(rest, "^(%S+) (%S+) (%S+) ?(%S*) ?(.*)$")
-	local size, ported, glowToken, wayToken, extraToken
+	local size, ported, glowToken, wayToken, extraToken, shotToken
 	for token in string.gfind(more or "", "%S+") do
-		if strfind(token, "^s%d+$") then
+		if strfind(token, "^b") then
+			shotToken = token
+		elseif strfind(token, "^s%d+$") then
 			size = token
 		elseif strfind(token, "^P") then
 			ported = token
@@ -1000,6 +1040,7 @@ local function ReadLook(sender, rest)
 		SetPeerGlows(sender, glowsIn)
 		SetPeerWeapons(sender, weaponsIn)
 		SetPeerExtra(sender, extraIn)
+		SetPeerShot(sender, ShotOf(shotToken))
 		return
 	end
 	if SetPeer(sender, look, guid, true) then
@@ -1007,6 +1048,7 @@ local function ReadLook(sender, rest)
 		look.glows = glowsIn
 		look.weapons = weaponsIn
 		look.extra = extraIn
+		look.shot = ShotOf(shotToken)
 		Scan()
 	end
 end
@@ -1025,7 +1067,7 @@ local function ReadMount(sender, m)
 end
 
 -- "Nothing changed": confirms what we remember, else we ask for it all.
-local function ReadPrint(sender, print, guid, size, glowToken, wayToken, extraToken)
+local function ReadPrint(sender, print, guid, size, glowToken, wayToken, extraToken, shotToken)
 	Unask(sender)
 	Answered(sender)
 	asked[sender] = clock
@@ -1036,6 +1078,7 @@ local function ReadPrint(sender, print, guid, size, glowToken, wayToken, extraTo
 		SetPeerGlows(sender, GlowsOf(glowToken))
 		SetPeerWeapons(sender, WeaponsOf(wayToken))
 		SetPeerExtra(sender, ExtraOf(extraToken))
+		SetPeerShot(sender, ShotOf(shotToken))
 		if strfind(guid or "", "^0x%x+$") then
 			peer.guid = guid
 		end
@@ -1090,7 +1133,7 @@ local function Receive(sender, text, way)
 	elseif kind == "H" then
 		local _, _, print, guid, more = strfind(rest, "^(%S+) ?(%S*) ?(.*)$")
 		if print then
-			local size, glowToken, wayToken, extraToken
+			local size, glowToken, wayToken, extraToken, shotToken
 			for token in string.gfind(more or "", "%S+") do
 				if strfind(token, "^s%d+$") then
 					size = token
@@ -1100,9 +1143,17 @@ local function Receive(sender, text, way)
 					wayToken = token
 				elseif strfind(token, "^x") then
 					extraToken = token
+				elseif strfind(token, "^b") then
+					shotToken = token
 				end
 			end
-			ReadPrint(sender, print, guid, size, glowToken, wayToken, extraToken)
+			ReadPrint(sender, print, guid, size, glowToken, wayToken, extraToken, shotToken)
+		end
+	elseif kind == "B" then
+		-- Only the picked missile changed ("0": their weapon's own again).
+		local peer = peers[sender]
+		if peer and peer.confirmed then
+			SetPeerShot(sender, ShotOf("b" .. rest))
 		end
 	elseif kind == "G" then
 		-- Only the weapon glows changed ("-": none any more).
@@ -1197,10 +1248,22 @@ local function OwnExtra()
 	return "x" .. table.concat(parts, "-")
 end
 
+-- Your picked missile as a message token: "b5Z" (spell visual in base 36), or "".
+local function OwnShot()
+	local shot = Sharing() and M.GetShot and M.GetShot()
+	if not shot or shot == 0 then
+		return ""
+	end
+	return "b" .. Encode(shot)
+end
+
 local function OnChange()
 	local d, m, it = OwnParts()
 	if OwnExtra() ~= sent.x then
 		timers.extra = timers.extra or clock + SETTLE
+	end
+	if OwnShot() ~= (sent.b or "") then
+		timers.shot = timers.shot or clock + SETTLE
 	end
 	if OwnWeapons() ~= sent.w then
 		timers.ways = timers.ways or clock + SETTLE
@@ -1249,6 +1312,10 @@ local function WithSize(text)
 	if extra ~= "" then
 		text = text .. " " .. extra
 	end
+	local shot = OwnShot()
+	if shot ~= "" then
+		text = text .. " " .. shot
+	end
 	return text
 end
 
@@ -1269,8 +1336,9 @@ local function SendLook(ways)
 	sent.g = OwnGlows()
 	sent.w = OwnWeapons()
 	sent.x = OwnExtra()
+	sent.b = OwnShot()
 	timers.send, timers.first, timers.mount, timers.size, timers.glow, timers.ways = nil, nil, nil, nil, nil, nil
-	timers.extra = nil
+	timers.extra, timers.shot = nil, nil
 	local text = LookText()
 	for way in pairs(ways) do
 		Send(text, way)
@@ -1322,6 +1390,15 @@ local function SendNext()
 			sent.x = extra
 			for way in pairs(ChangeWays()) do
 				Send("X " .. (extra == "" and "-" or strsub(extra, 2)), way)
+			end
+		end
+	elseif timers.shot and clock >= timers.shot then
+		timers.shot = nil
+		local shot = OwnShot()
+		if shot ~= (sent.b or "") then
+			sent.b = shot
+			for way in pairs(ChangeWays()) do
+				Send("B " .. (shot == "" and "0" or strsub(shot, 2)), way)
 			end
 		end
 	elseif timers.ways and clock >= timers.ways then

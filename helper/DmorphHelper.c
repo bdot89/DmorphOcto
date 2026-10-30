@@ -38,6 +38,7 @@
 //   DmorphHelper_GetRiderPose(displayID)                     -> animation, poses work (1/0)
 //   DmorphHelper_SetShotVisual(spellVisualID)                (v18: your ranged attacks' missile; 0 = the weapon's own)
 //   DmorphHelper_GetShotVisual()                             -> picked visual, patch in (1/0)
+//   DmorphHelper_SetUnitShotVisual(unit, spellVisualID)      (v19: a friendly player's missile, for sharing; 0 = theirs)
 // unit is a unit token for a player you could help ("player", "target", ...);
 // slot is an inventory slot, 1-19. The functions only write the values: the
 // addon keeps what it wants and puts it back after the server resends them.
@@ -58,7 +59,7 @@
 #define GAME_FASTCALL __attribute__((fastcall))
 #define GAME_THISCALL __attribute__((thiscall))
 
-#define HELPER_VERSION 18
+#define HELPER_VERSION 19
 
 // Game functions, build 5875 (from VanillaHelpers' Offsets.h).
 #define FUN_INVALID_FUNCTION_PTR_CHECK 0x42A320
@@ -1013,8 +1014,27 @@ static void PatchRiderPoses(void) {
 static uint32_t g_shotVisual = 0;     // 0: the weapon's own
 static BOOL g_shotPatched = FALSE;
 __attribute__((used)) static uint32_t ShotVisual(void *unit, uint32_t visual) __asm__("DmorphHelper_ShotVisual");
+// v19: other DMorph users' picked missiles, by GUID (DmorphHelper_SetUnitShotVisual).
+#define MAX_UNIT_SHOTS 128
+static struct { uint64_t guid; uint32_t visual; } g_unitShots[MAX_UNIT_SHOTS];
+static uint64_t UnitGuid(void *unit) {
+    uint32_t *f = Fields(unit);
+    return f ? ((uint64_t)f[1] << 32) | f[0] : 0;
+}
 static uint32_t ShotVisual(void *unit, uint32_t visual) {
-    return g_shotVisual && unit && unit == Me() ? g_shotVisual : visual;
+    if (!unit) {
+        return visual;
+    }
+    if (unit == Me()) {
+        return g_shotVisual ? g_shotVisual : visual;
+    }
+    uint64_t guid = UnitGuid(unit);
+    for (int i = 0; guid && i < MAX_UNIT_SHOTS; i++) {
+        if (g_unitShots[i].guid == guid) {
+            return g_unitShots[i].visual;
+        }
+    }
+    return visual;
 }
 // eax = the display row; edi = the shooting unit. ecx and edx kept; the flags of
 // "test eax,eax" set last, for the je/jl after the call.
@@ -1049,6 +1069,37 @@ static int GAME_FASTCALL Script_SetShotVisual(void *L) {
         return 0;
     }
     g_shotVisual = visual;
+    return 0;
+}
+// v19: another player's missile (unit = a friendly player token; 0 = their weapon's own).
+static const char *UNIT_SHOT_USAGE = "Usage: DmorphHelper_SetUnitShotVisual(unit, spellVisualID or 0)";
+static int GAME_FASTCALL Script_SetUnitShotVisual(void *L) {
+    void *unit = PlayerArg(L, 1, UNIT_SHOT_USAGE);
+    uint32_t visual = NumberArg(L, 2, 0, 1000000, UNIT_SHOT_USAGE);
+    uint64_t guid = unit ? UnitGuid(unit) : 0;
+    if (!guid || !g_shotPatched) {
+        return 0;
+    }
+    int free = -1;
+    for (int i = 0; i < MAX_UNIT_SHOTS; i++) {
+        if (g_unitShots[i].guid == guid) {
+            if (visual) {
+                g_unitShots[i].visual = visual;
+            } else {
+                g_unitShots[i].guid = 0;
+                g_unitShots[i].visual = 0;
+            }
+            return 0;
+        }
+        if (free < 0 && g_unitShots[i].guid == 0) {
+            free = i;
+        }
+    }
+    if (visual) {
+        int slot = free >= 0 ? free : (int)(guid % MAX_UNIT_SHOTS);   // full: replace one
+        g_unitShots[slot].guid = guid;
+        g_unitShots[slot].visual = visual;
+    }
     return 0;
 }
 // -> the picked visual (0 = the weapon's own), whether the patch is in (1/0).
@@ -1144,6 +1195,7 @@ static void GAME_FASTCALL LoadScriptFunctions_h(void) {
     RegisterFunction("DmorphHelper_SetRiderPose", (uintptr_t)&Script_SetRiderPose);
     RegisterFunction("DmorphHelper_SetShotVisual", (uintptr_t)&Script_SetShotVisual);
     RegisterFunction("DmorphHelper_GetShotVisual", (uintptr_t)&Script_GetShotVisual);
+    RegisterFunction("DmorphHelper_SetUnitShotVisual", (uintptr_t)&Script_SetUnitShotVisual);
     RegisterFunction("DmorphHelper_GetRiderPose", (uintptr_t)&Script_GetRiderPose);
 }
 
