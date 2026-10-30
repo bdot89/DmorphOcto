@@ -2115,6 +2115,14 @@ local function installHelper(look)
 	function DmorphHelper_Rebuild(unit)
 		game.rebuilds = game.rebuilds + 1
 	end
+	-- Your ammo field (v12; the server's own ammo is 2512).
+	game.ammo = 2512
+	function DmorphHelper_SetAmmo(id)
+		game.ammo = id
+	end
+	function DmorphHelper_GetAmmo()
+		return game.ammo
+	end
 	-- Aura fields per unit GUID (v17, Extra wear).
 	game.auras = {}
 	local function auraUnit(unit)
@@ -2580,6 +2588,27 @@ end)()
 	Mock.Tick(0.3)
 	check(row:IsVisible() and strsub(row.text.text, 1, 7) ~= "Wings: " and strsub(row.text.text, 1, 6) ~= "Back: ",
 		"the Spells button lists the client's own spell looks")
+	-- Arrows (2.34.0): the game's projectiles; a click sets the ammo you shoot, a
+	-- second click your own again; the server's rewrite is put right.
+	Mock.serverItems[3030] = { "Razor Arrow", 1, "INVTYPE_AMMO", "Projectile", "Arrow" }
+	Mock.serverItems[2516] = { "Light Shot", 1, "INVTYPE_AMMO", "Projectile", "Bullet" }
+	Mock.Click(DmorphOctoExtraCat10)
+	Mock.Tick(0.3)
+	check(row.text.text == "Light Shot" or row.text.text == "Razor Arrow", "the Arrows button lists the game's arrows and bullets")
+	local arrowRow
+	for k = 1, 3 do
+		local r = getglobal("DmorphOctoExtraListRow" .. k)
+		if r:IsVisible() and r.text.text == "Razor Arrow" then arrowRow = r end
+	end
+	Mock.Click(arrowRow)
+	check(game.ammo == 3030 and arrowRow.tick:IsVisible(), "clicking an arrow makes it the one you shoot")
+	game.ammo = 2512 -- the server writes your real ammo again
+	Mock.Tick(1.1)
+	check(game.ammo == 3030, "and it's put back when the server rewrites the field")
+	Mock.Tick(0.5)
+	Mock.Click(arrowRow)
+	check(game.ammo == 2512 and DmorphOcto.GetAmmo() == nil, "clicking it again gives your own ammo back")
+	Mock.serverItems[3030], Mock.serverItems[2516] = nil, nil
 	Mock.Click(DmorphOctoExtraCat1)
 	Mock.Type(DmorphOctoExtraSearch, "shadowform")
 	Mock.Tick(0.3)

@@ -3194,7 +3194,7 @@ P.EXTRA_CATS = {
 	{ text = "All" }, { text = "Wings", prefix = "Wings: " }, { text = "Bags", prefix = "Bag: " },
 	{ text = "Quivers", prefix = "Quiver: " }, { text = "Banners", prefix = "Banner: " },
 	{ text = "Cloaks", prefix = "Cloak: " }, { text = "Shadow", prefix = "Shadow: " }, { text = "Trails", prefix = "Trail: " },
-	{ text = "Spells", spells = true },
+	{ text = "Spells", spells = true }, { text = "Arrows", ammo = true },
 }
 P.extraCat = 1
 function P.FilterExtra(keep)
@@ -3202,6 +3202,20 @@ function P.FilterExtra(keep)
 	local text = strlower(ui.extraSearch:GetText() or "")
 	local result, m = {}, 0
 	local cat = P.EXTRA_CATS[P.extraCat]
+	ui.extraAmmo = nil
+	if cat.ammo then
+		ui.extraAmmo = M.GetAmmoCatalog()
+		for i = 1, ui.extraAmmo.count do
+			if text == "" or strfind(strlower(ui.extraAmmo.names[i]), text, 1, true) then
+				m = m + 1
+				result[m] = i
+			end
+		end
+		ui.extraResult = result
+		ui.extraCount:SetText(Count(m, "projectile") .. " - the one you shoot with any bow or gun")
+		ui.extraList.SetCount(m, keep)
+		return
+	end
 	for i = 1, catalog.count do
 		local name = catalog.names[i]
 		local inCat = (not cat.prefix or strsub(name, 1, strlen(cat.prefix)) == cat.prefix) and (not cat.spells or not catalog.ported[i])
@@ -3226,7 +3240,7 @@ function P.BuildExtraPage(page)
 	ui.extraCats = {}
 	for i = 1, table.getn(P.EXTRA_CATS) do
 		local index = i
-		ui.extraCats[i] = Button(page, P.EXTRA_CATS[i].text, 57, 8 + (i - 1) * 60, -8, function()
+		ui.extraCats[i] = Button(page, P.EXTRA_CATS[i].text, 51, 8 + (i - 1) * 54, -8, function()
 			P.extraCat = index
 			for k = 1, table.getn(ui.extraCats) do
 				if k == index then ui.extraCats[k]:LockHighlight() else ui.extraCats[k]:UnlockHighlight() end
@@ -3245,8 +3259,19 @@ function P.BuildExtraPage(page)
 	end)
 	ui.extraCount = Label(page, "", "GameFontDisableSmall", 262, -42, "DmorphOctoExtraCount")
 	ui.extraList = List(page, "DmorphOctoExtraList", 8, -66, 220, function(row, index)
-		local catalog = M.GetExtraWearCatalog()
 		local i = ui.extraResult[index]
+		if ui.extraAmmo then
+			-- Arrows: the ammo items; the ticked one is what you shoot.
+			local ammo = ui.extraAmmo
+			row.text:SetText(ammo.names[i])
+			row.info:SetText(ammo.kinds[i] .. " - click to shoot it")
+			if M.GetAmmo() == ammo.ids[i] then
+				row:LockHighlight()
+				row.tick:Show()
+			end
+			return
+		end
+		local catalog = M.GetExtraWearCatalog()
 		row.text:SetText(catalog.names[i])
 		row.info:SetText(catalog.ported[i] and "Retail (ported pack)" or catalog.others[i])
 		if M.IsWearingExtra(catalog.ids[i]) then
@@ -3254,6 +3279,12 @@ function P.BuildExtraPage(page)
 			row.tick:Show()
 		end
 	end, function(index)
+		if ui.extraAmmo then
+			local id = ui.extraAmmo.ids[ui.extraResult[index]]
+			Morph(M.SetAmmo, M.GetAmmo() == id and 0 or id) -- clicking the one you shoot goes back to your own
+			P.FilterExtra(true)
+			return
+		end
 		local catalog = M.GetExtraWearCatalog()
 		Morph(M.ToggleExtraWear, catalog.ids[ui.extraResult[index]])
 		P.FilterExtra(true)

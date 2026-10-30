@@ -557,7 +557,7 @@ function Mock.ResetUI()
 		-- Items the fake server has sent: { name, quality, equipLoc }.
 		local item = Mock.serverItems[id]
 		if item then
-			return item[1], "item:" .. id .. ":0:0:0", item[2], 60, "Armor", "Plate", 1, item[3],
+			return item[1], "item:" .. id .. ":0:0:0", item[2], 60, item[4] or "Armor", item[5] or "Plate", 1, item[3],
 				"Interface\\Icons\\INV_Misc_QuestionMark"
 		end
 		-- DmorphHelper's virtual items (Mock.virtualItems = { [id] = { template, display } }):

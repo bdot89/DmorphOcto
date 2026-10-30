@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.33.0"
+local VERSION = "2.34.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1345,6 +1345,10 @@ local function SanitizeOutfit(outfit)
 		end
 	end
 	outfit.extra = extra
+	outfit.ammo = ParseID(outfit.ammo) -- Arrows: the ammo item shown (0 = none)
+	if outfit.ammo == 0 then
+		outfit.ammo = nil
+	end
 	-- An outfit's own look: { race, gender, the five values }.
 	local look = outfit.look
 	if type(look) == "table" and RACES[look.race] and (look.gender == 0 or look.gender == 1) and ValidLook(look) then
@@ -2623,6 +2627,70 @@ function M.ClearExtraWear()
 	return true, "Extra wear taken off."
 end
 
+-- Arrows (2.34.0, user: "WHERE IS THE ARROW OPTIONS LIST"): the missile a bow,
+-- gun or thrown weapon fires is the ammo item's model, and DmorphHelper v12+
+-- writes your own ammo field (DmorphHelper_SetAmmo). db.ammo = the item shown;
+-- the watcher puts it back when the server rewrites the field. Candidates are
+-- the 1.12 arrows and bullets; only those GetItemInfo calls "Projectile" are listed.
+M.AMMO_IDS = { 2512, 2515, 3030, 3464, 9399, 11285, 12654, 18042, 19316, 2516, 2519, 3033, 3465, 4960, 5568, 8067,
+	8068, 8069, 10512, 10513, 11284, 11630, 13377, 15997, 19317, 3466, 18043, 15430, 19287 }
+function M.CanSetAmmo()
+	return type(DmorphHelper_SetAmmo) == "function" and type(DmorphHelper_GetAmmo) == "function"
+end
+function M.GetAmmoCatalog()
+	local c = { count = 0, ids = {}, names = {}, kinds = {} }
+	for _, id in ipairs(M.AMMO_IDS) do
+		local ok, name, _, _, _, class, subclass = pcall(GetItemInfo, id)
+		if ok and name and class == "Projectile" then
+			c.count = c.count + 1
+			c.ids[c.count], c.names[c.count], c.kinds[c.count] = id, name, subclass or ""
+		elseif not (ok and name) and type(C_Item) == "table" and type(C_Item.RequestLoadItemDataByID) == "function" then
+			pcall(C_Item.RequestLoadItemDataByID, id)
+		end
+	end
+	return c
+end
+function M.GetAmmo()
+	InitDB()
+	return db.ammo
+end
+local function WatchAmmo()
+	if not (sessionReady and db.ammo and M.CanSetAmmo()) then
+		return
+	end
+	local ok, now = pcall(DmorphHelper_GetAmmo)
+	if ok and now ~= db.ammo then
+		if not db.ammoReal then
+			db.ammoReal = now -- your own, to put back
+		end
+		pcall(DmorphHelper_SetAmmo, db.ammo)
+	end
+end
+M.WatchAmmo = WatchAmmo
+function M.SetAmmo(itemID)
+	if not Begin() then
+		return false, MissingAPI()
+	end
+	if not M.CanSetAmmo() then
+		return false, "Arrows need DmorphHelper. " .. INSTALL_HELPER
+	end
+	itemID = ParseID(itemID)
+	if not itemID or itemID == 0 then
+		db.ammo = nil
+		if db.ammoReal then
+			pcall(DmorphHelper_SetAmmo, db.ammoReal)
+		end
+		db.ammoReal = nil
+		Notify()
+		return true, "Your own ammo again."
+	end
+	db.ammo = itemID
+	WatchAmmo()
+	Notify()
+	local ok, name = pcall(GetItemInfo, itemID)
+	return true, "Shooting " .. (ok and name or ("item " .. itemID)) .. "."
+end
+
 -- The DmorphHelper version running (nil: none), and the one this DMorph
 -- comes with.
 function M.GetHelperVersion()
@@ -3022,6 +3090,7 @@ local function WatchHelper()
 	CheckItems()
 	WatchScale()
 	WatchExtra()
+	WatchAmmo()
 	local current = ReadLook()
 	if current then
 		if not SameValues(current, db.lookWritten) then
