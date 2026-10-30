@@ -2123,6 +2123,14 @@ local function installHelper(look)
 	function DmorphHelper_GetAmmo()
 		return game.ammo
 	end
+	-- The missile visual of your ranged attacks (v18; 0 = the weapon's own).
+	game.shot = 0
+	function DmorphHelper_SetShotVisual(id)
+		game.shot = id
+	end
+	function DmorphHelper_GetShotVisual()
+		return game.shot
+	end
 	-- Aura fields per unit GUID (v17, Extra wear).
 	game.auras = {}
 	local function auraUnit(unit)
@@ -2588,27 +2596,27 @@ end)()
 	Mock.Tick(0.3)
 	check(row:IsVisible() and strsub(row.text.text, 1, 7) ~= "Wings: " and strsub(row.text.text, 1, 6) ~= "Back: ",
 		"the Spells button lists the client's own spell looks")
-	-- Arrows (2.34.0): the game's projectiles; a click sets the ammo you shoot, a
-	-- second click your own again; the server's rewrite is put right.
-	Mock.serverItems[3030] = { "Razor Arrow", 1, "INVTYPE_AMMO", "Projectile", "Arrow" }
-	Mock.serverItems[2516] = { "Light Shot", 1, "INVTYPE_AMMO", "Projectile", "Bullet" }
+	-- Arrows (2.35.0, shots): every missile the client flies (Data/ShotVisuals.lua);
+	-- a click makes it what your ranged attacks fire, a second click the weapon's own.
 	Mock.Click(DmorphOctoExtraCat10)
+	Mock.Type(DmorphOctoExtraSearch, "aimed shot")
 	Mock.Tick(0.3)
-	check(row.text.text == "Light Shot" or row.text.text == "Razor Arrow", "the Arrows button lists the game's arrows and bullets")
-	local arrowRow
-	for k = 1, 3 do
-		local r = getglobal("DmorphOctoExtraListRow" .. k)
-		if r:IsVisible() and r.text.text == "Razor Arrow" then arrowRow = r end
-	end
-	Mock.Click(arrowRow)
-	check(game.ammo == 3030 and arrowRow.tick:IsVisible(), "clicking an arrow makes it the one you shoot")
-	game.ammo = 2512 -- the server writes your real ammo again
-	Mock.Tick(1.1)
-	check(game.ammo == 3030, "and it's put back when the server rewrites the field")
+	check(row:IsVisible() and row.text.text == "Aimed Shot", "the Arrows button lists and searches the missiles")
+	Mock.Click(row)
+	check(game.shot == 3180 and DmorphOcto.GetShot() == 3180 and row.tick:IsVisible(),
+		"clicking a missile makes it what your shots fire")
+	DmorphOcto.SaveOutfit("Shots test")
 	Mock.Tick(0.5)
-	Mock.Click(arrowRow)
-	check(game.ammo == 2512 and DmorphOcto.GetAmmo() == nil, "clicking it again gives your own ammo back")
-	Mock.serverItems[3030], Mock.serverItems[2516] = nil, nil
+	Mock.Click(row)
+	check(game.shot == 0 and DmorphOcto.GetShot() == nil, "clicking it again gives the weapon's own shots back")
+	DmorphOcto.LoadOutfit("Shots test")
+	Mock.Tick(1.1)
+	check(game.shot == 3180, "an outfit keeps the missile")
+	DmorphOcto.ResetAll()
+	Mock.Tick(0.5)
+	check(game.shot == 0 and DmorphOcto.GetShot() == nil, "Reset everything gives the weapon's own shots back")
+	DmorphOcto.DeleteOutfit("Shots test")
+	Mock.Type(DmorphOctoExtraSearch, "")
 	Mock.Click(DmorphOctoExtraCat1)
 	Mock.Type(DmorphOctoExtraSearch, "shadowform")
 	Mock.Tick(0.3)

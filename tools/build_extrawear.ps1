@@ -135,23 +135,28 @@ foreach ($l in $arr) { [void]$sb.Append($l.text + "`n") }
 [void]$sb.Append("]]`n")
 [IO.File]::WriteAllText([IO.Path]::GetFullPath($OutFile), $sb.ToString(), $utf8)
 
-# Data/ShotVisuals.lua (2.35.0): every missile this client can fly, for the
-# Arrows list (DmorphHelper v18 swaps your ranged attacks' visual). SpellVisual
-# field 10 = missile model (SpellVisualEffectName; bow 5 and crossbow 743 -> 4222, thrown 98 -> 3318); one visual per model, the
-# lowest ID; named after the model file.
+# Data/ShotVisuals.lua (2.35.0): missiles for the Arrows list (DmorphHelper v18
+# swaps your ranged attacks' visual; seen in game 30 Oct: 225 the fire wand
+# bolt flies, 5 (bow) has no missile of its own). Every spell with a travel
+# speed (Spell.dbc field 37: Fireball 133 = 24, Frostbolt 116 = 28) flies its
+# visual (field 115): one line per visual, named after the plainest spell name
+# most of its spells share.
 $shots = New-Object System.Collections.ArrayList
 if ($ok) {
-  $byModel = @{}
-  for ($r = 0; $r -lt $vis.Count; $r++) {
-    $e = $vis.Int($r, 10)
-    if ($e -le 0 -or -not $effFile.ContainsKey($e) -or -not (Test-GameFile $effFile[$e])) { continue }
-    $model = (Get-BaseName $effFile[$e]).ToLowerInvariant()
-    $id = $vis.Int($r, 0)
-    if (-not $byModel.ContainsKey($model) -or $id -lt $byModel[$model].id) { $byModel[$model] = @{ id = $id; name = (Get-BaseName $effFile[$e]) } }
+  $byVisual = @{}
+  for ($r = 0; $r -lt $spell.Count; $r++) {
+    $speed = [BitConverter]::ToSingle([BitConverter]::GetBytes($spell.Int($r, 37)), 0)
+    $v = $spell.Int($r, 115)
+    if ($speed -le 0 -or $v -le 0 -or -not $visRow.ContainsKey($v)) { continue }
+    $n = $spell.TryStr($r, 120)
+    if (-not $n -or $n -match $UGLY) { continue }
+    if (-not $byVisual.ContainsKey($v)) { $byVisual[$v] = @{} }
+    $byVisual[$v][$n] = 1 + [int]$byVisual[$v][$n]
   }
-  foreach ($m in $byModel.Keys) {
-    $n = ($byModel[$m].name -replace '_', ' ' -replace '\s+', ' ').Trim()
-    [void]$shots.Add([pscustomobject]@{ key = $n.ToLowerInvariant(); text = "$($byModel[$m].id)`t$n" })
+  foreach ($v in $byVisual.Keys) {
+    $names = $byVisual[$v]
+    $best = @($names.Keys | Sort-Object { -$names[$_] }, { $_.Length })[0]
+    [void]$shots.Add([pscustomobject]@{ key = $best.ToLowerInvariant() + [char]1 + $v.ToString("D6"); text = "$v`t$($best -replace "`t", ' ')" })
   }
 }
 $sarr = @($shots | Sort-Object key)

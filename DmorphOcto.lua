@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.34.0"
+local VERSION = "2.35.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1346,6 +1346,10 @@ local function SanitizeOutfit(outfit)
 	end
 	outfit.extra = extra
 	outfit.ammo = ParseID(outfit.ammo) -- Arrows: the ammo item shown (0 = none)
+	outfit.shot = ParseID(outfit.shot) -- Arrows: the missile visual of your shots (0 = own)
+	if outfit.shot == 0 then
+		outfit.shot = nil
+	end
 	if outfit.ammo == 0 then
 		outfit.ammo = nil
 	end
@@ -1363,7 +1367,7 @@ end
 -- The current look as an outfit: db, plus the look picked for your body.
 local function CopyOutfit(outfit)
 	local copy = { display = outfit.display, race = outfit.race, gender = outfit.gender, mount = outfit.mount,
-		items = {}, glows = {}, extra = {} }
+		shot = outfit.shot, items = {}, glows = {}, extra = {} }
 	for slot, itemID in pairs(outfit.items) do
 		copy.items[slot] = itemID
 	end
@@ -2667,6 +2671,67 @@ local function WatchAmmo()
 	end
 end
 M.WatchAmmo = WatchAmmo
+
+-- Shots (2.35.0): the missile of your ranged attacks (wand, bow, gun, thrown),
+-- swapped by DmorphHelper v18 (DmorphHelper_SetShotVisual; seen in game 30 Oct:
+-- 225 = the fire wand bolt flies from any ranged attack). Data/ShotVisuals.lua
+-- (tools/build_extrawear.ps1): every spell visual the client flies as a missile,
+-- named after its spell; duplicates numbered. db.shot = the visual (nil = the weapon's own).
+function M.CanSetShot()
+	return type(DmorphHelper_SetShotVisual) == "function" and type(DmorphHelper_GetShotVisual) == "function"
+end
+function M.GetShotCatalog()
+	if M.shotCatalog then
+		return M.shotCatalog
+	end
+	local c, seen = { count = 0, ids = {}, names = {}, kinds = {} }, {}
+	for id, name in string.gfind(DmorphOcto_ShotVisualData or "", "(%d+)\t([^\n]+)") do
+		seen[name] = (seen[name] or 0) + 1
+		c.count = c.count + 1
+		c.ids[c.count] = tonumber(id)
+		c.names[c.count] = seen[name] > 1 and (name .. " " .. seen[name]) or name
+		c.kinds[c.count] = "Missile"
+	end
+	DmorphOcto_ShotVisualData = nil
+	M.shotCatalog = c
+	return c
+end
+function M.GetShot()
+	InitDB()
+	return db.shot
+end
+local function WatchShot()
+	if not (sessionReady and M.CanSetShot()) then
+		return
+	end
+	local ok, now = pcall(DmorphHelper_GetShotVisual)
+	if ok and now ~= (db.shot or 0) then
+		pcall(DmorphHelper_SetShotVisual, db.shot or 0)
+	end
+end
+M.WatchShot = WatchShot
+function M.SetShot(visual)
+	if not Begin() then
+		return false, MissingAPI()
+	end
+	if not M.CanSetShot() then
+		return false, "Choosing your shots needs DmorphHelper v18. " .. INSTALL_HELPER
+	end
+	visual = ParseID(visual)
+	db.shot = visual ~= 0 and visual or nil
+	WatchShot()
+	Notify()
+	if not db.shot then
+		return true, "Your weapon's own shots again."
+	end
+	local c = M.GetShotCatalog()
+	for i = 1, c.count do
+		if c.ids[i] == db.shot then
+			return true, "Shooting " .. c.names[i] .. "."
+		end
+	end
+	return true, "Shooting visual " .. db.shot .. "."
+end
 function M.SetAmmo(itemID)
 	if not Begin() then
 		return false, MissingAPI()
@@ -3091,6 +3156,7 @@ local function WatchHelper()
 	WatchScale()
 	WatchExtra()
 	WatchAmmo()
+	WatchShot()
 	local current = ReadLook()
 	if current then
 		if not SameValues(current, db.lookWritten) then
@@ -3579,7 +3645,7 @@ function M.ResetAll()
 		return false, MissingAPI()
 	end
 	db.display, db.race, db.gender = nil, nil, 0
-	db.looks, db.glows, db.scale = {}, {}, nil
+	db.looks, db.glows, db.scale, db.shot = {}, {}, nil, nil
 	local ok, err = ApplyBody()
 	WatchHelper()
 	db.mount, db.mountSkins = nil, {}
@@ -4075,6 +4141,7 @@ function M.LoadOutfit(name)
 		end
 	end
 	db.mount = outfit.mount
+	db.shot = outfit.shot
 	db.extra = {}
 	for i = 1, table.getn(outfit.extra or {}) do
 		db.extra[i] = outfit.extra[i]

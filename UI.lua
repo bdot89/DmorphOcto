@@ -3204,7 +3204,7 @@ function P.FilterExtra(keep)
 	local cat = P.EXTRA_CATS[P.extraCat]
 	ui.extraAmmo = nil
 	if cat.ammo then
-		ui.extraAmmo = M.GetAmmoCatalog()
+		ui.extraAmmo = M.GetShotCatalog()
 		for i = 1, ui.extraAmmo.count do
 			if text == "" or strfind(strlower(ui.extraAmmo.names[i]), text, 1, true) then
 				m = m + 1
@@ -3212,7 +3212,7 @@ function P.FilterExtra(keep)
 			end
 		end
 		ui.extraResult = result
-		ui.extraCount:SetText(Count(m, "projectile") .. " - the one you shoot with any bow or gun")
+		ui.extraCount:SetText(Count(m, "missile") .. " - what your wand, bow or gun fires")
 		ui.extraList.SetCount(m, keep)
 		return
 	end
@@ -3264,8 +3264,8 @@ function P.BuildExtraPage(page)
 			-- Arrows: the ammo items; the ticked one is what you shoot.
 			local ammo = ui.extraAmmo
 			row.text:SetText(ammo.names[i])
-			row.info:SetText(ammo.kinds[i] .. " - click to shoot it")
-			if M.GetAmmo() == ammo.ids[i] then
+			row.info:SetText("click to shoot it")
+			if M.GetShot() == ammo.ids[i] then
 				row:LockHighlight()
 				row.tick:Show()
 			end
@@ -3281,7 +3281,7 @@ function P.BuildExtraPage(page)
 	end, function(index)
 		if ui.extraAmmo then
 			local id = ui.extraAmmo.ids[ui.extraResult[index]]
-			Morph(M.SetAmmo, M.GetAmmo() == id and 0 or id) -- clicking the one you shoot goes back to your own
+			Morph(M.SetShot, M.GetShot() == id and 0 or id) -- clicking the one you shoot goes back to your own
 			P.FilterExtra(true)
 			return
 		end
