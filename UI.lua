@@ -3188,12 +3188,23 @@ end
 
 -- Extra wear tab (2.29.0): spell looks worn on top of everything (Shadowform,
 -- shields, glows...), up to M.EXTRA_MAX at once; click to put on or take off.
+-- Category buttons (user, 30 Oct: "CLEANED UP INTO CATs"): the ported looks' names
+-- start with their category ("Wings: ..."); the client's own are spell looks.
+P.EXTRA_CATS = {
+	{ text = "All" }, { text = "Wings", prefix = "Wings: " }, { text = "Bags", prefix = "Bag: " },
+	{ text = "Quivers", prefix = "Quiver: " }, { text = "Banners", prefix = "Banner: " },
+	{ text = "Cloaks", prefix = "Cloak: " }, { text = "Shadow", prefix = "Shadow: " }, { text = "Spells", spells = true },
+}
+P.extraCat = 1
 function P.FilterExtra(keep)
 	local catalog = M.GetExtraWearCatalog()
 	local text = strlower(ui.extraSearch:GetText() or "")
 	local result, m = {}, 0
+	local cat = P.EXTRA_CATS[P.extraCat]
 	for i = 1, catalog.count do
-		if text == "" or strfind(strlower(catalog.names[i] .. " " .. catalog.others[i] .. " " .. catalog.models[i]), text, 1, true) then
+		local name = catalog.names[i]
+		local inCat = (not cat.prefix or strsub(name, 1, strlen(cat.prefix)) == cat.prefix) and (not cat.spells or not catalog.ported[i])
+		if inCat and (text == "" or strfind(strlower(name .. " " .. catalog.others[i] .. " " .. catalog.models[i]), text, 1, true)) then
 			m = m + 1
 			result[m] = i
 		end
@@ -3211,8 +3222,19 @@ function P.RefreshExtra()
 end
 
 function P.BuildExtraPage(page)
-	Label(page, "Search", "GameFontNormalSmall", 10, -12)
-	ui.extraSearch = EditBox(page, "DmorphOctoExtraSearch", 200, 52, -8)
+	ui.extraCats = {}
+	for i = 1, table.getn(P.EXTRA_CATS) do
+		local index = i
+		ui.extraCats[i] = Button(page, P.EXTRA_CATS[i].text, 64, 8 + (i - 1) * 67, -8, function()
+			P.extraCat = index
+			for k = 1, table.getn(ui.extraCats) do
+				if k == index then ui.extraCats[k]:LockHighlight() else ui.extraCats[k]:UnlockHighlight() end
+			end
+			P.FilterExtra()
+		end, "DmorphOctoExtraCat" .. i)
+	end
+	Label(page, "Search", "GameFontNormalSmall", 10, -42)
+	ui.extraSearch = EditBox(page, "DmorphOctoExtraSearch", 200, 52, -38)
 	ui.extraSearch:SetScript("OnTextChanged", function()
 		Debounce(ui.searchTimer, 0.25, P.FilterExtra)
 	end)
@@ -3220,8 +3242,8 @@ function P.BuildExtraPage(page)
 		this:ClearFocus()
 		P.FilterExtra()
 	end)
-	ui.extraCount = Label(page, "", "GameFontDisableSmall", 262, -12, "DmorphOctoExtraCount")
-	ui.extraList = List(page, "DmorphOctoExtraList", 8, -36, 220, function(row, index)
+	ui.extraCount = Label(page, "", "GameFontDisableSmall", 262, -42, "DmorphOctoExtraCount")
+	ui.extraList = List(page, "DmorphOctoExtraList", 8, -66, 220, function(row, index)
 		local catalog = M.GetExtraWearCatalog()
 		local i = ui.extraResult[index]
 		row.text:SetText(catalog.names[i])
@@ -3234,7 +3256,7 @@ function P.BuildExtraPage(page)
 		local catalog = M.GetExtraWearCatalog()
 		Morph(M.ToggleExtraWear, catalog.ids[ui.extraResult[index]])
 		P.FilterExtra(true)
-	end, nil, PAGE_W - 24, 17)
+	end, nil, PAGE_W - 24, 15)
 	local y = -346
 	Button(page, "Take all off", 120, 8, y, function()
 		Morph(M.ClearExtraWear)

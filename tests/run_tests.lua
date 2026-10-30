@@ -2571,6 +2571,18 @@ end)()
 	Mock.Tick(0.3)
 	local row = DmorphOctoExtraListRow1
 	check(row:IsVisible() and row.text.text == "Shadowform", "the Extra wear tab lists and searches the looks")
+	-- Categories: the Wings button shows only "Wings: ..." looks; Spells only the client's own.
+	Mock.Type(DmorphOctoExtraSearch, "")
+	Mock.Click(DmorphOctoExtraCat2)
+	Mock.Tick(0.3)
+	check(row.text.text == "Wings: Guardian Spirit" and not DmorphOctoExtraListRow2:IsVisible(), "the Wings button lists only wings")
+	Mock.Click(DmorphOctoExtraCat8)
+	Mock.Tick(0.3)
+	check(row:IsVisible() and strsub(row.text.text, 1, 7) ~= "Wings: " and strsub(row.text.text, 1, 6) ~= "Back: ",
+		"the Spells button lists the client's own spell looks")
+	Mock.Click(DmorphOctoExtraCat1)
+	Mock.Type(DmorphOctoExtraSearch, "shadowform")
+	Mock.Tick(0.3)
 	Mock.Click(row)
 	check(DmorphOcto.IsWearingExtra(15473) and row.tick:IsVisible(), "clicking a row wears it and ticks it")
 	Mock.Tick(0.5)
