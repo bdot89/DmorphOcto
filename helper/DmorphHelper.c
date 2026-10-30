@@ -551,6 +551,9 @@ static int GAME_FASTCALL Script_Rebuild(void *L) {
 // looks at the auras again. Only on this screen; the server's next write of
 // that slot replaces it.
 #define UNIT_FIELD_AURA 0x2F
+#define FUN_AURA_REMOVED 0x6123F0
+typedef void(GAME_THISCALL *AuraRemoved_t)(void *unit, uint32_t index, uint32_t oldSpell);
+#define AuraRemoved ((AuraRemoved_t)FUN_AURA_REMOVED)
 static const char *AURA_USAGE = "Usage: DmorphHelper_SetAura(unit, index 0-47, spellID or 0)";
 static int GAME_FASTCALL Script_SetAura(void *L) {
     void *unit = PlayerArg(L, 1, AURA_USAGE);
@@ -559,7 +562,15 @@ static int GAME_FASTCALL Script_SetAura(void *L) {
     if (!unit) {
         return 0;
     }
-    Fields(unit)[UNIT_FIELD_AURA + index] = spell;
+    uint32_t *aura = &Fields(unit)[UNIT_FIELD_AURA + index];
+    // Taking a spell off: a rebuild left Shadowform's see-through body on until
+    // a relog (user, 30 Oct). The game's own removal 0x6123F0 (thiscall: unit,
+    // aura index, old spell; ret 8), which the update-block code 0x604E73 calls
+    // while the field still holds the old spell, stops its looks.
+    if (*aura && *aura != spell) {
+        AuraRemoved(unit, index, *aura);
+    }
+    *aura = spell;
     Reload(unit);
     return 0;
 }
