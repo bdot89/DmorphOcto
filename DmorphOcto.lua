@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.28.0"
+local VERSION = "2.29.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1263,6 +1263,9 @@ function M.DescribeOutfit(outfit)
 	if outfit.look then
 		extra = extra .. ", own face"
 	end
+	if outfit.extra and outfit.extra[1] then
+		extra = extra .. ", extra wear"
+	end
 	if outfit.glows and next(outfit.glows) then
 		extra = extra .. ", glows"
 	end
@@ -1331,6 +1334,17 @@ local function SanitizeOutfit(outfit)
 		end
 		outfit.glows[slot] = enchantID
 	end
+	-- Extra wear (2.29.0): up to EXTRA_MAX spell IDs whose looks are worn.
+	local extra = {}
+	if type(outfit.extra) == "table" then
+		for i = 1, table.getn(outfit.extra) do
+			local id = ParseID(outfit.extra[i])
+			if id and id > 0 and table.getn(extra) < M.EXTRA_MAX then
+				table.insert(extra, id)
+			end
+		end
+	end
+	outfit.extra = extra
 	-- An outfit's own look: { race, gender, the five values }.
 	local look = outfit.look
 	if type(look) == "table" and RACES[look.race] and (look.gender == 0 or look.gender == 1) and ValidLook(look) then
@@ -1345,9 +1359,12 @@ end
 -- The current look as an outfit: db, plus the look picked for your body.
 local function CopyOutfit(outfit)
 	local copy = { display = outfit.display, race = outfit.race, gender = outfit.gender, mount = outfit.mount,
-		items = {}, glows = {} }
+		items = {}, glows = {}, extra = {} }
 	for slot, itemID in pairs(outfit.items) do
 		copy.items[slot] = itemID
+	end
+	for i = 1, table.getn(outfit.extra or {}) do
+		copy.extra[i] = outfit.extra[i]
 	end
 	for slot, enchantID in pairs(outfit.glows) do
 		copy.glows[slot] = enchantID
@@ -2420,6 +2437,155 @@ local function HasHelper()
 end
 M.HasHelper = HasHelper
 
+-- Extra wear (2.29.0, user: "a section for extra wear", Ascension-style
+-- wings, shadow forms, glows...). The game draws a spell's state look for the
+-- auras it finds in a unit's aura fields, so DmorphHelper v17's
+-- DmorphHelper_SetAura(unit, index, spell) puts one on (through the game's own
+-- aura add / remove, seen working in game 30 Oct with Shadowform). Looks come
+-- from Data/ExtraWear.lua (tools/build_extrawear.ps1: one spell per state
+-- look the client has). db.extra = the spell IDs worn, at most EXTRA_MAX;
+-- they go in the highest buff fields (EXTRA_TOP down), skipping fields the
+-- server uses, and are put back when the server empties or rewrites one.
+M.EXTRA_MAX = 6
+local extraData = { top = 31, slots = {} } -- slots: field index -> spell we wrote there
+function M.GetExtraWearCatalog()
+	if extraData.catalog then
+		return extraData.catalog
+	end
+	local c = { count = 0, ids = {}, names = {}, others = {}, models = {}, byID = {} }
+	for line in string.gfind(DmorphOcto_ExtraWearData or "", "[^\n]+") do
+		local _, _, id, name, others, models = strfind(line, "^(%d+)\t([^\t]*)\t([^\t]*)\t?([^\t]*)$")
+		id = tonumber(id)
+		if id then
+			c.count = c.count + 1
+			c.ids[c.count], c.names[c.count], c.others[c.count], c.models[c.count] = id, name, others, models
+			c.byID[id] = c.count
+		end
+	end
+	DmorphOcto_ExtraWearData = nil
+	extraData.catalog = c
+	return c
+end
+
+function M.CanWearExtra()
+	return type(DmorphHelper_SetAura) == "function" and type(DmorphHelper_GetAura) == "function"
+end
+
+function M.GetExtraWear()
+	InitDB()
+	return db.extra
+end
+
+function M.IsWearingExtra(spell)
+	InitDB()
+	for i = 1, table.getn(db.extra) do
+		if db.extra[i] == spell then
+			return true
+		end
+	end
+	return false
+end
+
+function M.DescribeExtra(spell)
+	local c = M.GetExtraWearCatalog()
+	local i = c.byID[spell]
+	return i and c.names[i] or ("Spell " .. tostring(spell))
+end
+
+-- Puts db.extra on in free buff fields and takes off what isn't wanted any
+-- more; run every second by the helper watcher and right after a change.
+local function WatchExtra()
+	if not (sessionReady and M.CanWearExtra()) then
+		return
+	end
+	local want = {}
+	for i = 1, table.getn(db.extra) do
+		want[db.extra[i]] = true
+	end
+	-- After a /reload our looks are still in the fields: adopt them once.
+	if not extraData.adopted then
+		extraData.adopted = true
+		for index = extraData.top, extraData.top - 2 * M.EXTRA_MAX, -1 do
+			local ok, now = pcall(DmorphHelper_GetAura, "player", index)
+			if ok and now and now > 0 and M.GetExtraWearCatalog().byID[now] then
+				extraData.slots[index] = now
+			end
+		end
+	end
+	-- Take off what we wrote and isn't wanted, and forget fields the server
+	-- took over (another spell there now).
+	for index, spell in pairs(extraData.slots) do
+		local ok, now = pcall(DmorphHelper_GetAura, "player", index)
+		if ok and now == spell and not want[spell] then
+			pcall(DmorphHelper_SetAura, "player", index, 0)
+			extraData.slots[index] = nil
+		elseif ok and now ~= spell then
+			extraData.slots[index] = nil
+		elseif want[spell] then
+			want[spell] = "on"
+		end
+	end
+	-- Put on what's missing, in empty fields from the top down.
+	local index = extraData.top
+	for i = 1, table.getn(db.extra) do
+		local spell = db.extra[i]
+		if want[spell] == true then
+			while index >= 0 do
+				local ok, now = pcall(DmorphHelper_GetAura, "player", index)
+				if ok and now == 0 and not extraData.slots[index] then
+					break
+				end
+				index = index - 1
+			end
+			if index < 0 then
+				return
+			end
+			if pcall(DmorphHelper_SetAura, "player", index, spell) then
+				extraData.slots[index] = spell
+			end
+			index = index - 1
+		end
+	end
+end
+M.WatchExtra = WatchExtra
+
+-- Wears a look, or takes it off when it's on.
+function M.ToggleExtraWear(spell)
+	if not Begin() then
+		return false, MissingAPI()
+	end
+	spell = ParseID(spell)
+	if not (spell and M.GetExtraWearCatalog().byID[spell]) then
+		return false, "That isn't a look DMorph knows."
+	end
+	if not M.CanWearExtra() then
+		return false, "Extra wear needs DmorphHelper v17. " .. INSTALL_HELPER
+	end
+	for i = 1, table.getn(db.extra) do
+		if db.extra[i] == spell then
+			table.remove(db.extra, i)
+			WatchExtra()
+			Notify()
+			return true, "Took off " .. M.DescribeExtra(spell) .. "."
+		end
+	end
+	if table.getn(db.extra) >= M.EXTRA_MAX then
+		return false, "You can wear " .. M.EXTRA_MAX .. " looks at once; take one off first."
+	end
+	table.insert(db.extra, spell)
+	WatchExtra()
+	Notify()
+	return true, "Wearing " .. M.DescribeExtra(spell) .. "."
+end
+
+function M.ClearExtraWear()
+	InitDB()
+	db.extra = {}
+	WatchExtra()
+	Notify()
+	return true, "Extra wear taken off."
+end
+
 -- The DmorphHelper version running (nil: none), and the one this DMorph
 -- comes with.
 function M.GetHelperVersion()
@@ -2818,6 +2984,7 @@ local function WatchHelper()
 	RepairRace()
 	CheckItems()
 	WatchScale()
+	WatchExtra()
 	local current = ReadLook()
 	if current then
 		if not SameValues(current, db.lookWritten) then
@@ -3802,6 +3969,10 @@ function M.LoadOutfit(name)
 		end
 	end
 	db.mount = outfit.mount
+	db.extra = {}
+	for i = 1, table.getn(outfit.extra or {}) do
+		db.extra[i] = outfit.extra[i]
+	end
 	-- The outfit's glows, and its look for its body (else your own).
 	db.glows = {}
 	for slot, enchantID in pairs(outfit.glows) do

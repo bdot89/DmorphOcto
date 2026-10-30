@@ -84,6 +84,7 @@ local TABS = {
 	{ key = "favourites", text = "Favourites" },
 	{ key = "races", text = "Races" },
 	{ key = "glows", text = "Glows" },
+	{ key = "extra", text = "Extra wear" },
 	{ key = "items", text = "Items" },
 	{ key = "slutmog", text = "Slutmog" },
 	{ key = "sets", text = "Sets" },
@@ -3185,6 +3186,63 @@ local function BuildSlutmogPage(page)
 	Label(page, "Revealing pieces, by how much body they cover.", "GameFontDisableSmall", 136, y - 6)
 end
 
+-- Extra wear tab (2.29.0): spell looks worn on top of everything (Shadowform,
+-- shields, glows...), up to M.EXTRA_MAX at once; click to put on or take off.
+function P.FilterExtra(keep)
+	local catalog = M.GetExtraWearCatalog()
+	local text = strlower(ui.extraSearch:GetText() or "")
+	local result, m = {}, 0
+	for i = 1, catalog.count do
+		if text == "" or strfind(strlower(catalog.names[i] .. " " .. catalog.others[i] .. " " .. catalog.models[i]), text, 1, true) then
+			m = m + 1
+			result[m] = i
+		end
+	end
+	ui.extraResult = result
+	ui.extraCount:SetText(Count(m, "look") .. ", " .. table.getn(M.GetExtraWear()) .. " of " .. M.EXTRA_MAX .. " worn")
+	ui.extraList.SetCount(m, keep)
+end
+
+function P.RefreshExtra()
+	if ui.extraResult then
+		P.FilterExtra(true)
+	end
+	ui.extraList.Refresh()
+end
+
+function P.BuildExtraPage(page)
+	Label(page, "Search", "GameFontNormalSmall", 10, -12)
+	ui.extraSearch = EditBox(page, "DmorphOctoExtraSearch", 200, 52, -8)
+	ui.extraSearch:SetScript("OnTextChanged", function()
+		Debounce(ui.searchTimer, 0.25, P.FilterExtra)
+	end)
+	ui.extraSearch:SetScript("OnEnterPressed", function()
+		this:ClearFocus()
+		P.FilterExtra()
+	end)
+	ui.extraCount = Label(page, "", "GameFontDisableSmall", 262, -12, "DmorphOctoExtraCount")
+	ui.extraList = List(page, "DmorphOctoExtraList", 8, -36, 220, function(row, index)
+		local catalog = M.GetExtraWearCatalog()
+		local i = ui.extraResult[index]
+		row.text:SetText(catalog.names[i])
+		row.info:SetText(catalog.others[i])
+		if M.IsWearingExtra(catalog.ids[i]) then
+			row:LockHighlight()
+			row.tick:Show()
+		end
+	end, function(index)
+		local catalog = M.GetExtraWearCatalog()
+		Morph(M.ToggleExtraWear, catalog.ids[ui.extraResult[index]])
+		P.FilterExtra(true)
+	end, nil, PAGE_W - 24, 17)
+	local y = -346
+	Button(page, "Take all off", 120, 8, y, function()
+		Morph(M.ClearExtraWear)
+		P.FilterExtra(true)
+	end, "DmorphOctoExtraClear")
+	Label(page, "Spell looks worn on top of your morph; DMorph users (2.29+) see them too.", "GameFontDisableSmall", 136, y - 6)
+end
+
 -- Sets tab --------------------------------------------------------------------------
 
 local function FilterSets(keep)
@@ -3710,6 +3768,7 @@ local REFRESH = {
 	glows = RefreshGlows,
 	items = RefreshItems,
 	slutmog = RefreshSlutmog,
+	extra = function() P.RefreshExtra() end,
 	sets = RefreshSets,
 	wardrobe = RefreshWardrobe,
 }
@@ -3783,6 +3842,8 @@ ShowTab = function(key)
 		FilterModels()
 	elseif key == "items" then
 		FilterItems()
+	elseif key == "extra" then
+		P.FilterExtra(ui.extraResult ~= nil)
 	elseif key == "slutmog" then
 		FilterSlutmog(ui.slutResult ~= nil)
 	elseif key == "sets" and not ui.setResult then
@@ -4108,7 +4169,7 @@ end
 local function BuildTabs()
 	for i = 1, table.getn(TABS) do
 		local info = TABS[i]
-		local tab = CreateFrame("Button", "DmorphOctoTab" .. info.text, frame)
+		local tab = CreateFrame("Button", "DmorphOctoTab" .. string.gsub(info.text, " ", ""), frame)
 		tab:SetHeight(26)
 		Flat(tab, C.btn, C.line)
 		tab.label = Font(tab:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall"), 12)
@@ -4135,6 +4196,16 @@ local function BuildTabs()
 		used = used + ui.tabs[TABS[i].key].label:GetStringWidth()
 	end
 	local pad = math.floor((PAGE_W - (count - 1) * TAB_GAP - used) / count)
+	-- Eleven tabs (2.29.0) may not fit at 12 pt: then a size smaller.
+	if pad < 6 then
+		used = 0
+		for i = 1, count do
+			local label = ui.tabs[TABS[i].key].label
+			Font(label, 10)
+			used = used + label:GetStringWidth()
+		end
+		pad = math.floor((PAGE_W - (count - 1) * TAB_GAP - used) / count)
+	end
 	local x = PAGE_X
 	for i = 1, count do
 		local tab = ui.tabs[TABS[i].key]
@@ -4148,6 +4219,7 @@ local function BuildTabs()
 	BuildFavouritesPage(ui.pages.favourites)
 	BuildRacesPage(ui.pages.races)
 	BuildGlowsPage(ui.pages.glows)
+	P.BuildExtraPage(ui.pages.extra)
 	BuildItemsPage(ui.pages.items)
 	BuildSlutmogPage(ui.pages.slutmog)
 	BuildSetsPage(ui.pages.sets)

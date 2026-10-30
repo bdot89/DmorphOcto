@@ -47,7 +47,11 @@
 -- it is): "wp-bqos". Receivers wear a copy held and sheathed that way
 -- (DmorphHelper v17).
 --   G <glows|->           my weapon glows changed, the rest didn't
+-- Extra wear (2.29.0): an "x" token, the spell IDs worn in base 36 with "-"
+-- between ("xBXT-H"); receivers put the looks they know on through
+-- DmorphHelper_SetAura (v17).
 --   W <ways|->            how my weapons are held/sheathed changed, the rest didn't
+--   X <spells|->          my extra wear changed, the rest didn't
 --   M <mount>             my mount skin changed, the rest didn't
 --   H <fingerprint> <guid|->  my look is still the one with this fingerprint
 --   Q <name>[:<fingerprint>],...  what do these players look like now?
@@ -84,7 +88,7 @@ local audience = {} -- name -> when they last showed they see us
 local inGroup, inGuild = {}, {} -- names
 local replies = {} -- way -> "L" (full look) or "H" (fingerprint)
 local timers = {} -- clock times: join, ready, send, first, mount, reply, replied, query, scan, guild, next
-local sent = { d = "0", m = "0", it = "-", s = "", p = "", g = "", w = "" } -- what the others were last told
+local sent = { d = "0", m = "0", it = "-", s = "", p = "", g = "", w = "", x = "" } -- what the others were last told
 local cache -- DmorphOctoAccount.peerCache for this realm
 local guidWorks -- whether VanillaHelpers took a GUID as a unit token (nil: not tried)
 local counts = { channel = 0, hidden = 0 }
@@ -549,6 +553,52 @@ local function KeepGlows(token, want, done)
 	end
 end
 
+-- A player's extra wear, through DmorphHelper's aura fields (like your own:
+-- empty fields from the top down, skipping ones the server uses). Checked on
+-- every scan: the server rewrites their fields when their buffs change.
+local EXTRA_TOP = 31
+local function KeepExtra(token, want, done)
+	if type(DmorphHelper_SetAura) ~= "function" or type(DmorphHelper_GetAura) ~= "function" then
+		return
+	end
+	local wanted = {}
+	for i = 1, table.getn(want.extra or {}) do
+		wanted[want.extra[i]] = true
+	end
+	done.extraSlots = done.extraSlots or {}
+	for index, spell in pairs(done.extraSlots) do
+		local ok, now = pcall(DmorphHelper_GetAura, token, index)
+		if ok and now == spell and not wanted[spell] then
+			pcall(DmorphHelper_SetAura, token, index, 0)
+			done.extraSlots[index] = nil
+		elseif ok and now ~= spell then
+			done.extraSlots[index] = nil
+		elseif wanted[spell] then
+			wanted[spell] = "on"
+		end
+	end
+	local index = EXTRA_TOP
+	for i = 1, table.getn(want.extra or {}) do
+		local spell = want.extra[i]
+		if wanted[spell] == true then
+			while index >= 0 do
+				local ok, now = pcall(DmorphHelper_GetAura, token, index)
+				if ok and now == 0 and not done.extraSlots[index] then
+					break
+				end
+				index = index - 1
+			end
+			if index < 0 then
+				return
+			end
+			if pcall(DmorphHelper_SetAura, token, index, spell) then
+				done.extraSlots[index] = spell
+			end
+			index = index - 1
+		end
+	end
+end
+
 -- Puts a player's look on them. `force` sets every part again, for a player
 -- the game has just built afresh (their morph is gone on our screen).
 local function ApplyTo(name, token)
@@ -566,6 +616,7 @@ local function ApplyTo(name, token)
 	if not force and done.version == want.version and not done.weaponWait then
 		done.scan = scanID
 		KeepGlows(token, want, done)
+		KeepExtra(token, want, done)
 		return
 	end
 	done = done or { items = {} }
@@ -619,9 +670,10 @@ local function ApplyTo(name, token)
 		end
 	end
 	KeepGlows(token, want, done)
+	KeepExtra(token, want, done)
 	done.version, done.scan, done.away = want.version, scanID, nil
 	if want == NONE and not done.display and not done.mount and not next(done.items) and not done.scale
-		and not (done.glows and next(done.glows)) then
+		and not (done.glows and next(done.glows)) and not (done.extraSlots and next(done.extraSlots)) then
 		applied[name] = nil
 	else
 		applied[name] = done
@@ -662,6 +714,7 @@ local function SetPeer(name, look, guid, confirmed)
 	look.scale = peer and peer.scale -- a full look message sets it again after
 	look.glows = peer and peer.glows -- (the same for weapon glows)
 	look.weapons = peer and peer.weapons
+	look.extra = peer and peer.extra
 	look.version = (peer and peer.version or 0) + 1
 	look.heard = confirmed and clock or -1000
 	look.confirmed = confirmed
@@ -869,6 +922,36 @@ local function SetPeerWeapons(name, weaponsIn)
 	end
 end
 
+-- A player's extra wear from an "x..." token: the spell IDs this PC knows
+-- as looks (at most EXTRA_MAX), and a key to compare by; nil for none.
+local function ExtraOf(token)
+	local _, _, list = strfind(token or "", "^x([0-9A-Z%-]+)$")
+	if not list then
+		return nil
+	end
+	local out, catalog = { key = "" }, M.GetExtraWearCatalog and M.GetExtraWearCatalog()
+	for id in string.gfind(list, "[0-9A-Z]+") do
+		local spell = Decode(id)
+		if spell and catalog and catalog.byID[spell] and table.getn(out) < (M.EXTRA_MAX or 6) then
+			table.insert(out, spell)
+			out.key = out.key .. id .. "-"
+		end
+	end
+	if not out[1] then
+		return nil
+	end
+	return out
+end
+
+local function SetPeerExtra(name, extraIn)
+	local peer = peers[name]
+	if peer and (peer.extra and peer.extra.key) ~= (extraIn and extraIn.key) then
+		peer.extra = extraIn
+		peer.version = peer.version + 1
+		Scan()
+	end
+end
+
 local function SetPeerSize(name, scale)
 	local peer = peers[name]
 	if peer and peer.scale ~= scale then
@@ -880,7 +963,7 @@ end
 
 local function ReadLook(sender, rest)
 	local _, _, d, m, it, guid, more = strfind(rest, "^(%S+) (%S+) (%S+) ?(%S*) ?(.*)$")
-	local size, ported, glowToken, wayToken
+	local size, ported, glowToken, wayToken, extraToken
 	for token in string.gfind(more or "", "%S+") do
 		if strfind(token, "^s%d+$") then
 			size = token
@@ -890,9 +973,11 @@ local function ReadLook(sender, rest)
 			glowToken = token
 		elseif strfind(token, "^w") then
 			wayToken = token
+		elseif strfind(token, "^x") then
+			extraToken = token
 		end
 	end
-	local glowsIn, weaponsIn = GlowsOf(glowToken), WeaponsOf(wayToken)
+	local glowsIn, weaponsIn, extraIn = GlowsOf(glowToken), WeaponsOf(wayToken), ExtraOf(extraToken)
 	local look = MakeLook(d, m, it, ported)
 	if not look then
 		return
@@ -914,12 +999,14 @@ local function ReadLook(sender, rest)
 		SetPeerSize(sender, scale)
 		SetPeerGlows(sender, glowsIn)
 		SetPeerWeapons(sender, weaponsIn)
+		SetPeerExtra(sender, extraIn)
 		return
 	end
 	if SetPeer(sender, look, guid, true) then
 		look.scale = scale
 		look.glows = glowsIn
 		look.weapons = weaponsIn
+		look.extra = extraIn
 		Scan()
 	end
 end
@@ -938,7 +1025,7 @@ local function ReadMount(sender, m)
 end
 
 -- "Nothing changed": confirms what we remember, else we ask for it all.
-local function ReadPrint(sender, print, guid, size, glowToken, wayToken)
+local function ReadPrint(sender, print, guid, size, glowToken, wayToken, extraToken)
 	Unask(sender)
 	Answered(sender)
 	asked[sender] = clock
@@ -948,6 +1035,7 @@ local function ReadPrint(sender, print, guid, size, glowToken, wayToken)
 		SetPeerSize(sender, SizeOf(size))
 		SetPeerGlows(sender, GlowsOf(glowToken))
 		SetPeerWeapons(sender, WeaponsOf(wayToken))
+		SetPeerExtra(sender, ExtraOf(extraToken))
 		if strfind(guid or "", "^0x%x+$") then
 			peer.guid = guid
 		end
@@ -1002,7 +1090,7 @@ local function Receive(sender, text, way)
 	elseif kind == "H" then
 		local _, _, print, guid, more = strfind(rest, "^(%S+) ?(%S*) ?(.*)$")
 		if print then
-			local size, glowToken, wayToken
+			local size, glowToken, wayToken, extraToken
 			for token in string.gfind(more or "", "%S+") do
 				if strfind(token, "^s%d+$") then
 					size = token
@@ -1010,15 +1098,23 @@ local function Receive(sender, text, way)
 					glowToken = token
 				elseif strfind(token, "^w") then
 					wayToken = token
+				elseif strfind(token, "^x") then
+					extraToken = token
 				end
 			end
-			ReadPrint(sender, print, guid, size, glowToken, wayToken)
+			ReadPrint(sender, print, guid, size, glowToken, wayToken, extraToken)
 		end
 	elseif kind == "G" then
 		-- Only the weapon glows changed ("-": none any more).
 		local peer = peers[sender]
 		if peer and peer.confirmed then
 			SetPeerGlows(sender, GlowsOf(rest))
+		end
+	elseif kind == "X" then
+		-- Only the extra wear changed ("-": none any more).
+		local peer = peers[sender]
+		if peer and peer.confirmed then
+			SetPeerExtra(sender, ExtraOf("x" .. rest))
 		end
 	elseif kind == "W" then
 		-- Only how the weapons are held/sheathed changed ("-": as they are).
@@ -1086,8 +1182,26 @@ local function OwnWeapons()
 	return "w" .. table.concat(parts)
 end
 
+-- Your extra wear as a message token: "xBXT-H", or "" with none.
+local function OwnExtra()
+	if not (Sharing() and M.GetExtraWear) then
+		return ""
+	end
+	local worn, parts = M.GetExtraWear(), {}
+	for i = 1, table.getn(worn) do
+		table.insert(parts, Encode(worn[i]))
+	end
+	if not parts[1] then
+		return ""
+	end
+	return "x" .. table.concat(parts, "-")
+end
+
 local function OnChange()
 	local d, m, it = OwnParts()
+	if OwnExtra() ~= sent.x then
+		timers.extra = timers.extra or clock + SETTLE
+	end
 	if OwnWeapons() ~= sent.w then
 		timers.ways = timers.ways or clock + SETTLE
 	end
@@ -1131,6 +1245,10 @@ local function WithSize(text)
 	if ways ~= "" then
 		text = text .. " " .. ways
 	end
+	local extra = OwnExtra()
+	if extra ~= "" then
+		text = text .. " " .. extra
+	end
 	return text
 end
 
@@ -1150,7 +1268,9 @@ local function SendLook(ways)
 	sent.p = OwnPorted()
 	sent.g = OwnGlows()
 	sent.w = OwnWeapons()
+	sent.x = OwnExtra()
 	timers.send, timers.first, timers.mount, timers.size, timers.glow, timers.ways = nil, nil, nil, nil, nil, nil
+	timers.extra = nil
 	local text = LookText()
 	for way in pairs(ways) do
 		Send(text, way)
@@ -1193,6 +1313,15 @@ local function SendNext()
 			sent.g = glow
 			for way in pairs(ChangeWays()) do
 				Send("G " .. (glow == "" and "-" or glow), way)
+			end
+		end
+	elseif timers.extra and clock >= timers.extra then
+		timers.extra = nil
+		local extra = OwnExtra()
+		if extra ~= sent.x then
+			sent.x = extra
+			for way in pairs(ChangeWays()) do
+				Send("X " .. (extra == "" and "-" or strsub(extra, 2)), way)
 			end
 		end
 	elseif timers.ways and clock >= timers.ways then

@@ -2110,6 +2110,28 @@ local function installHelper(look)
 	function DmorphHelper_Rebuild(unit)
 		game.rebuilds = game.rebuilds + 1
 	end
+	-- Aura fields per unit GUID (v17, Extra wear).
+	game.auras = {}
+	local function auraUnit(unit)
+		local key = unit == "player" and "player" or (Mock.Unit(unit) or {}).guid
+		if not key then
+			error("Unit not found.")
+		end
+		game.auras[key] = game.auras[key] or {}
+		return game.auras[key]
+	end
+	function DmorphHelper_SetAura(unit, index, spell)
+		if not (whole(index, 47) and type(spell) == "number" and spell >= 0) then
+			error("Usage: DmorphHelper_SetAura(unit, index 0-47, spellID or 0)")
+		end
+		auraUnit(unit)[index] = spell
+	end
+	function DmorphHelper_GetAura(unit, index)
+		if not whole(index, 47) then
+			error("Usage: DmorphHelper_GetAura(unit, index 0-47)")
+		end
+		return auraUnit(unit)[index] or 0
+	end
 	-- Weather: what shows, and the server's (rain at 30% here).
 	function DmorphHelper_SetWeather(kind, intensity)
 		if not whole(kind, 3) or type(intensity) ~= "number" or intensity < 0 or intensity > 1 then
@@ -2481,6 +2503,58 @@ end)()
 	DmorphHelper_Version = oldVersion
 	DmorphOcto.SetItem(16, 0)
 	Mock.serverItems[647], Mock.serverItems[25] = nil, nil
+end)()
+-- Extra wear (2.29.0): spell looks through the aura fields, from the top down.
+;(function()
+	local me = game.auras.player or {}
+	game.auras.player = me
+	check(DmorphOcto.GetExtraWearCatalog().count > 300 and DmorphOcto.DescribeExtra(15473) == "Shadowform",
+		"the extra wear list has the client's spell looks (Shadowform by name)")
+	local ok = DmorphOcto.ToggleExtraWear(15473)
+	check(ok and me[31] == 15473, "wearing Shadowform puts it in the top buff field")
+	me[30] = 1234 -- a real buff the server put there
+	DmorphOcto.ToggleExtraWear(17)
+	check(me[29] == 17 and me[30] == 1234, "the next look skips a field the server uses")
+	me[31] = 5555 -- the server's buff takes our field
+	Mock.Tick(1.1)
+	check(me[31] == 5555 and (me[28] == 15473 or me[30] == 15473), "a look the server pushed out goes back on elsewhere")
+	DmorphOcto.ToggleExtraWear(17)
+	check(me[29] == 0, "clicking a worn look takes it off")
+	check(not DmorphOcto.ToggleExtraWear(99999999), "an unknown spell is refused")
+	DmorphOcto.SaveOutfit("Shadowy")
+	DmorphOcto.ClearExtraWear()
+	check(me[28] ~= 15473 and not DmorphOcto.IsWearingExtra(15473), "Take all off clears them")
+	DmorphOcto.LoadOutfit("Shadowy")
+	check(DmorphOcto.IsWearingExtra(15473) and contains(DmorphOcto.DescribeOutfit(DmorphOctoAccount.outfits.Shadowy), "extra wear"),
+		"outfits keep their extra wear")
+	local catalog = DmorphOcto.GetExtraWearCatalog()
+	for i = 1, 5 do
+		DmorphOcto.ToggleExtraWear(catalog.ids[i])
+	end
+	local full, msg = DmorphOcto.ToggleExtraWear(catalog.ids[6])
+	check(not full and contains(msg, "6 looks"), "at most six looks at once")
+	DmorphOcto.ClearExtraWear()
+	DmorphOcto.DeleteOutfit("Shadowy")
+	me[30], me[31] = 0, 0
+	-- The tab: search, click to wear, the tick shows it.
+	local wasOpen = DmorphOctoFrame:IsVisible()
+	if not wasOpen then
+		DmorphOcto_ToggleUI()
+	end
+	Mock.Click(DmorphOctoTabExtrawear)
+	Mock.Type(DmorphOctoExtraSearch, "shadowform")
+	Mock.Tick(0.3)
+	local row = DmorphOctoExtraListRow1
+	check(row:IsVisible() and row.text.text == "Shadowform", "the Extra wear tab lists and searches the looks")
+	Mock.Click(row)
+	check(DmorphOcto.IsWearingExtra(15473) and row.tick:IsVisible(), "clicking a row wears it and ticks it")
+	Mock.Tick(0.5)
+	Mock.Click(DmorphOctoExtraClear)
+	Mock.Tick(0.5)
+	check(not DmorphOcto.IsWearingExtra(15473), "Take all off from the tab")
+	if not wasOpen then
+		DmorphOcto_ToggleUI()
+	end
 end)()
 DmorphOctoSize:SetValue(2)
 Mock.Tick(0.4)
@@ -2986,6 +3060,21 @@ check(morphOf(pally).items[16] == 900002, "the ported part is read after a size 
 	hear("Porter", "Q Tester")
 	wait(4)
 	check(channelSays(" wp-b"), "and with your look when someone asks")
+	-- 2.29.0: extra wear is shared ("x" token, "X" message).
+	hear("Porter", "L 0 0 - " .. pally .. " x" .. b36(15473))
+	wait(1.5)
+	local theirAuras = game.auras[pally] or {}
+	check(theirAuras[31] == 15473, "a DMorph user's extra wear shows on them")
+	hear("Porter", "X -")
+	wait(1.5)
+	check(theirAuras[31] == 0, "an X message without looks takes theirs off")
+	quiet()
+	DmorphOcto.ToggleExtraWear(15473)
+	wait(3)
+	check(channelSays("DMO2 X " .. b36(15473)) or channelSays(" x" .. b36(15473)),
+		"your extra wear goes out to DMorph users around you")
+	DmorphOcto.ClearExtraWear()
+	wait(3)
 	DmorphOcto.SetWeaponSheath(16, nil)
 	DmorphOcto.SetItem(16, ownWeapon or 0)
 	Mock.serverItems[647], Mock.serverItems[25] = kept647, kept25

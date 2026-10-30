@@ -18,4 +18,5 @@ $ErrorActionPreference = "Stop"
 & (Join-Path $PSScriptRoot "build_items.ps1") -GameDir $GameDir
 & (Join-Path $PSScriptRoot "build_options.ps1") -GameDir $GameDir
 & (Join-Path $PSScriptRoot "build_frames.ps1") -GameDir $GameDir
+& (Join-Path $PSScriptRoot "build_extrawear.ps1") -GameDir $GameDir
 "Done. /reload in game to see the new lists."
