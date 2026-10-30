@@ -2638,6 +2638,32 @@ Mock.Fire("PLAYER_ALIVE")
 check(vh.items[1] == 2955, "coming back to life still checks the morphs and puts a lost one back")
 Mock.gear[1] = nil
 end
+-- 2.27.0 (user: textures mixed "changing through races quickly"): a quick run
+-- of race changes gets one rebuild once they stop; a single change none.
+do
+Mock.Tick(2)
+local function Repaints() return game.rebuilds - DmorphOcto.GetRaceRepairs() end
+local before = Repaints()
+DmorphOcto.SetRace(2, 0)
+Mock.Tick(0.5)
+Mock.Tick(0.5)
+Mock.Tick(0.5)
+check(Repaints() == before, "one race change isn't rebuilt again")
+DmorphOcto.SetRace(4, 0)
+Mock.Tick(0.3)
+DmorphOcto.SetRace(8, 1)
+Mock.Tick(0.3)
+DmorphOcto.SetRace(6, 0)
+Mock.Tick(0.5)
+check(Repaints() == before, "no rebuild while the changes keep coming")
+Mock.Tick(0.5)
+check(Repaints() == before + 1, "one rebuild once they stop")
+Mock.Tick(1)
+Mock.Tick(1)
+check(Repaints() == before + 1, "and only one")
+DmorphOcto.ResetModel()
+Mock.Tick(2)
+end
 -- After a loading screen the game may have built your model before it had the
 -- items your morphs show (invisible, white in previews: user, 16 Oct): rebuilt
 -- once, when every morphed item is in.

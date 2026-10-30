@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.27.0"
+local VERSION = "2.27.1"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1701,11 +1701,23 @@ local function KeepRace()
 	end
 end
 
+-- 2.27.0 (user, 30 Oct, screenshot: another race's face on the model after
+-- "changing through races quickly"): a new body while the game still paints
+-- the last one's skin mixes their textures. After a body change that came
+-- within BODY_SETTLE seconds of the one before, the model is rebuilt once
+-- when no change has come for BODY_REPAINT seconds, so it is painted from
+-- one race.
+local BODY_SETTLE, BODY_REPAINT = 1, 0.8
+local bodyFrame = CreateFrame("Frame")
 local function ApplyBody()
 	helperHold, helperWait = 0.5, 0.5
 	if next(raceHeld) then
 		return true -- it goes on when the flight map or spellbook closes
 	end
+	if bodyFrame.since and bodyFrame.since < BODY_SETTLE then
+		bodyFrame.rushed = true
+	end
+	bodyFrame.since = 0
 	local ok, err = Morph(SetUnitDisplayID, "player", BodyDisplayID())
 	KeepRace()
 	if next(raceSwapped) and MorphRace() then
@@ -1713,6 +1725,21 @@ local function ApplyBody()
 	end
 	return ok, err
 end
+bodyFrame:SetScript("OnUpdate", function()
+	if not this.since then
+		return
+	end
+	this.since = this.since + arg1
+	if this.rushed and this.since >= BODY_REPAINT then
+		this.rushed = nil
+		if type(DmorphHelper_Rebuild) == "function" then
+			pcall(DmorphHelper_Rebuild, "player")
+		end
+	end
+	if this.since >= BODY_SETTLE then
+		this.since = nil
+	end
+end)
 
 -- The race byte has to match the model you show: the game paints your skin,
 -- hair and gear by that race, and with another race's there you stand there
