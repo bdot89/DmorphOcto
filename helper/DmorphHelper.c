@@ -36,6 +36,8 @@
 //   DmorphHelper_GetAmmo()                                   -> ammo item ID
 //   DmorphHelper_SetRiderPose(displayID, animation)          (v14; riders of that mount display: 120 stand, 97 sit; 91 usual)
 //   DmorphHelper_GetRiderPose(displayID)                     -> animation, poses work (1/0)
+//   DmorphHelper_SetShotVisual(spellVisualID)                (v18: your ranged attacks' missile; 0 = the weapon's own)
+//   DmorphHelper_GetShotVisual()                             -> picked visual, patch in (1/0)
 // unit is a unit token for a player you could help ("player", "target", ...);
 // slot is an inventory slot, 1-19. The functions only write the values: the
 // addon keeps what it wants and puts it back after the server resends them.
@@ -56,7 +58,7 @@
 #define GAME_FASTCALL __attribute__((fastcall))
 #define GAME_THISCALL __attribute__((thiscall))
 
-#define HELPER_VERSION 17
+#define HELPER_VERSION 18
 
 // Game functions, build 5875 (from VanillaHelpers' Offsets.h).
 #define FUN_INVALID_FUNCTION_PTR_CHECK 0x42A320
@@ -998,6 +1000,64 @@ static void PatchRiderPoses(void) {
                      WriteCall(RIDER_MOUNT_AT, mount, sizeof mount, (void *)&RiderMountStub);
 }
 
+// Shot visuals (v18, user: "THE QUIVERS SHOULD CHANGE THE ARROW LOOK YOU ARE
+// USING ON YOUR BOW"). The missile of a ranged attack isn't the ammo item (the
+// ammo field changed, the arrow didn't): 0x60D450 (thiscall on the shooting
+// unit, edi) asks the unit for its ranged weapon's display (virtual +0xA0,
+// slot 2), reads that ItemDisplayInfo row's field 10 (+0x28, a SpellVisual ID)
+// at 0x60D493 and looks it up in the SpellVisual table (rows 0xC0D738, highest
+// ID 0xC0D73C); the visual's missile is what flies. The 5 bytes there
+// (mov eax,[eax+0x28]; test eax,eax) become a call to ShotVisualStub, which
+// does the same with your picked visual when the shooter is you.
+#define SHOT_VISUAL_AT 0x60D493
+static uint32_t g_shotVisual = 0;     // 0: the weapon's own
+static BOOL g_shotPatched = FALSE;
+__attribute__((used)) static uint32_t ShotVisual(void *unit, uint32_t visual) __asm__("DmorphHelper_ShotVisual");
+static uint32_t ShotVisual(void *unit, uint32_t visual) {
+    return g_shotVisual && unit && unit == Me() ? g_shotVisual : visual;
+}
+// eax = the display row; edi = the shooting unit. ecx and edx kept; the flags of
+// "test eax,eax" set last, for the je/jl after the call.
+__attribute__((naked)) static void ShotVisualStub(void) {
+    __asm__ volatile(
+        "mov 0x28(%eax), %eax\n\t"
+        "push %ecx\n\t"
+        "push %edx\n\t"
+        "push %eax\n\t"
+        "push %edi\n\t"
+        "call DmorphHelper_ShotVisual\n\t"
+        "add $8, %esp\n\t"
+        "pop %edx\n\t"
+        "pop %ecx\n\t"
+        "test %eax, %eax\n\t"
+        "ret\n\t");
+}
+static void PatchShotVisual(void) {
+    static BOOL tried = FALSE;
+    if (tried) {
+        return;
+    }
+    tried = TRUE;
+    static const uint8_t stock[] = { 0x8B, 0x40, 0x28, 0x85, 0xC0 };
+    g_shotPatched = WriteCall(SHOT_VISUAL_AT, stock, sizeof stock, (void *)&ShotVisualStub);
+}
+static const char *SHOT_USAGE = "Usage: DmorphHelper_SetShotVisual(spellVisualID or 0)";
+static int GAME_FASTCALL Script_SetShotVisual(void *L) {
+    uint32_t visual = NumberArg(L, 1, 0, 1000000, SHOT_USAGE);
+    if (!g_shotPatched) {
+        LuaError(L, "DmorphHelper couldn't change the game's ranged missile.");
+        return 0;
+    }
+    g_shotVisual = visual;
+    return 0;
+}
+// -> the picked visual (0 = the weapon's own), whether the patch is in (1/0).
+static int GAME_FASTCALL Script_GetShotVisual(void *L) {
+    LuaPushNumber(L, g_shotVisual);
+    LuaPushNumber(L, g_shotPatched ? 1 : 0);
+    return 2;
+}
+
 static const char *POSE_USAGE = "Usage: DmorphHelper_SetRiderPose(displayID, animation) (0 or 91: the riding pose)";
 
 // Which pose riders of a mount display get (0 or 91 = the usual riding pose).
@@ -1058,6 +1118,7 @@ static void GAME_FASTCALL LoadScriptFunctions_h(void) {
     LoadScriptFunctions_o();
     GrowWorldLineCells();
     PatchRiderPoses();
+    PatchShotVisual();
     RegisterFunction("DmorphHelper_Version", (uintptr_t)&Script_Version);
     RegisterFunction("DmorphHelper_GetItemEnchants", (uintptr_t)&Script_GetItemEnchants);
     RegisterFunction("DmorphHelper_SetItemEnchants", (uintptr_t)&Script_SetItemEnchants);
@@ -1081,6 +1142,8 @@ static void GAME_FASTCALL LoadScriptFunctions_h(void) {
     RegisterFunction("DmorphHelper_SetAmmo", (uintptr_t)&Script_SetAmmo);
     RegisterFunction("DmorphHelper_GetAmmo", (uintptr_t)&Script_GetAmmo);
     RegisterFunction("DmorphHelper_SetRiderPose", (uintptr_t)&Script_SetRiderPose);
+    RegisterFunction("DmorphHelper_SetShotVisual", (uintptr_t)&Script_SetShotVisual);
+    RegisterFunction("DmorphHelper_GetShotVisual", (uintptr_t)&Script_GetShotVisual);
     RegisterFunction("DmorphHelper_GetRiderPose", (uintptr_t)&Script_GetRiderPose);
 }
 
