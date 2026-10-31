@@ -59,7 +59,7 @@
 #define GAME_FASTCALL __attribute__((fastcall))
 #define GAME_THISCALL __attribute__((thiscall))
 
-#define HELPER_VERSION 21
+#define HELPER_VERSION 22
 
 // Game functions, build 5875 (from VanillaHelpers' Offsets.h).
 #define FUN_INVALID_FUNCTION_PTR_CHECK 0x42A320
@@ -1178,7 +1178,112 @@ static int GAME_FASTCALL Script_GetShotVisual(void *L) {
     return 2;
 }
 
-static const char *POSE_USAGE = "Usage: DmorphHelper_SetRiderPose(displayID, animation) (0 or 91: the riding pose)";
+// HD skin (v22, user 1 Nov: "all armour should match the helm and shoulders"). The
+// character skin is one 256x256 16-bit texture painted from 10 regions; every texture
+// is copied into its region pixel for pixel (CharacterComponent.cpp, 0x475000-0x47C000):
+// region table {x, y, w, h} x 10 at 0xB42450, filled at start-up by 0x475C50; paint
+// buffer made 256x256 at 0x4760A7/AC and 0x476791/96, the "CharacterBaseSkin" texture
+// at 0x47792F/34; the three blenders 0x477C80 / 0x477DB0 / 0x477F20 step rows by 0x200
+// bytes (256 pixels). With DmorphHelper_HD.txt next to WoW.exe, everything doubles: a
+// 512x512 skin. It needs every painted texture at double size (the HD archives); it is
+// only switched on before the game fills the region table, else left off.
+#define HD_TABLE 0xB42450
+static BOOL g_hdSkin = FALSE;
+static int g_hdWhy = 0;   // 0 no DmorphHelper_HD.txt, 1 on, 2 too late (table already filled), 3 unexpected WoW.exe
+static void HdFillTable(void) {
+    // As 0x475C50 writes them: arm upper, arm lower, hand, torso upper, torso lower,
+    // leg upper, leg lower, foot, face lower, face upper.
+    static const uint32_t regions[10][4] = {
+        { 0, 0, 128, 64 }, { 0, 64, 128, 64 }, { 0, 128, 128, 32 }, { 128, 0, 128, 64 }, { 128, 64, 128, 32 },
+        { 128, 96, 128, 64 }, { 128, 160, 128, 64 }, { 128, 224, 128, 32 }, { 0, 160, 128, 32 }, { 0, 192, 128, 64 },
+    };
+    uint32_t *t = (uint32_t *)HD_TABLE;
+    for (int i = 0; i < 10; i++) {
+        for (int k = 0; k < 4; k++) {
+            t[i * 4 + k] = regions[i][k] * 2;
+        }
+    }
+}
+static BOOL PatchImm32(uintptr_t at, uint32_t expected, uint32_t value) {
+    if (*(const uint32_t *)at != expected) {
+        return FALSE;
+    }
+    DWORD old;
+    if (!VirtualProtect((LPVOID)at, 4, PAGE_EXECUTE_READWRITE, &old)) {
+        return FALSE;
+    }
+    *(uint32_t *)at = value;
+    VirtualProtect((LPVOID)at, 4, old, &old);
+    FlushInstructionCache(GetCurrentProcess(), (LPCVOID)at, 4);
+    return TRUE;
+}
+static void HdSkinStart(void) {
+    char path[MAX_PATH];
+    DWORD n = GetModuleFileNameA(NULL, path, MAX_PATH);
+    char *slash = n ? strrchr(path, '\\') : NULL;
+    if (!slash || (size_t)(slash - path) + 20 >= MAX_PATH) {
+        return;
+    }
+    strcpy(slash + 1, "DmorphHelper_HD.txt");
+    if (GetFileAttributesA(path) == INVALID_FILE_ATTRIBUTES) {
+        return;
+    }
+    // The stock region table, as 0x475C50 writes it (checked against its code).
+    const uint32_t *t = (const uint32_t *)HD_TABLE;
+    for (int i = 0; i < 40; i++) {
+        if (t[i] != 0) {
+            g_hdWhy = 2;
+            return;
+        }
+    }
+    static const uint8_t init[8] = { 0x56, 0x33, 0xF6, 0xB8, 0x80, 0x00, 0x00, 0x00 };
+    static const uintptr_t imm256[6] = { 0x4760A8, 0x4760AD, 0x476792, 0x476797, 0x477930, 0x477935 };
+    static const uintptr_t pitch[3] = { 0x477CA1, 0x477DD1, 0x477F43 };
+    if (memcmp((const void *)0x475C50, init, sizeof init) != 0) {
+        g_hdWhy = 3;
+        return;
+    }
+    for (int i = 0; i < 6; i++) {
+        if (*(const uint32_t *)imm256[i] != 0x100) {
+            g_hdWhy = 3;
+            return;
+        }
+    }
+    for (int i = 0; i < 3; i++) {
+        if (*(const uint32_t *)pitch[i] != 0x200) {
+            g_hdWhy = 3;
+            return;
+        }
+    }
+    // The table filler becomes a jump to ours (doubled values); then the sizes.
+    DWORD old;
+    if (!VirtualProtect((LPVOID)0x475C50, 5, PAGE_EXECUTE_READWRITE, &old)) {
+        return;
+    }
+    uint8_t jmp[5];
+    int32_t rel = (int32_t)((uintptr_t)&HdFillTable - (0x475C50 + 5));
+    jmp[0] = 0xE9;
+    memcpy(jmp + 1, &rel, 4);
+    memcpy((void *)0x475C50, jmp, 5);
+    VirtualProtect((LPVOID)0x475C50, 5, old, &old);
+    FlushInstructionCache(GetCurrentProcess(), (LPCVOID)0x475C50, 5);
+    for (int i = 0; i < 6; i++) {
+        PatchImm32(imm256[i], 0x100, 0x200);
+    }
+    for (int i = 0; i < 3; i++) {
+        PatchImm32(pitch[i], 0x200, 0x400);
+    }
+    g_hdSkin = TRUE;
+    g_hdWhy = 1;
+}
+// -> 1/0, and why: 0 no DmorphHelper_HD.txt, 1 on, 2 too late, 3 unexpected WoW.exe.
+static int GAME_FASTCALL Script_GetHDSkin(void *L) {
+    LuaPushNumber(L, g_hdSkin ? 1 : 0);
+    LuaPushNumber(L, g_hdWhy);
+    return 2;
+}
+
+static const char *POSE_USAGE ="Usage: DmorphHelper_SetRiderPose(displayID, animation) (0 or 91: the riding pose)";
 
 // Which pose riders of a mount display get (0 or 91 = the usual riding pose).
 static int GAME_FASTCALL Script_SetRiderPose(void *L) {
@@ -1264,6 +1369,7 @@ static void GAME_FASTCALL LoadScriptFunctions_h(void) {
     RegisterFunction("DmorphHelper_SetRiderPose", (uintptr_t)&Script_SetRiderPose);
     RegisterFunction("DmorphHelper_SetShotVisual", (uintptr_t)&Script_SetShotVisual);
     RegisterFunction("DmorphHelper_GetShotVisual", (uintptr_t)&Script_GetShotVisual);
+    RegisterFunction("DmorphHelper_GetHDSkin", (uintptr_t)&Script_GetHDSkin);
     RegisterFunction("DmorphHelper_SetUnitShotVisual", (uintptr_t)&Script_SetUnitShotVisual);
     RegisterFunction("DmorphHelper_GetRiderPose", (uintptr_t)&Script_GetRiderPose);
 }
@@ -1437,6 +1543,8 @@ BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved) {
         if (!GameLooksRight()) {
             return TRUE;
         }
+        // Before anything else: the skin size can only change before the game sets it up.
+        HdSkinStart();
         if (Ready()) {
             InstallHook();
         } else {

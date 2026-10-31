@@ -2435,7 +2435,7 @@ local MISSING_HELPER = "DmorphHelper.dll isn't loaded, so weapon glows, your siz
 M.MISSING_HELPER = MISSING_HELPER
 -- The DmorphHelper_Version() the DLL in helper\ reports. An older one in the
 -- game folder (DMorph was updated, the DLL wasn't copied again) is flagged.
-local HELPER_VERSION = 21
+local HELPER_VERSION = 22
 -- Rows 1-5 of the Races tab, in DmorphHelper_GetLook's order.
 local OWN_LOOK_NPC = { "npcSkin", "npcFace", "npcHairStyle", "npcHairColour" }
 
@@ -2827,6 +2827,17 @@ function M.GetSetupReport()
 				poses = " Riders stand on discs, boards and carpets."
 			else
 				poses = " It couldn't change the riding pose (another mod changed that part of the game?)."
+			end
+		end
+		-- v22: the 512x512 character skin (DmorphHelper_HD.txt next to WoW.exe).
+		if type(DmorphHelper_GetHDSkin) == "function" then
+			local ok, on, why = pcall(DmorphHelper_GetHDSkin)
+			if ok and on == 1 then
+				poses = poses .. " HD skin: on (512x512)."
+			elseif ok and why == 2 then
+				poses = poses .. " HD skin: asked for, but the game had set up its skin first (it stays 256x256)."
+			elseif ok and why == 3 then
+				poses = poses .. " HD skin: asked for, but this WoW.exe isn't the one it knows."
 			end
 		end
 		Add("DmorphHelper", "ok", "Running v" .. helperVersion .. " (this DMorph comes with v" .. HELPER_VERSION .. "): weapon "
