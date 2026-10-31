@@ -1492,9 +1492,7 @@ static BOOL IsSkinPiece(const uint8_t *data) {
 // Diagnostics (1 Nov: the first test copied nothing): hook installed, updates seen, DMSKIN
 // models seen, of those with a parent.
 static uint32_t g_skinHooked = 0, g_skinCalls = 0, g_skinNamed = 0, g_skinParented = 0;
-static void GAME_THISCALL M2UpdateBones_h(void *model) {
-    M2UpdateBones_o(model);
-    g_skinCalls++;
+static void SkinAfter(void *model) {
     const uint8_t *data = M2Data(model);
     if (!data || !IsSkinPiece(data)) {
         return;
@@ -1517,14 +1515,33 @@ static void GAME_THISCALL M2UpdateBones_h(void *model) {
     memcpy(dst, src, 64 * (n < pn ? n : pn));
     g_skinCopies++;
 }
-// -> copies, hook installed (1/0), bone updates seen, DMSKIN updates, DMSKIN updates with a parent.
+static void GAME_THISCALL M2UpdateBones_h(void *model) {
+    M2UpdateBones_o(model);
+    g_skinCalls++;
+    SkinAfter(model);
+}
+// 0x714260 animates one model (thiscall: placement matrix, scale, position, alpha; ret 0x10);
+// children attached to a model may be animated from their parent's update through it alone.
+#define FUN_M2_ANIMATE 0x714260
+typedef void(GAME_THISCALL *M2Animate_t)(void *model, void *a, void *b, void *c, uint32_t d);
+static M2Animate_t M2Animate_o = NULL;
+static uint32_t g_animHooked = 0, g_animCalls = 0;
+static void GAME_THISCALL M2Animate_h(void *model, void *a, void *b, void *c, uint32_t d) {
+    M2Animate_o(model, a, b, c, d);
+    g_animCalls++;
+    SkinAfter(model);
+}
+// -> copies, hook installed (1/0), bone updates seen, DMSKIN updates, DMSKIN updates with a
+// parent, animate hook installed (1/0), animate calls seen.
 static int GAME_FASTCALL Script_GetSkinCopies(void *L) {
     LuaPushNumber(L, g_skinCopies);
     LuaPushNumber(L, g_skinHooked);
     LuaPushNumber(L, g_skinCalls);
     LuaPushNumber(L, g_skinNamed);
     LuaPushNumber(L, g_skinParented);
-    return 5;
+    LuaPushNumber(L, g_animHooked);
+    LuaPushNumber(L, g_animCalls);
+    return 7;
 }
 
 static void InstallHook(void) {
@@ -1536,6 +1553,11 @@ static void InstallHook(void) {
         if (memcmp((const void *)FUN_M2_UPDATE_BONES, stock, sizeof stock) == 0 &&
             MH_CreateHook((LPVOID)FUN_M2_UPDATE_BONES, (LPVOID)&M2UpdateBones_h, (LPVOID *)&M2UpdateBones_o) == MH_OK) {
             g_skinHooked = MH_EnableHook((LPVOID)FUN_M2_UPDATE_BONES) == MH_OK ? 1 : 0;
+        }
+        static const uint8_t animate[9] = { 0x55, 0x8B, 0xEC, 0x81, 0xEC, 0x9C, 0x01, 0x00, 0x00 };
+        if (memcmp((const void *)FUN_M2_ANIMATE, animate, sizeof animate) == 0 &&
+            MH_CreateHook((LPVOID)FUN_M2_ANIMATE, (LPVOID)&M2Animate_h, (LPVOID *)&M2Animate_o) == MH_OK) {
+            g_animHooked = MH_EnableHook((LPVOID)FUN_M2_ANIMATE) == MH_OK ? 1 : 0;
         }
     }
     if (MH_CreateHook((LPVOID)FUN_LOAD_SCRIPT_FUNCTIONS, (LPVOID)&LoadScriptFunctions_h,
