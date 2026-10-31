@@ -1478,8 +1478,16 @@ static const uint8_t *M2Data(void *model) {
 }
 static BOOL IsSkinPiece(const uint8_t *data) {
     uint32_t len = *(const uint32_t *)(data + 0x8);
-    const char *name = *(const char *const *)(data + 0xC);
-    return len >= 6 && name && !IsBadReadPtr(name, 6) && memcmp(name, "DMSKIN", 6) == 0;
+    uint32_t at = *(const uint32_t *)(data + 0xC);
+    if (len < 6 || len > 256 || at == 0) {
+        return FALSE;
+    }
+    // The game may leave the name as a file offset (not every array is turned into a pointer).
+    const char *as_ptr = (const char *)(uintptr_t)at, *as_ofs = (const char *)data + at;
+    if (!IsBadReadPtr(as_ptr, 6) && memcmp(as_ptr, "DMSKIN", 6) == 0) {
+        return TRUE;
+    }
+    return at < 0x4000000 && !IsBadReadPtr(as_ofs, 6) && memcmp(as_ofs, "DMSKIN", 6) == 0;
 }
 static void GAME_THISCALL M2UpdateBones_h(void *model) {
     M2UpdateBones_o(model);
