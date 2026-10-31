@@ -59,7 +59,7 @@
 #define GAME_FASTCALL __attribute__((fastcall))
 #define GAME_THISCALL __attribute__((thiscall))
 
-#define HELPER_VERSION 22
+#define HELPER_VERSION 23
 
 // Game functions, build 5875 (from VanillaHelpers' Offsets.h).
 #define FUN_INVALID_FUNCTION_PTR_CHECK 0x42A320
@@ -1277,6 +1277,7 @@ static void HdSkinStart(void) {
     g_hdWhy = 1;
 }
 // -> 1/0, and why: 0 no DmorphHelper_HD.txt, 1 on, 2 too late, 3 unexpected WoW.exe.
+static int GAME_FASTCALL Script_GetSkinCopies(void *L);   // skinned pieces, further down
 static int GAME_FASTCALL Script_GetHDSkin(void *L) {
     LuaPushNumber(L, g_hdSkin ? 1 : 0);
     LuaPushNumber(L, g_hdWhy);
@@ -1370,6 +1371,7 @@ static void GAME_FASTCALL LoadScriptFunctions_h(void) {
     RegisterFunction("DmorphHelper_SetShotVisual", (uintptr_t)&Script_SetShotVisual);
     RegisterFunction("DmorphHelper_GetShotVisual", (uintptr_t)&Script_GetShotVisual);
     RegisterFunction("DmorphHelper_GetHDSkin", (uintptr_t)&Script_GetHDSkin);
+    RegisterFunction("DmorphHelper_GetSkinCopies", (uintptr_t)&Script_GetSkinCopies);
     RegisterFunction("DmorphHelper_SetUnitShotVisual", (uintptr_t)&Script_SetUnitShotVisual);
     RegisterFunction("DmorphHelper_GetRiderPose", (uintptr_t)&Script_GetRiderPose);
 }
@@ -1458,9 +1460,61 @@ static void DiagInstall(void) {
 }
 #endif
 
+// Skinned pieces (v23, user 1 Nov: "make the 3D models wrap"). Retail's 3D boots, belts,
+// glove cuffs... bend with the character's skeleton; 1.12 only attaches rigid models. In
+// WoW.exe a model (CM2Model) keeps its parent at +0x1CC, its shared data at +0x30 (the M2
+// file at shared +0x130, bones count +0x34) and its bone matrices (64 bytes each, already
+// placed in the scene) at +0x94. 0x714000 (thiscall, no args, plain ret) updates a model's
+// bones each frame, its parent's first. A piece whose M2 name starts "DMSKIN" was built in
+// its body's pose with the body's bone numbers (wowport), so after its own update it takes
+// the parent's matrices: it bends exactly with the body.
+#define FUN_M2_UPDATE_BONES 0x714000
+typedef void(GAME_THISCALL *M2UpdateBones_t)(void *model);
+static M2UpdateBones_t M2UpdateBones_o = NULL;
+static uint32_t g_skinCopies = 0;
+static const uint8_t *M2Data(void *model) {
+    const uint8_t *shared = *(const uint8_t **)((const char *)model + 0x30);
+    return shared ? *(const uint8_t *const *)(shared + 0x130) : NULL;
+}
+static BOOL IsSkinPiece(const uint8_t *data) {
+    uint32_t len = *(const uint32_t *)(data + 0x8);
+    const char *name = *(const char *const *)(data + 0xC);
+    return len >= 6 && name && !IsBadReadPtr(name, 6) && memcmp(name, "DMSKIN", 6) == 0;
+}
+static void GAME_THISCALL M2UpdateBones_h(void *model) {
+    M2UpdateBones_o(model);
+    void *parent = *(void **)((char *)model + 0x1CC);
+    if (!parent) {
+        return;
+    }
+    const uint8_t *data = M2Data(model), *pdata = M2Data(parent);
+    if (!data || !pdata || !IsSkinPiece(data)) {
+        return;
+    }
+    uint32_t n = *(const uint32_t *)(data + 0x34), pn = *(const uint32_t *)(pdata + 0x34);
+    void *dst = *(void **)((char *)model + 0x94), *src = *(void **)((char *)parent + 0x94);
+    if (!dst || !src || n == 0 || pn == 0) {
+        return;
+    }
+    memcpy(dst, src, 64 * (n < pn ? n : pn));
+    g_skinCopies++;
+}
+// -> how many times a skinned piece took its body's bones (to see it working).
+static int GAME_FASTCALL Script_GetSkinCopies(void *L) {
+    LuaPushNumber(L, g_skinCopies);
+    return 1;
+}
+
 static void InstallHook(void) {
     if (MH_Initialize() != MH_OK) {
         return;
+    }
+    {
+        static const uint8_t stock[9] = { 0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x58, 0x53, 0x8B, 0xD9 };
+        if (memcmp((const void *)FUN_M2_UPDATE_BONES, stock, sizeof stock) == 0 &&
+            MH_CreateHook((LPVOID)FUN_M2_UPDATE_BONES, (LPVOID)&M2UpdateBones_h, (LPVOID *)&M2UpdateBones_o) == MH_OK) {
+            MH_EnableHook((LPVOID)FUN_M2_UPDATE_BONES);
+        }
     }
     if (MH_CreateHook((LPVOID)FUN_LOAD_SCRIPT_FUNCTIONS, (LPVOID)&LoadScriptFunctions_h,
                       (LPVOID *)&LoadScriptFunctions_o) == MH_OK) {
