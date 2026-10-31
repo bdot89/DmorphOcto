@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.37.0"
+local VERSION = "2.37.1"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -2456,6 +2456,7 @@ M.HasHelper = HasHelper
 -- server uses, and are put back when the server empties or rewrites one.
 M.EXTRA_MAX = 6
 local extraData = { top = 31, slots = {} } -- slots: field index -> spell we wrote there
+M.EXTRA_RENAME = { [30200] = "Orb: Scythe of Elune (trinket)" }
 function M.GetExtraWearCatalog()
 	if extraData.catalog then
 		return extraData.catalog
@@ -2467,6 +2468,8 @@ function M.GetExtraWearCatalog()
 		for line in string.gfind(data, "[^\n]+") do
 			local _, _, id, name, others, models = strfind(line, "^(%d+)\t([^\t]*)\t([^\t]*)\t?([^\t]*)$")
 			id = tonumber(id)
+			-- Item effects listed with their kind and item (user, 31 Oct: "Scythe of Elune gives orbs").
+			if id and M.EXTRA_RENAME[id] then name = M.EXTRA_RENAME[id] end
 			-- Retail cloaks come per race and gender ("Back: ... [ni f]"): one row per
 			-- cloak, the copies kept in c.variants[row]["ni f"] (user, 30 Oct: "if i
 			-- change to a night elf then they should be the ones showing").
