@@ -59,7 +59,7 @@
 #define GAME_FASTCALL __attribute__((fastcall))
 #define GAME_THISCALL __attribute__((thiscall))
 
-#define HELPER_VERSION 19
+#define HELPER_VERSION 20
 
 // Game functions, build 5875 (from VanillaHelpers' Offsets.h).
 #define FUN_INVALID_FUNCTION_PTR_CHECK 0x42A320
@@ -1021,17 +1021,25 @@ static uint64_t UnitGuid(void *unit) {
     uint32_t *f = Fields(unit);
     return f ? ((uint64_t)f[1] << 32) | f[0] : 0;
 }
+// v20 (user, 31 Oct: crash #132 at 0x6EC817 picking "Forgiveness", visual 7615): a picked
+// visual the SpellVisual table has no row for made 0x60D450 return NULL, which its caller
+// reads. Only visuals with a row are used; otherwise the weapon's own.
+static BOOL ShotVisualExists(uint32_t visual) {
+    int32_t highest = *(int32_t *)0xC0D73C;
+    void **rows = *(void ***)0xC0D738;
+    return visual > 0 && (int32_t)visual <= highest && rows && rows[visual];
+}
 static uint32_t ShotVisual(void *unit, uint32_t visual) {
     if (!unit) {
         return visual;
     }
     if (unit == Me()) {
-        return g_shotVisual ? g_shotVisual : visual;
+        return g_shotVisual && ShotVisualExists(g_shotVisual) ? g_shotVisual : visual;
     }
     uint64_t guid = UnitGuid(unit);
     for (int i = 0; guid && i < MAX_UNIT_SHOTS; i++) {
         if (g_unitShots[i].guid == guid) {
-            return g_unitShots[i].visual;
+            return ShotVisualExists(g_unitShots[i].visual) ? g_unitShots[i].visual : visual;
         }
     }
     return visual;
