@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.38.0"
+local VERSION = "2.39.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -4756,7 +4756,22 @@ end)
 -- sees its buff and puts the skin on again a tenth of a second later.
 mountFrame:RegisterEvent("PLAYER_CONTROL_LOST")
 mountFrame:RegisterEvent("PLAYER_CONTROL_GAINED")
+-- 2.39.0 (user: "entering a battleground the mount model sticks though you're on
+-- foot, and you can't pick up flags"): a loading screen dismounts you without the
+-- buff change the watcher waits for, and the held skin keeps the mount field set,
+-- so the game thinks you still ride. Every loading screen takes the skin off and
+-- forgets the buffs seen before it; still mounted, the watcher puts it back.
+mountFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 mountFrame:SetScript("OnEvent", function()
+	if event == "PLAYER_ENTERING_WORLD" then
+		watch.last = nil
+		if HasMountAPI() and (watch.active or (db and (db.mount or (db.mountSkins and next(db.mountSkins))))) then
+			Morph(SetUnitMountDisplayID, "player", nil)
+		end
+		watch.active, watch.skin, watch.real = nil, nil, nil
+		Notify()
+		return
+	end
 	if watch.active then
 		StopSkin()
 		watch.real = nil

@@ -2,7 +2,7 @@
 ## Title: DMorph |cff33ff99(OctoWoW)|r
 ## Notes: Morph window for OctoWoW: 16,000+ creatures (every model in the client, with 3D previews, bosses and 950 mounts), every race, 13,000+ items and 351 item sets. Skins for your mount, favourites, and DMorph users see each other's morphs. Weapon glows, real skin, face and hair, size, weather and time of day with the bundled DmorphHelper.dll. Optional ported packs add later-expansion models, armour and glows. Type /dmorph. Needs VanillaHelpers v1.1.0+ (OctoLauncher's vanillaHelpers mod); previews need ClassicAPI.
 ## Author: bdot89
-## Version: 2.38.0
+## Version: 2.39.0
 ## X-Website: https://github.com/bdot89/DmorphOcto
 ## OptionalDeps: DMorph_Ported
 ## SavedVariables: DmorphOctoAccount

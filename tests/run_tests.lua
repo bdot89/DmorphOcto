@@ -786,6 +786,16 @@ Mock.Fire("PLAYER_CONTROL_GAINED") -- a stun ends while riding
 check(vh.mount == nil, "getting control back takes it off")
 Mock.Tick(0.15)
 check(vh.mount == skin, "and it's back a tick later while you still ride")
+-- 2.39.0: a loading screen (into a battleground) dismounts you with the mount's buff
+-- still showing for a moment: the skin must not stay on.
+vh.serverMount = 0
+Mock.Fire("PLAYER_ENTERING_WORLD")
+Mock.Tick(0.15)
+check(vh.mount == nil, "a loading screen that dismounts you takes the skin off")
+vh.serverMount = 10671
+Mock.Fire("PLAYER_ENTERING_WORLD")
+Mock.Tick(0.15)
+check(vh.mount == skin, "still riding after a loading screen, the skin comes back")
 vh.serverMount, Mock.buffs = 0, {}
 Mock.Tick(0.15)
 check(vh.mount == nil, "dismounting takes it off again")
