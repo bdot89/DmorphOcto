@@ -1489,14 +1489,24 @@ static BOOL IsSkinPiece(const uint8_t *data) {
     }
     return at < 0x4000000 && !IsBadReadPtr(as_ofs, 6) && memcmp(as_ofs, "DMSKIN", 6) == 0;
 }
+// Diagnostics (1 Nov: the first test copied nothing): hook installed, updates seen, DMSKIN
+// models seen, of those with a parent.
+static uint32_t g_skinHooked = 0, g_skinCalls = 0, g_skinNamed = 0, g_skinParented = 0;
 static void GAME_THISCALL M2UpdateBones_h(void *model) {
     M2UpdateBones_o(model);
+    g_skinCalls++;
+    const uint8_t *data = M2Data(model);
+    if (!data || !IsSkinPiece(data)) {
+        return;
+    }
+    g_skinNamed++;
     void *parent = *(void **)((char *)model + 0x1CC);
     if (!parent) {
         return;
     }
-    const uint8_t *data = M2Data(model), *pdata = M2Data(parent);
-    if (!data || !pdata || !IsSkinPiece(data)) {
+    g_skinParented++;
+    const uint8_t *pdata = M2Data(parent);
+    if (!pdata) {
         return;
     }
     uint32_t n = *(const uint32_t *)(data + 0x34), pn = *(const uint32_t *)(pdata + 0x34);
@@ -1507,10 +1517,14 @@ static void GAME_THISCALL M2UpdateBones_h(void *model) {
     memcpy(dst, src, 64 * (n < pn ? n : pn));
     g_skinCopies++;
 }
-// -> how many times a skinned piece took its body's bones (to see it working).
+// -> copies, hook installed (1/0), bone updates seen, DMSKIN updates, DMSKIN updates with a parent.
 static int GAME_FASTCALL Script_GetSkinCopies(void *L) {
     LuaPushNumber(L, g_skinCopies);
-    return 1;
+    LuaPushNumber(L, g_skinHooked);
+    LuaPushNumber(L, g_skinCalls);
+    LuaPushNumber(L, g_skinNamed);
+    LuaPushNumber(L, g_skinParented);
+    return 5;
 }
 
 static void InstallHook(void) {
@@ -1521,7 +1535,7 @@ static void InstallHook(void) {
         static const uint8_t stock[9] = { 0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x58, 0x53, 0x8B, 0xD9 };
         if (memcmp((const void *)FUN_M2_UPDATE_BONES, stock, sizeof stock) == 0 &&
             MH_CreateHook((LPVOID)FUN_M2_UPDATE_BONES, (LPVOID)&M2UpdateBones_h, (LPVOID *)&M2UpdateBones_o) == MH_OK) {
-            MH_EnableHook((LPVOID)FUN_M2_UPDATE_BONES);
+            g_skinHooked = MH_EnableHook((LPVOID)FUN_M2_UPDATE_BONES) == MH_OK ? 1 : 0;
         }
     }
     if (MH_CreateHook((LPVOID)FUN_LOAD_SCRIPT_FUNCTIONS, (LPVOID)&LoadScriptFunctions_h,
