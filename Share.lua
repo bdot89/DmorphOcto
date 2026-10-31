@@ -646,6 +646,9 @@ local function ApplyTo(name, token)
 				done.weaponWait = true
 			end
 		end
+		if item and M.MapAlias then
+			item = M.MapAlias(item)
+		end
 		if item ~= done.items[slot] or (force and item) then
 			if Call(SetUnitVisibleItemID, token, slot, item) then
 				done.items[slot] = item

@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.39.0"
+local VERSION = "2.40.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -2126,7 +2126,24 @@ function M.GetPortedIcon(itemID)
 	return ok and texture or nil
 end
 
+-- Ported items that were the game's own look again (wowport dedupe, 1 Nov) left the list;
+-- DmorphOcto_PortedAlias "virtual<TAB>own item" maps outfits and shared looks saved with them.
+local portedAlias
+function M.MapAlias(id)
+	if not portedAlias then
+		portedAlias = {}
+		for v, own in string.gfind(DmorphOcto_PortedAlias or "", "(%d+)\t(%d+)") do
+			portedAlias[tonumber(v)] = tonumber(own)
+		end
+		DmorphOcto_PortedAlias = nil
+	end
+	return id and portedAlias[id] or id
+end
+
 local function ApplyItem(slot)
+	if db.items[slot] then
+		db.items[slot] = M.MapAlias(db.items[slot])
+	end
 	local id = db.items[slot]
 	if id and M.IsPortedItem(id) then
 		-- A ported armour piece goes in its own slot only. Outfits saved before

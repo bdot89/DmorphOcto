@@ -2,7 +2,7 @@
 -- Models: "R Tx Ty Tz Cx Cy Cz height width" per line (see GameFiles.Frame in tools/MpqDbc.cs);
 -- displays: "display:model" pairs, the model being a line number above.
 DmorphOcto_PortedFrames = {
-  pack = "P8157x48889x915",
+  pack = "P8157x45213x777",
   models = [[
 1.41 1.43 -0.2 2.99 0.3 0 1.15 2.17 14.77 1
 0.93 2 0.25 1.92 -0.28 0 1.49 3.05 13.21 1
