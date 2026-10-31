@@ -2607,13 +2607,13 @@ end)()
 	Mock.Click(DmorphOctoExtraCat2)
 	Mock.Tick(0.3)
 	check(row.text.text == "Wings: Guardian Spirit" and not DmorphOctoExtraListRow2:IsVisible(), "the Wings button lists only wings")
-	Mock.Click(DmorphOctoExtraCat9)
+	Mock.Click(DmorphOctoExtraCat14)
 	Mock.Tick(0.3)
 	check(row:IsVisible() and strsub(row.text.text, 1, 7) ~= "Wings: " and strsub(row.text.text, 1, 6) ~= "Back: ",
 		"the Spells button lists the client's own spell looks")
 	-- Arrows (2.35.0, shots): every missile the client flies (Data/ShotVisuals.lua);
 	-- a click makes it what your ranged attacks fire, a second click the weapon's own.
-	Mock.Click(DmorphOctoExtraCat10)
+	Mock.Click(DmorphOctoExtraCat15)
 	Mock.Type(DmorphOctoExtraSearch, "aimed shot")
 	Mock.Tick(0.3)
 	check(row:IsVisible() and row.text.text == "Aimed Shot", "the Arrows button lists and searches the missiles")
@@ -3325,7 +3325,7 @@ if not DmorphOctoFrame:IsVisible() then
 end
 Mock.Click(DmorphOctoTabGlows)
 Mock.Type(DmorphOctoGlowSearch, "")
-check(DmorphOctoGlowListRow5.text.text == "Mongoose" and DmorphOctoGlowListRow5.info.text == "TBC-MoP"
+check(DmorphOctoGlowListRow5.text.text == "Mongoose" and DmorphOctoGlowListRow5.info.text == "Ported"
 	and DmorphOctoGlowListRow4.info.text == "glow 29", "the Glows tab marks them")
 press(DmorphOctoGlowListRow5)
 check(game.enchants[16][1] == 2673 and DmorphOctoGlowState.text == "Main hand: Mongoose", "clicking one puts its enchant on")

@@ -2713,7 +2713,7 @@ local function BuildGlowsPage(page)
 		local i = ui.glowResult[index]
 		row.text:SetText(all.name[i])
 		if all.ported[i] then
-			row.info:SetText("TBC-MoP")
+			row.info:SetText("Ported")
 		else
 			row.info:SetText("glow " .. all.visual[i])
 		end
@@ -3190,10 +3190,13 @@ end
 -- shields, glows...), up to M.EXTRA_MAX at once; click to put on or take off.
 -- Category buttons (user, 30 Oct: "CLEANED UP INTO CATs"): the ported looks' names
 -- start with their category ("Wings: ..."); the client's own are spell looks.
+-- Two rows (2.37.0: the full Retail pull added auras, elements, horns, orbs, halos).
 P.EXTRA_CATS = {
 	{ text = "All" }, { text = "Wings", prefix = "Wings: " }, { text = "Bags", prefix = "Bag: " },
 	{ text = "Quivers", prefix = "Quiver: " }, { text = "Banners", prefix = "Banner: " },
 	{ text = "Cloaks", prefix = "Cloak: " }, { text = "Shadow", prefix = "Shadow: " }, { text = "Trails", prefix = "Trail: " },
+	{ text = "Auras", prefix = "Aura: " }, { text = "Elements", prefix = "Element: " }, { text = "Horns", prefix = "Horns: " },
+	{ text = "Orbs", prefix = "Orb: " }, { text = "Halos", prefix = "Halo: " },
 	{ text = "Spells", spells = true }, { text = "Arrows", ammo = true },
 }
 P.extraCat = 1
@@ -3240,7 +3243,8 @@ function P.BuildExtraPage(page)
 	ui.extraCats = {}
 	for i = 1, table.getn(P.EXTRA_CATS) do
 		local index = i
-		ui.extraCats[i] = Button(page, P.EXTRA_CATS[i].text, 51, 8 + (i - 1) * 54, -8, function()
+		local col, rowY = math.mod(i - 1, 8), i <= 8 and -6 or -30
+		ui.extraCats[i] = Button(page, P.EXTRA_CATS[i].text, 64, 8 + col * 67, rowY, function()
 			P.extraCat = index
 			for k = 1, table.getn(ui.extraCats) do
 				if k == index then ui.extraCats[k]:LockHighlight() else ui.extraCats[k]:UnlockHighlight() end
@@ -3248,8 +3252,8 @@ function P.BuildExtraPage(page)
 			P.FilterExtra()
 		end, "DmorphOctoExtraCat" .. i)
 	end
-	Label(page, "Search", "GameFontNormalSmall", 10, -42)
-	ui.extraSearch = EditBox(page, "DmorphOctoExtraSearch", 200, 52, -38)
+	Label(page, "Search", "GameFontNormalSmall", 10, -62)
+	ui.extraSearch = EditBox(page, "DmorphOctoExtraSearch", 200, 52, -58)
 	ui.extraSearch:SetScript("OnTextChanged", function()
 		Debounce(ui.searchTimer, 0.25, P.FilterExtra)
 	end)
@@ -3257,8 +3261,8 @@ function P.BuildExtraPage(page)
 		this:ClearFocus()
 		P.FilterExtra()
 	end)
-	ui.extraCount = Label(page, "", "GameFontDisableSmall", 262, -42, "DmorphOctoExtraCount")
-	ui.extraList = List(page, "DmorphOctoExtraList", 8, -66, 220, function(row, index)
+	ui.extraCount = Label(page, "", "GameFontDisableSmall", 262, -62, "DmorphOctoExtraCount")
+	ui.extraList = List(page, "DmorphOctoExtraList", 8, -84, 220, function(row, index)
 		local i = ui.extraResult[index]
 		if ui.extraAmmo then
 			-- Arrows: the ammo items; the ticked one is what you shoot.
@@ -3288,7 +3292,7 @@ function P.BuildExtraPage(page)
 		local catalog = M.GetExtraWearCatalog()
 		Morph(M.ToggleExtraWear, catalog.ids[ui.extraResult[index]])
 		P.FilterExtra(true)
-	end, nil, PAGE_W - 24, 15)
+	end, nil, PAGE_W - 24, 14)
 	local y = -346
 	Button(page, "Take all off", 120, 8, y, function()
 		Morph(M.ClearExtraWear)
