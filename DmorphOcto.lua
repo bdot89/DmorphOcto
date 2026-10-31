@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.37.2"
+local VERSION = "2.38.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -2435,7 +2435,7 @@ local MISSING_HELPER = "DmorphHelper.dll isn't loaded, so weapon glows, your siz
 M.MISSING_HELPER = MISSING_HELPER
 -- The DmorphHelper_Version() the DLL in helper\ reports. An older one in the
 -- game folder (DMorph was updated, the DLL wasn't copied again) is flagged.
-local HELPER_VERSION = 20
+local HELPER_VERSION = 21
 -- Rows 1-5 of the Races tab, in DmorphHelper_GetLook's order.
 local OWN_LOOK_NPC = { "npcSkin", "npcFace", "npcHairStyle", "npcHairColour" }
 
@@ -2683,19 +2683,49 @@ M.WatchAmmo = WatchAmmo
 function M.CanSetShot()
 	return type(DmorphHelper_SetShotVisual) == "function" and type(DmorphHelper_GetShotVisual) == "function"
 end
+-- A missile model that is a projectile (arrow, bolt, bullet, thrown weapon), not a spell.
+local PROJECTILE_WORDS = { "arrow", "shot", "quiver", "missile_axe", "boomerang", "dart", "bullet", "javelin", "spear", "knife", "dagger", "shuriken" }
+function M.IsProjectile(model, name)
+	for _, w in ipairs(PROJECTILE_WORDS) do
+		if strfind(model, w, 1, true) or strfind(name, w, 1, true) then
+			return true
+		end
+	end
+	return false
+end
 function M.GetShotCatalog()
 	if M.shotCatalog then
 		return M.shotCatalog
 	end
+	-- 2.38.0 (user: "arrows like the one in the screenshot easily found; flaming or
+	-- special ammo in its own list"): the ported pack's Retail projectiles first
+	-- (DmorphOcto_PortedShots, same line format), then this client's arrows, bolts,
+	-- bullets and thrown missiles (by missile model), then the spell missiles.
+	-- kinds: "Retail" / "Arrow" / "Missile".
 	local c, seen = { count = 0, ids = {}, names = {}, kinds = {} }, {}
-	for id, name in string.gfind(DmorphOcto_ShotVisualData or "", "(%d+)\t([^\n]+)") do
-		seen[name] = (seen[name] or 0) + 1
-		c.count = c.count + 1
-		c.ids[c.count] = tonumber(id)
-		c.names[c.count] = seen[name] > 1 and (name .. " " .. seen[name]) or name
-		c.kinds[c.count] = "Missile"
+	local lists = { {}, {}, {} }
+	for k, data in ipairs({ DmorphOcto_PortedShots or "", DmorphOcto_ShotVisualData or "" }) do
+		for line in string.gfind(data, "[^\n]+") do
+			local _, _, id, name, model = strfind(line, "^(%d+)\t([^\t]+)\t?([^\t]*)$")
+			if id then
+				local m = strlower(model or "")
+				local kind = k == 1 and 1 or (M.IsProjectile(m, strlower(name)) and 2 or 3)
+				table.insert(lists[kind], { tonumber(id), name })
+			end
+		end
 	end
-	DmorphOcto_ShotVisualData = nil
+	local KIND_NAMES = { "Retail", "Arrow", "Missile" }
+	for kind = 1, 3 do
+		for _, e in ipairs(lists[kind]) do
+			local name = e[2]
+			seen[name] = (seen[name] or 0) + 1
+			c.count = c.count + 1
+			c.ids[c.count] = e[1]
+			c.names[c.count] = seen[name] > 1 and (name .. " " .. seen[name]) or name
+			c.kinds[c.count] = KIND_NAMES[kind]
+		end
+	end
+	DmorphOcto_ShotVisualData, DmorphOcto_PortedShots = nil, nil
 	M.shotCatalog = c
 	return c
 end

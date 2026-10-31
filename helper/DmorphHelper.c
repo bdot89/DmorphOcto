@@ -59,7 +59,7 @@
 #define GAME_FASTCALL __attribute__((fastcall))
 #define GAME_THISCALL __attribute__((thiscall))
 
-#define HELPER_VERSION 20
+#define HELPER_VERSION 21
 
 // Game functions, build 5875 (from VanillaHelpers' Offsets.h).
 #define FUN_INVALID_FUNCTION_PTR_CHECK 0x42A320
@@ -1029,20 +1029,81 @@ static BOOL ShotVisualExists(uint32_t visual) {
     void **rows = *(void ***)0xC0D738;
     return visual > 0 && (int32_t)visual <= highest && rows && rows[visual];
 }
+// v21 (user, 31 Oct: "the bow's draw string is looking straight ahead" with a picked
+// missile): a whole spell visual brought its precast/cast kits, so the shooter played a
+// spell cast instead of the bow draw. Now the shot is the weapon's own visual (kits,
+// sounds) with only the picked one's missile (SpellVisual 64-byte rows: 6 has missile,
+// 7 missile model, 8 path type, 9 destination attachment), as a copy put in a free row
+// of the table (from the highest ID down), one per weapon visual + missile.
+#define SHOT_ROW_SIZE 64
+#define MAX_SHOT_MIXES 64
+static struct { uint32_t base, picked, id; } g_shotMixes[MAX_SHOT_MIXES];
+static uint32_t ShotMix(uint32_t base, uint32_t picked) {
+    if (!ShotVisualExists(base)) {
+        base = 5;   // the stock bow shot
+        if (!ShotVisualExists(base)) {
+            return picked;
+        }
+    }
+    for (int i = 0; i < MAX_SHOT_MIXES; i++) {
+        if (g_shotMixes[i].id && g_shotMixes[i].base == base && g_shotMixes[i].picked == picked) {
+            return g_shotMixes[i].id;
+        }
+    }
+    int free = -1;
+    for (int i = 0; i < MAX_SHOT_MIXES && free < 0; i++) {
+        if (!g_shotMixes[i].id) {
+            free = i;
+        }
+    }
+    if (free < 0) {
+        return picked;
+    }
+    int32_t highest = *(int32_t *)0xC0D73C;
+    void **rows = *(void ***)0xC0D738;
+    int32_t id = highest;
+    while (id > 1 && rows[id]) {
+        id--;
+    }
+    if (id <= 1) {
+        return picked;
+    }
+    uint32_t *row = (uint32_t *)HeapAlloc(GetProcessHeap(), 0, SHOT_ROW_SIZE);
+    if (!row) {
+        return picked;
+    }
+    memcpy(row, rows[base], SHOT_ROW_SIZE);
+    const uint32_t *from = (const uint32_t *)rows[picked];
+    row[0] = (uint32_t)id;
+    for (int f = 6; f <= 9; f++) {
+        row[f] = from[f];
+    }
+    rows[id] = row;
+    g_shotMixes[free].base = base;
+    g_shotMixes[free].picked = picked;
+    g_shotMixes[free].id = (uint32_t)id;
+    return (uint32_t)id;
+}
 static uint32_t ShotVisual(void *unit, uint32_t visual) {
     if (!unit) {
         return visual;
     }
+    uint32_t picked = 0;
     if (unit == Me()) {
-        return g_shotVisual && ShotVisualExists(g_shotVisual) ? g_shotVisual : visual;
-    }
-    uint64_t guid = UnitGuid(unit);
-    for (int i = 0; guid && i < MAX_UNIT_SHOTS; i++) {
-        if (g_unitShots[i].guid == guid) {
-            return ShotVisualExists(g_unitShots[i].visual) ? g_unitShots[i].visual : visual;
+        picked = g_shotVisual;
+    } else {
+        uint64_t guid = UnitGuid(unit);
+        for (int i = 0; guid && i < MAX_UNIT_SHOTS; i++) {
+            if (g_unitShots[i].guid == guid) {
+                picked = g_unitShots[i].visual;
+                break;
+            }
         }
     }
-    return visual;
+    if (!picked || !ShotVisualExists(picked) || !((const uint32_t *)(*(void ***)0xC0D738)[picked])[6]) {
+        return visual;
+    }
+    return ShotMix(visual, picked);
 }
 // eax = the display row; edi = the shooting unit. ecx and edx kept; the flags of
 // "test eax,eax" set last, for the je/jl after the call.

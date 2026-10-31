@@ -4,7 +4,7 @@
 
 ### Become anything. Ride anything. Wear anything. ✨
 
-**DMorph** is a free morph addon for WoW 1.12 (OctoWoW), **version 2.37.2**. Turn into a dragon 🐉, ride a mechanical chicken 🐔, swap your race 🧝, light your blade on fire 🔥, make it snow in Orgrimmar ❄️, and dress up in any armour set in the game 🛡️, all from one slick purple window.
+**DMorph** is a free morph addon for WoW 1.12 (OctoWoW), **version 2.38.0**. Turn into a dragon 🐉, ride a mechanical chicken 🐔, swap your race 🧝, light your blade on fire 🔥, make it snow in Orgrimmar ❄️, and dress up in any armour set in the game 🛡️, all from one slick purple window.
 
 > 🔒 **100% client-side and safe:** morphs only change what *you* and other DMorph users see. Everyone else, and the server, sees your real character.
 

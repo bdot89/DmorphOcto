@@ -3197,8 +3197,10 @@ P.EXTRA_CATS = {
 	{ text = "Cloaks", prefix = "Cloak: " }, { text = "Shadow", prefix = "Shadow: " }, { text = "Trails", prefix = "Trail: " },
 	{ text = "Auras", prefix = "Aura: " }, { text = "Elements", prefix = "Element: " }, { text = "Horns", prefix = "Horns: " },
 	{ text = "Orbs", prefix = "Orb: " }, { text = "Halos", prefix = "Halo: " },
-	{ text = "Spells", spells = true }, { text = "Arrows", ammo = true },
+	{ text = "Spells", spells = true }, { text = "Arrows", ammo = "arrows" }, { text = "Missiles", ammo = "all" },
 }
+-- Row labels per missile kind (M.GetShotCatalog).
+P.SHOT_KINDS = { Retail = "Retail arrow (ported pack)", Arrow = "arrow / shot", Missile = "spell missile" }
 P.extraCat = 1
 function P.FilterExtra(keep)
 	local catalog = M.GetExtraWearCatalog()
@@ -3209,13 +3211,14 @@ function P.FilterExtra(keep)
 	if cat.ammo then
 		ui.extraAmmo = M.GetShotCatalog()
 		for i = 1, ui.extraAmmo.count do
-			if text == "" or strfind(strlower(ui.extraAmmo.names[i]), text, 1, true) then
+			local arrow = ui.extraAmmo.kinds[i] ~= "Missile"
+			if (cat.ammo == "all" or arrow) and (text == "" or strfind(strlower(ui.extraAmmo.names[i]), text, 1, true)) then
 				m = m + 1
 				result[m] = i
 			end
 		end
 		ui.extraResult = result
-		ui.extraCount:SetText(Count(m, "missile") .. " - what your wand, bow or gun fires")
+		ui.extraCount:SetText(Count(m, cat.ammo == "all" and "missile" or "arrow") .. " - what your wand, bow or gun fires")
 		ui.extraList.SetCount(m, keep)
 		return
 	end
@@ -3268,7 +3271,7 @@ function P.BuildExtraPage(page)
 			-- Arrows: the ammo items; the ticked one is what you shoot.
 			local ammo = ui.extraAmmo
 			row.text:SetText(ammo.names[i])
-			row.info:SetText("click to shoot it")
+			row.info:SetText(P.SHOT_KINDS[ammo.kinds[i]] or "")
 			if M.GetShot() == ammo.ids[i] then
 				row:LockHighlight()
 				row.tick:Show()

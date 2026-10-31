@@ -2092,7 +2092,7 @@ local function installHelper(look)
 		return type(v) == "number" and v >= 0 and v <= max and v == math.floor(v)
 	end
 	function DmorphHelper_Version()
-		return 20
+		return 21
 	end
 	-- v14: riders of some mount displays get another pose (game.posesWork: the
 	-- helper could patch the game).
@@ -2317,16 +2317,16 @@ DmorphOctoDB, DmorphOctoAccount = nil, nil
 loadWithHelper()
 Mock.Tick(1.1)
 slash("dmorph status")
-check(contains(allChat(), "DmorphHelper v20 is loaded"), "status shows the helper's version")
+check(contains(allChat(), "DmorphHelper v21 is loaded"), "status shows the helper's version")
 slash("dmorph check")
 check(contains(allChat(), "DmorphHelper: |cff33ff99OK"), "the check says the helper runs")
-check(contains(allChat(), "Running v20 (this DMorph comes with v20)"), "and which version runs")
+check(contains(allChat(), "Running v21 (this DMorph comes with v21)"), "and which version runs")
 local openedForSetup = not (DmorphOctoFrame and DmorphOctoFrame:IsVisible())
 if openedForSetup then
 	slash("")
 end
 Mock.Click(DmorphOctoSetupButton)
-check(contains(DmorphOctoSetupButton.text, "Helper v20") and contains(DmorphOctoSetupText2.text, "Running v20"),
+check(contains(DmorphOctoSetupButton.text, "Helper v21") and contains(DmorphOctoSetupText2.text, "Running v21"),
 	"the Setup button and panel show the helper version")
 Mock.Click(DmorphOctoSetupClose)
 local currentVersion = DmorphHelper_Version
@@ -2631,7 +2631,17 @@ end)()
 	Mock.Tick(0.5)
 	check(game.shot == 0 and DmorphOcto.GetShot() == nil, "Reset everything gives the weapon's own shots back")
 	DmorphOcto.DeleteOutfit("Shots test")
+	-- 2.38.0: Arrows lists projectiles only (arrows, shots, thrown); Missiles every missile.
+	Mock.Type(DmorphOctoExtraSearch, "fireball")
+	Mock.Tick(0.3)
+	check(not row:IsVisible(), "the Arrows button leaves spell missiles out")
+	Mock.Click(DmorphOctoExtraCat16)
+	Mock.Tick(0.3)
+	check(row:IsVisible() and strfind(row.text.text, "Fireball", 1, true) and row.info.text == "spell missile", "the Missiles button lists them")
 	Mock.Type(DmorphOctoExtraSearch, "")
+	Mock.Tick(0.3)
+	check(DmorphOcto.IsProjectile("arrowfireflight_01", "fire-soaked arrow") and not DmorphOcto.IsProjectile("fireball_missile_low", "fireball"),
+		"arrows are told from spell missiles by their model")
 	Mock.Click(DmorphOctoExtraCat1)
 	Mock.Type(DmorphOctoExtraSearch, "shadowform")
 	Mock.Tick(0.3)
