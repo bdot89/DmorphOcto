@@ -2552,6 +2552,55 @@ function M.ExtraForBody(spell, race, gender)
 	return v[(EXTRA_RACE_CODES[race or 1] or "hu") .. " " .. g] or v["hu " .. g] or v["hu m"] or c.ids[row]
 end
 
+-- Skinned armour pieces (the ported pack's DmorphOcto_PortedSkin, "virtual<TAB>
+-- unit:bodies,..."): Retail's 3D boots, belts, cuffs... that bend with the body,
+-- one hidden spell per piece per body: base + unit * 20 + (race - 1) * 2 + gender,
+-- built for the bodies whose bit (race - 1) * 2 + gender is set.
+local skinOf
+local function SkinUnits(item)
+	if not skinOf then
+		skinOf = {}
+		for v, units in string.gfind(DmorphOcto_PortedSkin or "", "(%d+)\t([%d:,]+)") do
+			skinOf[tonumber(v)] = units
+		end
+		DmorphOcto_PortedSkin = nil
+	end
+	return skinOf[item]
+end
+
+local function HasBit(mask, bit)
+	for i = 1, bit do
+		mask = math.floor(mask / 2)
+	end
+	return math.mod(mask, 2) == 1
+end
+
+-- The skin piece spells the body slots' ported items wear on this body.
+function M.SkinSpells(items, race, gender)
+	local out = {}
+	local base = DmorphOcto_PortedSkinBase
+	if not (base and items and race and race >= 1 and race <= 10) then
+		return out
+	end
+	local bit = (race - 1) * 2 + (gender == 1 and 1 or 0)
+	for slot = 5, 10 do
+		local units = items[slot] and items[slot] > 0 and SkinUnits(M.MapAlias(items[slot]))
+		if units then
+			for u, mask in string.gfind(units, "(%d+):(%d+)") do
+				if HasBit(tonumber(mask), bit) then
+					table.insert(out, base + tonumber(u) * 20 + bit)
+				end
+			end
+		end
+	end
+	return out
+end
+
+local function IsSkinSpell(spell)
+	local base = DmorphOcto_PortedSkinBase
+	return base and spell >= base and spell < base + 1000000
+end
+
 -- Puts db.extra on in free buff fields and takes off what isn't wanted any
 -- more; run every second by the helper watcher and right after a change.
 local function WatchExtra()
@@ -2565,12 +2614,20 @@ local function WatchExtra()
 		worn[i] = M.ExtraForBody(db.extra[i], race, gender)
 		want[worn[i]] = true
 	end
+	-- Skin pieces of the ported items you wear (not on a creature morph).
+	if not (db.display and not db.race) then
+		local skins = M.SkinSpells(db.items, race, gender)
+		for i = 1, table.getn(skins) do
+			table.insert(worn, skins[i])
+			want[skins[i]] = true
+		end
+	end
 	-- After a /reload our looks are still in the fields: adopt them once.
 	if not extraData.adopted then
 		extraData.adopted = true
 		for index = extraData.top, extraData.top - 2 * M.EXTRA_MAX, -1 do
 			local ok, now = pcall(DmorphHelper_GetAura, "player", index)
-			if ok and now and now > 0 and M.GetExtraWearCatalog().byID[now] then
+			if ok and now and now > 0 and (M.GetExtraWearCatalog().byID[now] or IsSkinSpell(now)) then
 				extraData.slots[index] = now
 			end
 		end
@@ -2590,7 +2647,7 @@ local function WatchExtra()
 	end
 	-- Put on what's missing, in empty fields from the top down.
 	local index = extraData.top
-	for i = 1, table.getn(db.extra) do
+	for i = 1, table.getn(worn) do
 		local spell = worn[i]
 		if want[spell] == true then
 			while index >= 0 do

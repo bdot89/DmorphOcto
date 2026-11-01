@@ -561,13 +561,27 @@ end
 -- empty fields from the top down, skipping ones the server uses). Checked on
 -- every scan: the server rewrites their fields when their buffs change.
 local EXTRA_TOP = 31
+local SKIN_RACES = { Human = 1, Orc = 2, Dwarf = 3, NightElf = 4, Scourge = 5, Tauren = 6, Gnome = 7, Troll = 8, Goblin = 9, BloodElf = 10 }
 local function KeepExtra(token, want, done)
 	if type(DmorphHelper_SetAura) ~= "function" or type(DmorphHelper_GetAura) ~= "function" then
 		return
 	end
-	local wanted = {}
+	local list = {}
 	for i = 1, table.getn(want.extra or {}) do
-		wanted[M.ExtraForBody and M.ExtraForBody(want.extra[i]) or want.extra[i]] = true
+		table.insert(list, M.ExtraForBody and M.ExtraForBody(want.extra[i]) or want.extra[i])
+	end
+	-- Skin pieces of their ported items, for the body their unit shows.
+	local _, raceFile = UnitRace(token)
+	local race = SKIN_RACES[raceFile or ""]
+	if race and M.SkinSpells and want.items then
+		local skins = M.SkinSpells(want.items, race, UnitSex(token) == 3 and 1 or 0)
+		for i = 1, table.getn(skins) do
+			table.insert(list, skins[i])
+		end
+	end
+	local wanted = {}
+	for i = 1, table.getn(list) do
+		wanted[list[i]] = true
 	end
 	done.extraSlots = done.extraSlots or {}
 	for index, spell in pairs(done.extraSlots) do
@@ -582,8 +596,8 @@ local function KeepExtra(token, want, done)
 		end
 	end
 	local index = EXTRA_TOP
-	for i = 1, table.getn(want.extra or {}) do
-		local spell = M.ExtraForBody and M.ExtraForBody(want.extra[i]) or want.extra[i]
+	for i = 1, table.getn(list) do
+		local spell = list[i]
 		if wanted[spell] == true then
 			while index >= 0 do
 				local ok, now = pcall(DmorphHelper_GetAura, token, index)

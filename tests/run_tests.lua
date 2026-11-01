@@ -3475,6 +3475,20 @@ end)()
 	DmorphOcto.SetItem(16, 0)
 end)()
 
+-- Skinned armour pieces: one spell per piece per body, only for bodies built.
+;(function()
+	DmorphOcto_PortedSkinBase = 970000
+	DmorphOcto_PortedSkin = "900500\t3:1048575,7:2048\n900501\t4:1\n"
+	local s = DmorphOcto.SkinSpells({ [8] = 900500, [6] = 900501 }, 6, 1)
+	check(table.getn(s) == 2 and s[1] == 970000 + 3 * 20 + 11 and s[2] == 970000 + 7 * 20 + 11 or false,
+		"Tauren female wears both feet pieces (bit 11 set in both)")
+	s = DmorphOcto.SkinSpells({ [8] = 900500, [6] = 900501 }, 1, 0)
+	check(table.getn(s) == 2 and s[1] == 970000 + 4 * 20 or false, "Human male: belt piece built only for him, feet piece 3")
+	s = DmorphOcto.SkinSpells({ [16] = 900500 }, 1, 0)
+	check(table.getn(s) == 0, "weapon slots wear no skin pieces")
+	DmorphOcto_PortedSkinBase = nil
+end)()
+
 print(format("%d checks, %d failures", checks, failures))
 if failures > 0 then
 	os.exit(1)
