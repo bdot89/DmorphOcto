@@ -1205,7 +1205,7 @@ end
 
 -- Your size as a message token: "s150", or "" at normal size.
 local function OwnSize()
-	local scale = Sharing() and M.GetScale and M.GetScale()
+	local scale = Sharing() and M.GetSharedScale and M.GetSharedScale()
 	local pct = scale and math.floor(scale * 100 + 0.5) or 100
 	if pct == 100 then
 		return ""

@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "2.40.0"
+local VERSION = "3.1.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -774,6 +774,7 @@ function M.GetSetCatalog()
 	if not sets then
 		sets = NewCatalog()
 		sets.pieces = {}
+		sets.expansion = {}
 		local list, n = {}, 0
 		local function Pieces(text)
 			local pieces = {}
@@ -789,10 +790,11 @@ function M.GetSetCatalog()
 		-- Data/Ported.lua's sets (DmorphOcto_PortedSets: name<TAB>virtual items),
 		-- only on the PC that has them; numbered after every real set.
 		local p = 0
-		for name, pieces in string.gfind(DmorphOcto_PortedSets or "", "([^\t\r\n]+)\t([%d,]+)") do
+		-- A third column: the set's expansion (0 = Classic ... 11 = Midnight).
+		for name, pieces, expansion in string.gfind(DmorphOcto_PortedSets or "", "([^\t\r\n]+)\t([%d,]+)\t?(%d*)") do
 			p = p + 1
 			n = n + 1
-			list[n] = { 900000 + p, name, strlower(name), M.KIND_PORTED, Pieces(pieces) }
+			list[n] = { 900000 + p, name, strlower(name), M.KIND_PORTED, Pieces(pieces), tonumber(expansion) or 0 }
 		end
 		DmorphOcto_SetData, DmorphOcto_PortedSets = nil, nil
 		if p > 0 then
@@ -801,6 +803,7 @@ function M.GetSetCatalog()
 		for i = 1, n do
 			AddEntry(sets, list[i][1], list[i][2], nil, list[i][4])
 			sets.pieces[sets.count] = list[i][5]
+			sets.expansion[sets.count] = list[i][6] or 0
 		end
 	end
 	if not sets.qualityKnown then
@@ -2485,6 +2488,10 @@ function M.GetExtraWearCatalog()
 		for line in string.gfind(data, "[^\n]+") do
 			local _, _, id, name, others, models = strfind(line, "^(%d+)\t([^\t]*)\t([^\t]*)\t?([^\t]*)$")
 			id = tonumber(id)
+			-- The audit's list: these draw nothing (no model, missing file, blank textures).
+			if id and DmorphOcto_ExtraHidden and strfind(DmorphOcto_ExtraHidden, "," .. id .. ",", 1, true) then
+				id = nil
+			end
 			-- Item effects listed with their kind and item (user, 31 Oct: "Scythe of Elune gives orbs").
 			if id and M.EXTRA_RENAME[id] then name = M.EXTRA_RENAME[id] end
 			-- Retail cloaks come per race and gender ("Back: ... [ni f]"): one row per
@@ -2668,6 +2675,24 @@ local function WatchExtra()
 	end
 end
 M.WatchExtra = WatchExtra
+
+-- Puts every worn look on again (user: "die in a BG and respawn, ALL still equipped, even
+-- extras"). The server doesn't know these auras, so it never clears their fields, and
+-- WatchExtra sees them still there; but the game stops their looks when your model
+-- changes on death and coming back, so only taking them off and on starts them again.
+function M.RestartExtra()
+	if not (sessionReady and M.CanWearExtra()) then
+		return
+	end
+	for index, spell in pairs(extraData.slots) do
+		local ok, now = pcall(DmorphHelper_GetAura, "player", index)
+		if ok and now == spell then
+			pcall(DmorphHelper_SetAura, "player", index, 0)
+			pcall(DmorphHelper_SetAura, "player", index, spell)
+		end
+	end
+	WatchExtra()
+end
 
 -- Wears a look, or takes it off when it's on.
 function M.ToggleExtraWear(spell)
@@ -3177,6 +3202,12 @@ local function WatchScale()
 			auto = math.floor(db.scaleReal * ratio * 100 + 0.5) / 100
 		end
 	end
+	-- Khijazi: other DMorph users didn't see this automatic size (only a picked
+	-- one was sent), so a Tauren in a race morph stayed Tauren-sized for them.
+	if auto ~= M.autoScale then
+		M.autoScale = auto -- the size a race morph put on by itself
+		Notify()
+	end
 	local want = db.scale or auto or (written and db.scaleReal)
 	if want and math.abs(current - want) >= 0.001 and pcall(DmorphHelper_SetScale, "player", want) then
 		db.scaleWritten = want
@@ -3373,9 +3404,16 @@ function M.SetScale(scale)
 	WatchScale()
 	Notify()
 	if scale then
-		return true, format("Size: %d%%. Only you see it.", math.floor(scale * 100 + 0.5))
+		return true, format("Size: %d%%.", math.floor(scale * 100 + 0.5))
 	end
 	return true, "Your own size again."
+end
+
+-- The size other DMorph users should see: the picked one, else the one a race
+-- morph put on by itself. nil: your own.
+function M.GetSharedScale()
+	InitDB()
+	return db.scale or M.autoScale
 end
 
 -- The size you picked (nil: your own) and the real one last seen.
@@ -4923,14 +4961,13 @@ local function GearCheck(force)
 	local changed = force or gear ~= itemCheck.gear
 	itemCheck.gear, itemCheck.counts = gear, counts
 	if itemCheck.clock < (itemCheck.ignoreUntil or -1) then
-		-- Right after our own rebuild (which changes none of this): a real
-		-- change still gets its rebuild, once the second is up.
-		if changed then
-			itemCheck.rebuildPending = true
-		end
-		return
+		return -- right after our own rebuild, which changes none of this
 	end
 	CheckItems()
+	-- 2.41.0 (Khijazi: swapping gear "makes you pop in and out"): a swap gets its
+	-- morphs checked again shortly after, but no rebuild any more. By 2.27.0's test
+	-- the game doesn't redraw slots from real items, so the pop was only the rebuild.
+	-- (Not tested for a swap itself: if a real item ever shows, wearing the set again rebuilds.)
 	if changed then
 		itemFrame.wait = 0.2
 	end
@@ -4951,6 +4988,7 @@ itemFrame:SetScript("OnEvent", function()
 		-- leaves you invisible, white in previews: then rebuilt once they're
 		-- all in (or after LOGIN_WAIT seconds), see below.
 		itemCheck.loginWait = not MorphedItemsLoaded() and 0 or nil
+		itemCheck.cameraWait = 0
 		return
 	end
 	if event == "UNIT_INVENTORY_CHANGED" then
@@ -4958,6 +4996,11 @@ itemFrame:SetScript("OnEvent", function()
 			GearCheck()
 		end
 		return
+	end
+	-- Coming back to life: your looks start again, now and once the living model is built.
+	if event == "PLAYER_ALIVE" or event == "PLAYER_UNGHOST" then
+		itemCheck.reviveAt = { 0.5, 2 }
+		itemCheck.reviveClock = 0
 	end
 	-- Death, back to life, repairs, durability alerts: the morphs are only
 	-- checked (no rebuild; see 2.27.0 above).
@@ -4988,10 +5031,33 @@ itemFrame:SetScript("OnUpdate", function()
 		if this.wait <= 0 then
 			this.wait = nil
 			CheckItems()
-			RebuildForItems()
 		end
-	elseif itemCheck.rebuildPending then
-		RebuildForItems()
+	end
+	if itemCheck.rebuildPending then
+		RebuildForItems() -- the login rebuild, when one had just been done
+	end
+	if itemCheck.reviveAt then
+		itemCheck.reviveClock = itemCheck.reviveClock + arg1
+		if itemCheck.reviveClock >= itemCheck.reviveAt[1] then
+			table.remove(itemCheck.reviveAt, 1)
+			if not itemCheck.reviveAt[1] then
+				itemCheck.reviveAt = nil
+			end
+			M.RestartExtra()
+		end
+	end
+	-- Khijazi: the camera sits at your race morph's height after you switch race, but goes
+	-- back to your own race's height after a reload or teleport: the game sets it up when
+	-- your model is built, and a race morph comes on after that. Building it again with
+	-- the morph on, as switching race does, a moment after you arrive.
+	if itemCheck.cameraWait then
+		itemCheck.cameraWait = itemCheck.cameraWait + arg1
+		if itemCheck.cameraWait >= 1.5 and sessionReady then
+			itemCheck.cameraWait = nil
+			if MorphRace() and HasHelper() and type(DmorphHelper_Rebuild) == "function" then
+				pcall(DmorphHelper_Rebuild, "player")
+			end
+		end
 	end
 end)
 

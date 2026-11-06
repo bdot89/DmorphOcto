@@ -137,6 +137,27 @@ local function loadUI()
 	Mock.Fire("PLAYER_ENTERING_WORLD")
 	Mock.Tick(0.3)
 	Mock.Tick(0.3)
+	-- 3.0 opens on "My look"; most checks here start from the Models tab, and reach
+	-- a tab in the smaller row through its parent, as a player does.
+	local toggle, first = DmorphOcto.ToggleUI, true
+	DmorphOcto.ToggleUI = function()
+		toggle()
+		if first and DmorphOctoFrame and DmorphOctoFrame:IsVisible() then
+			first = false
+			Mock.Click(DmorphOctoTabModels)
+		end
+	end
+end
+do
+	local click = Mock.Click
+	function Mock.Click(button, mouseButton)
+		if button == DmorphOctoTabRaces or button == DmorphOctoTabFavourites then
+			click(DmorphOctoTabModels)
+		elseif button == DmorphOctoTabSlutmog then
+			click(DmorphOctoTabItems)
+		end
+		click(button, mouseButton)
+	end
 end
 
 -- What the chat edit box does when you press Enter.
@@ -2452,18 +2473,18 @@ check(game.scale == 0.5, ".scale 50% halves it")
 slash("scale 20")
 check(game.scale == 0.5 and contains(lastChat(), "0.1 to 10"), "a size out of range is refused")
 slash("")
-check(DmorphOctoSize:GetValue() == 0.5 and DmorphOctoSizeLabel.text == "Size in game 50%" and contains(DmorphOctoLookInfo.text, "size 50%"),
+check(DmorphOctoSize:GetValue() == 0.5 and DmorphOctoSizeBox:GetText() == "50" and contains(DmorphOctoLookInfo.text, "size 50%"),
 	"the window's size slider and plate show the size")
 DmorphOctoSize:SetValue(1.5)
 Mock.Tick(0.4)
-check(game.scale == 1.5 and DmorphOctoSizeLabel.text == "Size in game 150%", "dragging the slider sets your size once it stands still")
+check(game.scale == 1.5 and DmorphOctoSizeBox:GetText() == "150", "dragging the slider sets your size once it stands still")
 Mock.RunScript(DmorphOctoSize, "OnMouseUp", "RightButton")
 Mock.Tick(0.4)
 check(game.scale == 1 and DmorphOcto.GetScale() == nil, "right-click puts your own size back")
 -- 2.24.0 (Khijazi): 1% steps and the mouse wheel; Tauren size follows race morphs.
 Mock.RunScript(DmorphOctoSize, "OnMouseWheel", 1)
 Mock.Tick(0.4)
-check(game.scale == 1.01 and DmorphOctoSizeLabel.text == "Size in game 101%", "the mouse wheel moves the size 1% at a time")
+check(game.scale == 1.01 and DmorphOctoSizeBox:GetText() == "101", "the mouse wheel moves the size 1% at a time")
 Mock.RunScript(DmorphOctoSize, "OnMouseUp", "RightButton")
 Mock.Tick(0.4)
 ;(function()
@@ -2669,7 +2690,7 @@ DmorphOctoSize:SetValue(2)
 Mock.Tick(0.4)
 Mock.Click(DmorphOctoSizeReset)
 Mock.Tick(0.4)
-check(game.scale == 1 and DmorphOcto.GetScale() == nil and DmorphOctoSizeLabel.text == "Size in game 100%", "Reset puts your own size back")
+check(game.scale == 1 and DmorphOcto.GetScale() == nil and DmorphOctoSizeBox:GetText() == "100", "Reset puts your own size back")
 DmorphOcto_ToggleUI()
 slash("scale 3")
 slash("demorph all")
@@ -2767,69 +2788,95 @@ check(vh.items[1] == 4321, "/dmorph itemcheck off stops the repairs")
 slash("dmorph itemcheck on")
 Mock.Tick(1.1)
 check(vh.items[1] == 2955, "and on starts them again")
--- Putting on another item can make the game redraw the slot from it while the
--- morph stays on: the model is rebuilt with the morphs, at most once a second,
--- without looping. Nothing else in UNIT_INVENTORY_CHANGED rebuilds (bags, loot,
--- food: running on the spot).
-Mock.gear[1] = { 7000, 1, 60, 60 } -- your real helmet, 60 / 60
-Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
-Mock.Tick(2)
-local rebuilt = game.rebuilds
-Mock.gear[1] = { 7001, 1, 60, 60 }
-Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
-Mock.Tick(0.3)
-check(game.rebuilds == rebuilt + 1, "another real item put on rebuilds the model with the item morphs")
-Mock.Tick(1.1)
-Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
-Mock.Tick(0.3)
-check(game.rebuilds == rebuilt + 1, "an inventory change that isn't your gear (bags, loot, food) doesn't")
-Mock.gear[1] = { 7002, 1, 60, 60 }
-Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
-Mock.Tick(0.3)
-Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
-Mock.Tick(0.1)
-check(game.rebuilds == rebuilt + 2, "an event from our own rebuild doesn't start another (no loop)")
-Mock.gear[1] = { 7003, 1, 60, 60 }
-Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
-Mock.Tick(0.3)
-check(game.rebuilds == rebuilt + 2, "a second change within a second waits")
-Mock.Tick(0.4)
-Mock.Tick(0.4)
-check(game.rebuilds == rebuilt + 3, "and is rebuilt once the second is up")
-Mock.Tick(2)
-Mock.Fire("UNIT_INVENTORY_CHANGED", "target")
-Mock.Tick(0.3)
-check(game.rebuilds == rebuilt + 3, "someone else's gear changing doesn't rebuild yours")
--- Shooting: every arrow, bullet or throw changes the inventory; rebuilding then
--- made a hunter blink and broke the shooting animation (user, 16 Oct).
+-- 2.41.0 (Khijazi: swapping gear "makes you pop in and out"): a real item put
+-- on no longer rebuilds the model; its morph is checked again and stays on.
 do
-Mock.gear[18], Mock.gear[0] = { 2504 }, { 2512, 200 }
-Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
-Mock.Tick(1.1)
-local beforeShots = game.rebuilds
-for _ = 1, 3 do
-	Mock.gear[0][2] = Mock.gear[0][2] - 1
+	Mock.gear[1] = { 7000, 1, 60, 60 } -- your real helmet, 60 / 60
+	Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
+	Mock.Tick(2)
+	local rebuilt = game.rebuilds
+	Mock.gear[1] = { 7001, 1, 60, 60 }
+	Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
+	Mock.Tick(1.1)
+	check(game.rebuilds == rebuilt and vh.items[1] == 2955, "another real item put on doesn't rebuild you, and the morph stays")
+	-- Every arrow, bullet or throw changes the inventory too (user, 16 Oct).
+	Mock.gear[18], Mock.gear[0] = { 2504 }, { 2512, 200 }
+	Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
+	Mock.Tick(1.1)
+	Mock.gear[0][2] = 199
+	Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
+	Mock.Tick(1.1)
+	check(game.rebuilds == rebuilt, "arrows used and a new weapon don't rebuild you either")
+	Mock.gear[1], Mock.gear[18], Mock.gear[0] = nil, nil, nil
 	Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
 	Mock.Tick(1.1)
 end
-Mock.gear[18] = { 2947, 99 }
-Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
-Mock.Tick(1.1)
-local afterSwap = game.rebuilds
-Mock.gear[18][2] = 98
-Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
-Mock.Tick(1.1)
-check(beforeShots + 1 == afterSwap and game.rebuilds == afterSwap,
-	"arrows and throws used don't rebuild the model; putting on another weapon does")
-Mock.gear[18], Mock.gear[0] = nil, nil
-end
-slash("dmorph itemcheck off")
-Mock.gear[1] = { 7004, 1, 60, 60 }
-Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
-Mock.Tick(0.3)
-check(game.rebuilds == rebuilt + 5, "/dmorph itemcheck off stops the rebuilds too")
-Mock.gear[1] = nil
 slash("dmorph itemcheck on")
+-- 2.41.0 (Khijazi): the size box, the race morph's own size shared, and the camera rebuild on arrival.
+do
+	DmorphOcto_ToggleUI()
+	DmorphOctoSizeBox:SetText("123")
+	this = DmorphOctoSizeBox; this:GetScript("OnEnterPressed")()
+	check(math.abs(game.scale - 1.23) < 0.001 and DmorphOctoSizeBox:GetText() == "123", "the size box sets the exact size")
+	DmorphOctoSizeBox:SetText("500")
+	this = DmorphOctoSizeBox; this:GetScript("OnEnterPressed")()
+	check(math.abs(game.scale - 5) < 0.001 and DmorphOctoSizeBox:GetText() == "500", "and goes past the slider's end")
+	DmorphOctoSizeBox:SetText("abc")
+	this = DmorphOctoSizeBox; this:GetScript("OnEnterPressed")()
+	check(math.abs(game.scale - 5) < 0.001 and DmorphOctoSizeBox:GetText() == "500", "not a number: nothing changes, the box shows the size again")
+	DmorphOctoSizeBox:SetText("100")
+	this = DmorphOctoSizeBox; this:GetScript("OnEnterPressed")()
+	check(game.scale == 1 and DmorphOcto.GetScale() == nil, "100 is your own size")
+	DmorphOcto_ToggleUI()
+	check(DmorphOcto.GetSharedScale() == nil, "no race morph, no size picked: nothing shared")
+	DmorphOcto.SetRace(6, 0)
+	Mock.Tick(1.1)
+	check(math.abs((DmorphOcto.GetSharedScale() or 0) - 1.35) < 0.001, "a race morph's own size is shared")
+	local before = game.rebuilds
+	Mock.Fire("PLAYER_ENTERING_WORLD")
+	Mock.Tick(0.5)
+	check(game.rebuilds == before, "arriving: no rebuild at once")
+	Mock.Tick(1.2)
+	check(game.rebuilds >= before + 1, "a race morph is rebuilt a moment after you arrive, for the camera")
+	DmorphOcto.ResetModel()
+	Mock.Tick(1.1)
+	before = game.rebuilds
+	Mock.Fire("PLAYER_ENTERING_WORLD")
+	Mock.Tick(2)
+	check(game.rebuilds == before, "without a race morph arriving doesn't rebuild")
+end
+-- 3.0 (user: "die in a BG and respawn, still ALL equipped, even extras"): the server never
+-- clears our auras, so the field still holds the look while the game has stopped drawing it.
+do
+	local all = DmorphOcto.GetExtraWearCatalog()
+	DmorphOcto.ClearExtraWear()
+	DmorphOcto.ToggleExtraWear(all.ids[1])
+	Mock.Tick(1.1)
+	local sets, set = 0, DmorphHelper_SetAura
+	local cleared = false
+	DmorphHelper_SetAura = function(unit, index, spell)
+		sets = sets + 1
+		if spell == 0 then cleared = true end
+		return set(unit, index, spell)
+	end
+	Mock.Fire("PLAYER_ALIVE")
+	Mock.Tick(0.6)
+	check(cleared and DmorphOcto.IsWearingExtra(all.ids[1]), "coming back to life takes each look off and on again, so it's drawn")
+	local first = sets
+	Mock.Tick(1.6)
+	check(sets > first, "and again once the living model is built")
+	local after = sets
+	Mock.Tick(3)
+	check(sets == after, "then it stops")
+	cleared = false
+	Mock.Fire("PLAYER_UNGHOST")
+	Mock.Tick(0.6)
+	check(cleared, "releasing and coming back from a graveyard too")
+	Mock.Tick(2)
+	DmorphHelper_SetAura = set
+	DmorphOcto.ClearExtraWear()
+	Mock.Tick(1.1)
+end
 -- 2.27.0 (user, 30 Oct: "popping"): the helper's test build showed the game
 -- redraws no slot from the real items on durability loss, death, res or repair;
 -- the blink was DMorph's own rebuild. Those now never rebuild.
@@ -3035,7 +3082,7 @@ Mock.portedItems = "900001\t90001\t207\t647\tWarglaive of Azzinoth\t0\t5\n900002
 	.. "901001\t120001\t404\t2955\tPorted Plate Helm\t1\n901002\t120002\t404\t16966\tPorted Plate Chest\t5\n"
 	.. "901003\t120003\t401\t16966\tPorted Robe\t5\n901004\t120004\t401\t99999\tPorted Cloth Mantle\t3\n"
 Mock.serverItems[16966] = { "Breastplate of Wrath", 4, "INVTYPE_CHEST" }
-Mock.portedSets = "Ported Plate Set\t901001,901002\nPorted Robe Set\t901003\n"
+Mock.portedSets = "Ported Plate Set\t901001,901002\t7\nPorted Robe Set\t901003\nPorted Plate Set (Mythic)\t901002,901003\t7\n"
 loadUI()
 installMorphAPI()
 local pc = DmorphOcto.GetCreatureCatalog()
@@ -3199,6 +3246,7 @@ wait(4)
 check(channelSays("DMO2 H ") and not channelSays("DMO2 L "), "one with it is answered with a fingerprint")
 Mock.units.target = nil
 -- Ported armour names its slot; ported sets come from DmorphOcto_PortedSets.
+-- (3.0: a set's colours open under its row: see the end of this block.)
 local helm = DmorphOcto.GetItemCatalog(1)
 check(helm.byID[901001] and helm.kind[helm.byID[901001]] == DmorphOcto.KIND_PORTED and not helm.byID[901002]
 	and DmorphOcto.GetItemCatalog(5).byID[901002] and not DmorphOcto.GetItemCatalog(16).byID[901001],
@@ -3352,6 +3400,30 @@ check(game.enchants[16][1] == 2673 and DmorphOctoGlowState.text == "Main hand: M
 slash("demorph all")
 DmorphOcto_PortedGlows = nil
 removeHelper()
+-- 3.0 (user: "a way to select the different options that is neat"): a set's colours open as
+-- rows under it, clicking it again closes them; one expansion at a time.
+do
+	if not DmorphOctoFrame:IsVisible() then
+		DmorphOcto_ToggleUI()
+	end
+	Mock.Click(DmorphOctoTabSets)
+	Mock.Type(DmorphOctoSetSearch, "ported plate")
+	local row1, row2 = DmorphOctoSetListRow1, DmorphOctoSetListRow2
+	check(row1.text.text == "Ported Plate Set" and contains(row1.info.text, "2 colours") and not row2:IsVisible(),
+		"a set with colours is one row, saying how many")
+	press(row1)
+	check(row2:IsVisible() and contains(row2.text.text, "Mythic") and not contains(row2.text.text, "Ported Plate"),
+		"clicking it opens its colours under it")
+	press(row2)
+	check(DmorphOctoSetListRow2:IsVisible() and DmorphOcto.GetSetCatalog().names[DmorphOcto.GetSetCatalog().count] ~= nil,
+		"clicking a colour wears it and leaves the rows open")
+	press(row1)
+	check(not row2:IsVisible(), "clicking the set again closes them")
+	press(DmorphOctoExp8)
+	check(row1.text.text == "Ported Plate Set" and DmorphOctoBannerTitle.text == "Battle for Azeroth", "an expansion button keeps that expansion's sets and shows its name")
+	press(DmorphOctoExp0)
+	Mock.Type(DmorphOctoSetSearch, "")
+end
 Mock.portedData, Mock.portedItems, Mock.portedSets = nil, nil, nil
 Mock.serverItems[647], Mock.serverItems[16966] = nil, nil
 

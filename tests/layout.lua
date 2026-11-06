@@ -135,8 +135,9 @@ local function Draw(name)
 	f:close()
 end
 
-local tabs = { "Models", "Mounts", "Favourites", "Races", "Glows", "Items", "Slutmog", "Sets", "Wardrobe", "Weather" }
+local tabs = { "Home", "Sets", "Extrawear", "Models", "Mounts", "Favourites", "Races", "Glows", "Items", "Slutmog", "Sets", "Wardrobe", "Weather" }
 for _, t in ipairs(tabs) do
+	if t == "Races" or t == "Favourites" then Mock.Click(DmorphOctoTabModels) elseif t == "Slutmog" then Mock.Click(DmorphOctoTabItems) end
 	Mock.Click(getglobal("DmorphOctoTab" .. t))
 	Draw(t)
 end

@@ -21,13 +21,13 @@
 
 local M = DmorphOcto
 
-local W, H = 922, 534
+local W, H = 1002, 610
 local ART_W, ART_H, PLATE_H = 318, 383, 44
-local PAGE_X, PAGE_Y, PAGE_W, PAGE_H = 352, -74, 550, 382
-local ROW_HEIGHT, LIST_ROWS, LIST_WIDTH = 18, 15, 510
+local PAGE_X, PAGE_Y, PAGE_W, PAGE_H = 352, -180, 630, 382
+local ROW_HEIGHT, LIST_ROWS, LIST_WIDTH = 18, 15, 590
 -- Every list tab (2.21.0, user: "all tabs with lists should have this same
 -- layout"): the list on the left, a preview box on the right.
-local BOX_W, LIST_W = 178, 330
+local BOX_W, LIST_W = 178, 410
 local TILE_W, TILE_H, TILE_GAP, GRID_COLS = 128, 132, 6, 4
 -- ClassicAPI dresses at most 8 NPC preview models at a time, so 8 tiles.
 local PAGE_SIZE = 8
@@ -54,8 +54,8 @@ local SLOT_KEYS = {
 	[17] = "SecondaryHandSlot", [18] = "RangedSlot", [19] = "TabardSlot",
 }
 -- Paper-doll layout: slots down the left and right of the model.
-local LEFT_SLOTS = { 1, 3, 15, 5, 4, 19, 9 }
-local RIGHT_SLOTS = { 10, 6, 7, 8, 16, 17, 18 }
+local LEFT_SLOTS = { 1, 3, 15, 5, 4, 19 }
+local RIGHT_SLOTS = { 9, 10, 6, 7, 8 }
 
 -- Per race ID (DmorphOcto.RACES): the dress-up backdrop, and the male icon's
 -- cell { left, right, top } in the character-create race icons, from the
@@ -78,18 +78,22 @@ local KIND_NOTES = {
 	[4] = "Ported from a later expansion: only on this PC (patch-Z.mpq), others see your own look.",
 }
 
+-- The top row, in order (3.0, user: "more professional, tidier"). A tab with `group` sits
+-- in a smaller row under its parent, shown while that group is open. `name` keeps
+-- the frame names of the old tab labels.
 local TABS = {
-	{ key = "models", text = "Models" },
-	{ key = "mounts", text = "Mounts" },
-	{ key = "favourites", text = "Favourites" },
-	{ key = "races", text = "Races" },
-	{ key = "glows", text = "Glows" },
-	{ key = "extra", text = "Extra wear" },
-	{ key = "items", text = "Items" },
-	{ key = "slutmog", text = "Slutmog" },
+	{ key = "home", text = "My look", name = "Home" },
 	{ key = "sets", text = "Sets" },
-	{ key = "wardrobe", text = "Wardrobe" },
-	{ key = "weather", text = "Weather" },
+	{ key = "items", text = "Items" },
+	{ key = "slutmog", text = "Slutmog", group = "items" },
+	{ key = "extra", text = "Extras", name = "Extrawear" },
+	{ key = "glows", text = "Glows" },
+	{ key = "models", text = "Models" },
+	{ key = "races", text = "Races" },
+	{ key = "favourites", text = "Favourites", group = "models" },
+	{ key = "mounts", text = "Mounts" },
+	{ key = "wardrobe", text = "Loadouts", name = "Wardrobe" },
+	{ key = "weather", text = "World", name = "Weather" },
 }
 local TAB_GAP = 3
 -- The gold star of the raid target icons marks favourites.
@@ -108,7 +112,7 @@ local ui = {
 -- Helpers of the preview boxes and the list tabs (one table: Lua 5.0 allows
 -- 200 locals in a chunk and 32 upvalues in a function).
 local P = {}
-local currentTab = "models"
+local currentTab = "home"
 local itemSlot = 1 -- the slot the Items tab is browsing
 local selectedOutfit
 local pendingDelete
@@ -204,23 +208,29 @@ local C = {
 	lineHi = { 0.5, 0.38, 0.7 }, text = { 0.94, 0.93, 0.96 }, dim = { 0.62, 0.6, 0.68 },
 	accent = { 0.71, 0.42, 1 }, deep = { 0.29, 0.15, 0.5 }, gold = { 1, 0.82, 0.3 },
 }
-local FONTS = { friz = "Fonts\\FRIZQT__.TTF", roboto = "Interface\\AddOns\\DmorphOcto\\media\\fonts\\Roboto.ttf" }
--- A failed SetFont keeps the old font, so GetFont tells whether Roboto loaded.
+local FONTS = { friz = "Fonts\\FRIZQT__.TTF", roboto = "Interface\\AddOns\\DmorphOcto\\media\\fonts\\FiraSansCondensed-Regular.ttf",
+	semi = "Interface\\AddOns\\DmorphOcto\\media\\fonts\\FiraSansCondensed-SemiBold.ttf", title = "Fonts\\MORPHEUS.TTF" }
+-- A failed SetFont keeps the old font, so GetFont tells whether Fira loaded
+-- (a font file added while the game runs needs a game restart).
 local function UIFont()
 	if not FONTS.ui then
 		FONTS.ui = FONTS.friz
+		FONTS.bold = FONTS.friz
 		local probe = UIParent:CreateFontString(nil, "OVERLAY")
 		probe:SetFont(FONTS.roboto, 12, "")
 		local now = probe:GetFont()
 		if type(now) == "string" and strlower(string.gsub(now, "/", "\\")) == strlower(FONTS.roboto) then
 			FONTS.ui = FONTS.roboto
+			FONTS.bold = FONTS.semi
 		end
 	end
 	return FONTS.ui
 end
 
-local function Font(fs, size, col)
-	fs:SetFont(UIFont(), size or 11, "")
+-- Fira Condensed is narrow: one point up everywhere reads better and still fits.
+local function Font(fs, size, col, bold)
+	local face = UIFont()
+	fs:SetFont(bold and FONTS.bold or face, (size or 11) + 1, "")
 	fs:SetShadowColor(0, 0, 0, 0.85)
 	fs:SetShadowOffset(1, -1)
 	col = col or C.text
@@ -260,7 +270,7 @@ local function Label(parent, text, font, x, y, name)
 	local label = parent:CreateFontString(name, "OVERLAY", font or "GameFontNormalSmall")
 	local look = LABEL_LOOK[font or "GameFontNormalSmall"]
 	if look then
-		Font(label, look[1], look[2])
+		Font(label, look[1], look[2], font == "GameFontNormal" or font == "GameFontNormalLarge")
 	end
 	label:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
 	label:SetJustifyH("LEFT")
@@ -273,7 +283,7 @@ end
 local function FlatButton(button, text, size)
 	Flat(button, C.btn, C.line)
 	local label = button:CreateFontString(nil, "OVERLAY")
-	Font(label, size or 11)
+	Font(label, size or 11, nil, true)
 	label:SetPoint("LEFT", button, "LEFT", 3, 0)
 	label:SetPoint("RIGHT", button, "RIGHT", -3, 0)
 	button:SetFontString(label)
@@ -892,6 +902,7 @@ local function UpdatePlate()
 	if state.scale then
 		info = info .. " - size " .. math.floor(state.scale * 100 + 0.5) .. "%"
 	end
+	P.RefreshQuick()
 	ui.plateTitle:SetText(title)
 	ui.plateInfo:SetText(info)
 	-- The size slider shows the picked size without picking it again.
@@ -899,6 +910,7 @@ local function UpdatePlate()
 		ui.sizeSync = true
 		ui.sizeSlider:SetValue(state.scale or 1)
 		ui.sizeSync = nil
+		ui.sizeBox:SetText(math.floor((state.scale or 1) * 100 + 0.5))
 	end
 end
 
@@ -1007,7 +1019,8 @@ local function UpdateSlots()
 			-- the empty slot, purple. It showed a question mark (user, 18 Oct).
 			-- 2.26.0 (user: "icons on the item slots"): the game's Lesser
 			-- Invisibility icon, so invisible slots read at a glance.
-			button.icon:SetTexture("Interface\\Icons\\Spell_Magic_LesserInvisibilty")
+			button.iconPath = "Interface\\Icons\\Spell_Magic_LesserInvisibilty"
+			button.icon:SetTexture(button.iconPath)
 			button.icon:SetVertexColor(1, 1, 1)
 			button.glow:Show()
 		elseif itemID then
@@ -1026,18 +1039,21 @@ local function UpdateSlots()
 				ui.iconAsked[itemID] = true
 				pcall(C_Item.RequestLoadItemDataByID, itemID)
 			end
-			button.icon:SetTexture(texture or "Interface\\Icons\\INV_Misc_QuestionMark")
+			button.iconPath = texture or "Interface\\Icons\\INV_Misc_QuestionMark"
+			button.icon:SetTexture(button.iconPath)
 			button.icon:SetVertexColor(1, 1, 1)
 			button.glow:Show()
 		else
 			-- Not morphed: show the gear you really wear, dimmed.
 			local texture = GetInventoryItemTexture("player", slot)
 			if texture then
-				button.icon:SetTexture(texture)
+				button.iconPath = texture
+				button.icon:SetTexture(button.iconPath)
 				button.icon:SetVertexColor(0.45, 0.45, 0.45)
 			else
 				local _, empty = GetInventorySlotInfo(SLOT_KEYS[slot])
-				button.icon:SetTexture(empty)
+				button.iconPath = empty
+				button.icon:SetTexture(button.iconPath)
 				button.icon:SetVertexColor(1, 1, 1)
 			end
 			button.glow:Hide()
@@ -1991,6 +2007,7 @@ local function RaceIcon(button, race, gender)
 	icon:SetTexture(RACE_ICONS_FILE)
 	local c = RACE_ICONS[race]
 	icon:SetTexCoord(c[1], c[2], c[3] + gender * 0.5, c[3] + gender * 0.5 + 0.25)
+	button.raceTex, button.raceCoords = icon, c
 	button.ring = button:CreateTexture(nil, "OVERLAY")
 	button.ring:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
 	button.ring:SetBlendMode("ADD")
@@ -2002,6 +2019,8 @@ local function RaceIcon(button, race, gender)
 	Hover(button, 0.3)
 	button.race, button.gender = race, gender
 end
+
+P.RaceIcon = RaceIcon
 
 local function GenderName(gender)
 	if gender == 1 then
@@ -2685,6 +2704,12 @@ function P.StepGlow(step)
 	ui.glowList.Show(pos)
 end
 
+-- The Glows tab on that hand (from the first screen).
+function P.ShowGlowSlot(slot)
+	glowSlot = slot
+	ShowTab("glows")
+end
+
 local function BuildGlowsPage(page)
 	Label(page, "Weapon glows", "GameFontNormal", 10, -12)
 	for i = 1, table.getn(M.GLOW_SLOTS) do
@@ -2842,6 +2867,7 @@ local function ShowItemSlot(slot)
 	ui.itemBox:SetText(M.GetState().items[slot] or "")
 	ShowTab("items")
 end
+ui.ShowItemSlot = ShowItemSlot
 
 local function CycleSlot(step)
 	local order = M.SLOT_ORDER
@@ -3202,6 +3228,7 @@ P.EXTRA_CATS = {
 -- Row labels per missile kind (M.GetShotCatalog).
 P.SHOT_KINDS = { Retail = "Retail arrow (ported pack)", Arrow = "arrow / shot", Missile = "spell missile" }
 P.extraCat = 1
+P.ARROW_CAT = 15
 function P.FilterExtra(keep)
 	local catalog = M.GetExtraWearCatalog()
 	local text = strlower(ui.extraSearch:GetText() or "")
@@ -3233,6 +3260,11 @@ function P.FilterExtra(keep)
 	ui.extraResult = result
 	ui.extraCount:SetText(Count(m, "look") .. ", " .. table.getn(M.GetExtraWear()) .. " of " .. M.EXTRA_MAX .. " worn")
 	ui.extraList.SetCount(m, keep)
+	local worn, names = M.GetExtraWear(), {}
+	for k = 1, table.getn(worn) do
+		names[k] = M.DescribeExtra(worn[k])
+	end
+	ui.extraWorn:SetText(names[1] and ("Wearing: " .. table.concat(names, ", ")) or "Click a look to put it on, click again to take it off.")
 end
 
 function P.RefreshExtra()
@@ -3242,21 +3274,20 @@ function P.RefreshExtra()
 	ui.extraList.Refresh()
 end
 
+-- 3.0: the categories down the left with how many each has, the list beside them.
 function P.BuildExtraPage(page)
 	ui.extraCats = {}
 	for i = 1, table.getn(P.EXTRA_CATS) do
 		local index = i
-		local col, rowY = math.mod(i - 1, 8), i <= 8 and -6 or -30
-		ui.extraCats[i] = Button(page, P.EXTRA_CATS[i].text, 64, 8 + col * 67, rowY, function()
+		ui.extraCats[i] = Button(page, P.EXTRA_CATS[i].text, 112, 8, -8 - (i - 1) * 20, function()
 			P.extraCat = index
-			for k = 1, table.getn(ui.extraCats) do
-				if k == index then ui.extraCats[k]:LockHighlight() else ui.extraCats[k]:UnlockHighlight() end
-			end
+			P.PaintExtraCats()
 			P.FilterExtra()
 		end, "DmorphOctoExtraCat" .. i)
+		ui.extraCats[i]:SetHeight(19)
 	end
-	Label(page, "Search", "GameFontNormalSmall", 10, -62)
-	ui.extraSearch = EditBox(page, "DmorphOctoExtraSearch", 200, 52, -58)
+	Label(page, "Search", "GameFontNormalSmall", 130, -12)
+	ui.extraSearch = EditBox(page, "DmorphOctoExtraSearch", 200, 172, -8)
 	ui.extraSearch:SetScript("OnTextChanged", function()
 		Debounce(ui.searchTimer, 0.25, P.FilterExtra)
 	end)
@@ -3264,8 +3295,8 @@ function P.BuildExtraPage(page)
 		this:ClearFocus()
 		P.FilterExtra()
 	end)
-	ui.extraCount = Label(page, "", "GameFontDisableSmall", 262, -62, "DmorphOctoExtraCount")
-	ui.extraList = List(page, "DmorphOctoExtraList", 8, -84, 220, function(row, index)
+	ui.extraCount = Label(page, "", "GameFontDisableSmall", 380, -12, "DmorphOctoExtraCount")
+	ui.extraList = List(page, "DmorphOctoExtraList", 128, -34, 170, function(row, index)
 		local i = ui.extraResult[index]
 		if ui.extraAmmo then
 			-- Arrows: the ammo items; the ticked one is what you shoot.
@@ -3295,13 +3326,205 @@ function P.BuildExtraPage(page)
 		local catalog = M.GetExtraWearCatalog()
 		Morph(M.ToggleExtraWear, catalog.ids[ui.extraResult[index]])
 		P.FilterExtra(true)
-	end, nil, PAGE_W - 24, 14)
-	local y = -346
-	Button(page, "Take all off", 120, 8, y, function()
+	end, nil, PAGE_W - 144, 16)
+	Button(page, "Take all off", 112, 8, -346, function()
 		Morph(M.ClearExtraWear)
 		P.FilterExtra(true)
 	end, "DmorphOctoExtraClear")
-	Label(page, "Spell looks worn on top of your morph; DMorph users (2.29+) see them too.", "GameFontDisableSmall", 136, y - 6)
+	ui.extraWorn = Label(page, "", "GameFontDisableSmall", 130, -352, "DmorphOctoExtraWorn")
+	ui.extraWorn:SetWidth(PAGE_W - 140)
+	ui.extraWorn:SetHeight(14)
+	P.PaintExtraCats()
+end
+
+-- The open category lit, each with how many it holds.
+function P.PaintExtraCats()
+	local catalog = M.GetExtraWearCatalog()
+	for k = 1, table.getn(ui.extraCats) do
+		local cat, n = P.EXTRA_CATS[k], 0
+		if cat.ammo then
+			local shots = M.GetShotCatalog()
+			for i = 1, shots.count do
+				if cat.ammo == "all" or shots.kinds[i] ~= "Missile" then
+					n = n + 1
+				end
+			end
+		else
+			for i = 1, catalog.count do
+				if (not cat.prefix or strsub(catalog.names[i], 1, strlen(cat.prefix)) == cat.prefix) and (not cat.spells or not catalog.ported[i]) then
+					n = n + 1
+				end
+			end
+		end
+		ui.extraCats[k]:SetText(cat.text .. "  " .. n)
+		if k == P.extraCat then
+			ui.extraCats[k]:LockHighlight()
+		else
+			ui.extraCats[k]:UnlockHighlight()
+		end
+	end
+end
+
+-- First screen (3.0, user: "add weapon glows on the first screen, see our loadouts"):
+-- what you have on, each line a click away from changing it; your glows, extras, loadouts.
+P.HOME_SLOTS = { 1, 3, 15, 5, 4, 19, 9, 10, 6, 7, 8, 16, 17, 18 }
+function P.BuildHomePage(page)
+	local base = page:GetFrameLevel()
+	-- A card: darker panel, a purple bar, a heading. Rows sit on top of it.
+	local function Card(title, x, y, width, height)
+		local card = CreateFrame("Frame", nil, page)
+		card:SetFrameLevel(base + 1)
+		card:SetWidth(width)
+		card:SetHeight(height)
+		card:SetPoint("TOPLEFT", page, "TOPLEFT", x, y)
+		Flat(card, C.card, C.line)
+		local bar = card:CreateTexture(nil, "ARTWORK")
+		bar:SetTexture(WHITE)
+		bar:SetVertexColor(C.accent[1], C.accent[2], C.accent[3], 1)
+		bar:SetWidth(3)
+		bar:SetHeight(14)
+		bar:SetPoint("TOPLEFT", card, "TOPLEFT", 6, -6)
+		Label(card, title, "GameFontNormal", 14, -6)
+		return card
+	end
+	local function Row(name, x, y, width, onClick)
+		local row = CreateFrame("Button", name, page)
+		row:SetFrameLevel(base + 3)
+		row:SetWidth(width)
+		row:SetHeight(22)
+		row:SetPoint("TOPLEFT", page, "TOPLEFT", x, y)
+		Hover(row, 0.14)
+		row.icon = row:CreateTexture(nil, "ARTWORK")
+		row.icon:SetWidth(18)
+		row.icon:SetHeight(18)
+		row.icon:SetPoint("LEFT", row, "LEFT", 3, 0)
+		row.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+		row.left = Font(row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall"), 10)
+		row.left:SetPoint("LEFT", row, "LEFT", 26, 0)
+		row.left:SetTextColor(C.dim[1], C.dim[2], C.dim[3])
+		row.right = Font(row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall"), 11)
+		row.right:SetPoint("LEFT", row, "LEFT", 92, 0)
+		row.right:SetPoint("RIGHT", row, "RIGHT", -4, 0)
+		row.right:SetJustifyH("LEFT")
+		row:SetScript("OnClick", onClick)
+		return row
+	end
+	Card("You are wearing", 8, -8, 326, 366)
+	ui.homeRows = {}
+	for i = 1, table.getn(P.HOME_SLOTS) do
+		local slot = P.HOME_SLOTS[i]
+		ui.homeRows[slot] = Row("DmorphOctoHomeSlot" .. slot, 11, -30 - (i - 1) * 24, 320, function()
+			ui.ShowItemSlot(slot)
+		end)
+		ui.homeRows[slot].left:SetText(M.SLOT_NAMES[slot])
+	end
+	Card("Weapon glows", 340, -8, 282, 78)
+	for i, slot in ipairs({ 16, 17 }) do
+		local s = slot
+		ui["homeGlow" .. s] = Row("DmorphOctoHomeGlow" .. s, 343, -30 - (i - 1) * 24, 276, function()
+			P.ShowGlowSlot(s)
+		end)
+		ui["homeGlow" .. s].left:SetText(M.SLOT_NAMES[s])
+	end
+	Card("Extras", 340, -90, 282, 54)
+	ui.homeExtra = Row("DmorphOctoHomeExtra", 343, -112, 276, function()
+		ShowTab("extra")
+	end)
+	ui.homeExtra.left:SetText("Wearing")
+	ui.homeExtra.icon:SetTexture("Interface\\Icons\\INV_Misc_Bag_08")
+	local outfits = Card("Loadouts", 340, -148, 282, 192)
+	ui.homeOutfits = {}
+	for i = 1, 8 do
+		local n = i
+		local row = Row("DmorphOctoHomeOutfit" .. i, 346 + math.mod(i - 1, 2) * 136, -172 - math.floor((i - 1) / 2) * 40, 134, function()
+			local name = ui.homeOutfitNames and ui.homeOutfitNames[n]
+			if name then
+				Morph(M.LoadOutfit, name)
+			end
+		end)
+		row:SetHeight(36)
+		Flat(row, C.btn, C.line)
+		row.icon:Hide()
+		row.right:ClearAllPoints()
+		row.right:SetPoint("LEFT", row, "LEFT", 6, 0)
+		row.right:SetPoint("RIGHT", row, "RIGHT", -6, 0)
+		row.right:SetJustifyH("CENTER")
+		ui.homeOutfits[i] = row
+	end
+	ui.homeEmpty = Label(outfits, "Build a look, then save it here.", "GameFontDisableSmall", 14, -30)
+	Button(page, "Save this look", 134, 346, -346, function()
+		ShowTab("wardrobe")
+		ui.outfitName:SetFocus()
+	end, "DmorphOctoHomeSave")
+	Button(page, "All loadouts", 134, 486, -346, function()
+		ShowTab("wardrobe")
+	end, "DmorphOctoHomeAll")
+end
+
+function P.RefreshHome()
+	local state = M.GetState()
+	local function CopyIcon(row, slot)
+		local source = ui.slots[slot]
+		if source then
+			row.icon:SetTexture(source.iconPath)
+		end
+	end
+	for slot, row in pairs(ui.homeRows) do
+		local item = state.items[slot]
+		CopyIcon(row, slot)
+		row.icon:SetVertexColor(1, 1, 1)
+		if item == 0 then
+			row.right:SetText("Invisible")
+			row.right:SetTextColor(C.dim[1], C.dim[2], C.dim[3])
+		elseif item then
+			-- The plain name, in its quality's colour.
+			local name = string.gsub(M.DescribeItem(item, slot), "^%[(.*)%] %(%d+%)$", "%1")
+			row.right:SetText(name)
+			local col = C.text
+			if M.IsPortedItem(item) then
+				col = C.accent
+			else
+				local ok, _, _, quality = pcall(GetItemInfo, item)
+				local q = ok and quality and ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[quality]
+				if q then
+					col = { q.r, q.g, q.b }
+				end
+			end
+			row.right:SetTextColor(col[1], col[2], col[3])
+		else
+			row.icon:SetVertexColor(0.45, 0.45, 0.45)
+			row.right:SetText("Your own")
+			row.right:SetTextColor(C.dim[1], C.dim[2], C.dim[3])
+		end
+	end
+	for _, slot in ipairs({ 16, 17 }) do
+		local picked = M.GetGlow(slot)
+		local row = ui["homeGlow" .. slot]
+		CopyIcon(row, slot)
+		row.right:SetText(picked and (picked == 0 and "No glow" or M.DescribeGlow(picked)) or "Your own")
+	end
+	local worn = M.GetExtraWear()
+	local names = {}
+	for i = 1, table.getn(worn) do
+		names[i] = M.DescribeExtra(worn[i])
+	end
+	ui.homeExtra.right:SetText(table.getn(names) > 0 and table.concat(names, ", ") or "Nothing")
+	ui.homeOutfitNames = M.GetOutfitNames()
+	for i = 1, 8 do
+		local name = ui.homeOutfitNames[i]
+		ui.homeOutfits[i].right:SetText(name or "")
+		ui.homeOutfits[i].right:SetTextColor(C.gold[1], C.gold[2], C.gold[3])
+		if name then
+			ui.homeOutfits[i]:Show()
+		else
+			ui.homeOutfits[i]:Hide()
+		end
+	end
+	if ui.homeOutfitNames[1] then
+		ui.homeEmpty:Hide()
+	else
+		ui.homeEmpty:Show()
+	end
 end
 
 -- Sets tab --------------------------------------------------------------------------
@@ -3309,13 +3532,63 @@ end
 local function FilterSets(keep)
 	local prefs = Prefs()
 	local count
-	ui.setResult, count = M.FilterCatalog(M.GetSetCatalog(), ui.setSearch:GetText(),
+	local catalog = M.GetSetCatalog()
+	ui.setResult, count = M.FilterCatalog(catalog, ui.setSearch:GetText(),
 		M.SET_FILTERS[prefs.setFilter], M.QUALITY_FILTERS[prefs.setQuality].quality, prefs.sortSets, prefs.setType)
+	-- 3.0: one row per set, its colours ("Name (Mythic)") under the row's base name; only the picked expansion.
+	local byName = {}
+	for k = 1, count do
+		byName[catalog.names[ui.setResult[k]]] = ui.setResult[k]
+	end
+	ui.setColours = {}
+	ui.setBaseOf = {}
+	ui.setLabel = {}
+	local kept, n = {}, 0
+	for k = 1, count do
+		local i = ui.setResult[k]
+		local _, _, base, label = strfind(catalog.names[i], "^(.+) %(([^()]+)%)$")
+		local baseIndex = base and byName[base]
+		if (not prefs.setExpansion or catalog.expansion[i] == prefs.setExpansion) then
+			if baseIndex then
+				ui.setColours[baseIndex] = ui.setColours[baseIndex] or {}
+				table.insert(ui.setColours[baseIndex], i)
+				ui.setBaseOf[i] = baseIndex
+				ui.setLabel[i] = label
+			else
+				n = n + 1
+				kept[n] = i
+			end
+		end
+	end
+	ui.setBaseRows, ui.setBaseCount = kept, n
 	ui.setTypeButton:SetText(TypeText(prefs.setType))
 	ui.setQualityButton:SetText(QualityText(prefs.setQuality))
 	ui.setSourceButton:SetText(M.SET_FILTERS[prefs.setFilter].text)
-	ui.setCount:SetText(Count(count, "set"))
-	ui.setList.SetCount(count, keep)
+	ui.setCount:SetText(Count(n, "set"))
+	P.ComposeSets(keep)
+end
+
+function P.FilterSetsNow()
+	FilterSets()
+end
+
+-- The rows: the sets, with the open set's colours under it (user: "a way to select the
+-- different options that is neat"). Clicking a set opens it, clicking it again closes it.
+function P.ComposeSets(keep)
+	local rows, n = {}, 0
+	for k = 1, ui.setBaseCount do
+		local i = ui.setBaseRows[k]
+		n = n + 1
+		rows[n] = i
+		if i == ui.setOpen and ui.setColours[i] then
+			for c = 1, table.getn(ui.setColours[i]) do
+				n = n + 1
+				rows[n] = ui.setColours[i][c]
+			end
+		end
+	end
+	ui.setResult = rows
+	ui.setList.SetCount(n, keep)
 end
 
 local function RefreshSetGear()
@@ -3369,8 +3642,22 @@ local function SetTooltip(index, row)
 	P.ShowSet(i, " - click to wear them")
 end
 
-function P.WearSetAt(pos)
-	ui.selectedSet = ui.setResult[pos]
+function P.WearSetAt(pos, stepping)
+	local i = ui.setResult[pos]
+	-- A set with colours: its row opens them, a second click closes them again.
+	if ui.setColours[i] and not stepping then
+		if ui.setOpen == i then
+			ui.setOpen = nil
+		else
+			ui.setOpen = i
+		end
+	elseif ui.setBaseOf[i] then
+		ui.setOpen = ui.setBaseOf[i]
+	elseif not stepping then
+		ui.setOpen = nil
+	end
+	ui.selectedSet = i
+	P.ComposeSets(true)
 	ui.setList.Refresh()
 	Morph(M.WearSet, ui.selectedSet)
 	P.RefreshSetBox()
@@ -3387,7 +3674,7 @@ function P.StepSet(step)
 	if not pos then
 		return SetStatus(false, "No sets in the list: clear the search or pick other filters.")
 	end
-	P.WearSetAt(pos)
+	P.WearSetAt(pos, true)
 	ui.setList.Show(pos)
 end
 
@@ -3422,14 +3709,24 @@ local function BuildSetsPage(page)
 	ui.setList = List(page, "DmorphOctoSetList", 8, -62, 70, function(row, index)
 		local catalog = M.GetSetCatalog()
 		local i = ui.setResult[index]
-		row.text:SetText(catalog.names[i])
-		row.text:SetTextColor(QualityColor(catalog.quality[i]))
-		row.info:SetText(Count(table.getn(catalog.pieces[i]), "piece"))
+		local colours = ui.setColours and ui.setColours[i]
+		if ui.setBaseOf and ui.setBaseOf[i] then
+			-- One of the open set's colours, set in under it.
+			row.text:SetText("      " .. ui.setLabel[i])
+			row.text:SetTextColor(C.text[1], C.text[2], C.text[3])
+			row.info:SetText(Count(table.getn(catalog.pieces[i]), "piece"))
+		else
+			row.text:SetText(catalog.names[i])
+			row.text:SetTextColor(QualityColor(catalog.quality[i]))
+			row.info:SetText(colours and (table.getn(colours) + 1) .. " colours " .. (ui.setOpen == i and "-" or "+") or Count(table.getn(catalog.pieces[i]), "piece"))
+		end
 		if i == ui.selectedSet then
 			row:LockHighlight()
 			row.tick:Show()
 		end
-	end, P.WearSetAt, SetTooltip, LIST_W, 14)
+	end, function(pos)
+		P.WearSetAt(pos) -- not the mouse button as its second value
+	end, SetTooltip, LIST_W, 14)
 	ui.setList.leave = P.RefreshSetBox
 	ui.setBox = P.NewBox(page, "Sets", "dress", -62, 14, "Try on", P.StepSet)
 	ui.setCount = Label(page, "", "GameFontDisableSmall", 10, -322, "DmorphOctoSetCount")
@@ -3450,7 +3747,7 @@ local function BuildSetsPage(page)
 	end)
 	ui.setGearButton:SetScript("OnLeave", HideTooltip)
 	RefreshSetGear()
-	Label(page, "Click a set to wear every piece. Hover: the pieces.", "GameFontDisableSmall", 156, -351)
+	Label(page, "Click a set to wear it and open its colours. Hover to try on.", "GameFontDisableSmall", 156, -351)
 end
 
 -- Wardrobe tab ------------------------------------------------------------------------
@@ -3830,6 +4127,7 @@ local REFRESH = {
 	items = RefreshItems,
 	slutmog = RefreshSlutmog,
 	extra = function() P.RefreshExtra() end,
+	home = function() P.RefreshHome() end,
 	sets = RefreshSets,
 	wardrobe = RefreshWardrobe,
 }
@@ -3890,6 +4188,14 @@ ShowTab = function(key)
 	end
 	currentTab = key
 	ui.menu:Hide()
+	-- The group open: a tab's parent, or the tab itself.
+	local open = key
+	for i = 1, table.getn(TABS) do
+		if TABS[i].key == key and TABS[i].group then
+			open = TABS[i].group
+		end
+	end
+	local anySub = false
 	for i = 1, table.getn(TABS) do
 		local tab = TABS[i]
 		if tab.key == key then
@@ -3897,8 +4203,28 @@ ShowTab = function(key)
 		else
 			ui.pages[tab.key]:Hide()
 		end
-		TabLook(ui.tabs[tab.key], tab.key == key)
+		-- The small row: only the open group's, and the parent again as its first entry.
+		if tab.group then
+			TabLook(ui.tabs[tab.key], tab.key == key)
+			if tab.group == open then
+				ui.tabs[tab.key]:Show()
+				anySub = true
+			else
+				ui.tabs[tab.key]:Hide()
+			end
+		else
+			TabLook(ui.tabs[tab.key], tab.key == open)
+		end
 	end
+	for parent, button in pairs(ui.subParents) do
+		TabLook(button, parent == key)
+		if parent == open then
+			button:Show()
+		else
+			button:Hide()
+		end
+	end
+	P.ShowBanner(open, anySub)
 	if key == "models" and not ui.modelResult then
 		FilterModels()
 	elseif key == "items" then
@@ -4070,15 +4396,46 @@ local function BuildStage()
 		this:SetValue(math.max(0.25, math.min(3, this:GetValue() + (arg1 > 0 and 0.01 or -0.01))))
 	end)
 	ui.sizeLabel = Font(size:CreateFontString("DmorphOctoSizeLabel", "OVERLAY", "GameFontHighlightSmall"), 11)
-	ui.sizeLabel:SetPoint("RIGHT", size, "LEFT", -8, 0)
+	-- Khijazi: a box to write the exact percentage in; the slider stays for dragging.
+	-- The box goes further than the slider (10-1000%, what the size can be).
+	local sizeBox = EditBox(plate, "DmorphOctoSizeBox", 38, 0, 0, 4)
+	sizeBox:ClearAllPoints()
+	sizeBox:SetPoint("RIGHT", size, "LEFT", -6, 0)
+	sizeBox:SetHeight(18)
+	sizeBox:SetFrameLevel(base + 6)
+	sizeBox:SetText("100")
+	sizeBox:SetScript("OnEnterPressed", function()
+		local percent = tonumber(this:GetText())
+		this:ClearFocus()
+		if percent then
+			if math.abs(percent - 100) < 0.5 then
+				SetStatus(M.SetScale(nil))
+			else
+				SetStatus(M.SetScale(percent / 100))
+			end
+		else
+			SetStatus(false, "Write the size as a number, 100 is normal.")
+		end
+		UpdatePlate() -- shows the size you have, whatever was written
+	end)
+	sizeBox:SetScript("OnEscapePressed", function()
+		this:ClearFocus()
+		UpdatePlate()
+	end)
+	sizeBox:SetScript("OnEnter", function()
+		Tooltip(this, "Size in game, in percent", "Write a number from 10 to 1000 and press Enter. 100 is your own size.")
+	end)
+	sizeBox:SetScript("OnLeave", HideTooltip)
+	ui.sizeBox = sizeBox
+	ui.sizeLabel:SetPoint("RIGHT", sizeBox, "LEFT", -5, 0)
 	-- "in game": it changes your character in the world, not only here (user, 18 Oct).
-	ui.sizeLabel:SetText("Size in game 100%")
+	ui.sizeLabel:SetText("Size in game")
 	size:SetScript("OnValueChanged", function()
 		local value = math.floor(this:GetValue() * 100 + 0.5) / 100
-		ui.sizeLabel:SetText("Size in game " .. math.floor(value * 100 + 0.5) .. "%")
 		if ui.sizeSync then
 			return
 		end
+		ui.sizeBox:SetText(math.floor(value * 100 + 0.5))
 		Debounce(ui.sizeTimer, 0.3, function()
 			if math.abs(value - 1) < 0.001 then
 				SetStatus(M.SetScale(nil))
@@ -4149,6 +4506,8 @@ local function BuildStage()
 	end
 	AddSlots(LEFT_SLOTS, 8)
 	AddSlots(RIGHT_SLOTS, ART_W - 44)
+	P.BuildWeaponRow(stage, AddSlots)
+	P.BuildRaceStrip()
 
 	local border = Layer(stage, 7)
 	border:SetPoint("TOPLEFT", stage, "TOPLEFT", -1, 1)
@@ -4156,10 +4515,10 @@ local function BuildStage()
 	border:SetBackdrop({ edgeFile = WHITE, edgeSize = 1 })
 	border:SetBackdropBorderColor(C.line[1], C.line[2], C.line[3], 1)
 
-	Button(frame, "Reset model", 156, 18, -436, function()
+	Button(frame, "Reset model", 156, 18, -510, function()
 		Morph(M.ResetModel)
 	end)
-	Button(frame, "Reset everything", 156, 180, -436, function()
+	Button(frame, "Reset everything", 156, 180, -510, function()
 		Morph(M.ResetAll)
 	end)
 end
@@ -4227,23 +4586,330 @@ local function BuildGrip()
 	end)
 end
 
+-- The weapons under your character (3.0, user: "quick options next to the weapon to
+-- select glows"): each with a button saying what it has, one click from changing it.
+function P.BuildWeaponRow(stage, AddSlots)
+	local Y = -ART_H - 7
+	AddSlots({ 16, 17, 18 }, 0)
+	ui.quick = {}
+	for i, slot in ipairs({ 16, 17, 18 }) do
+		local s, x = slot, (i - 1) * 107
+		local icon = ui.slots[s]
+		icon:ClearAllPoints()
+		icon:SetPoint("TOPLEFT", stage, "TOPLEFT", x, Y)
+		local title = Label(frame, slot == 18 and "Arrows" or "Glow", "GameFontDisableSmall", 18 + x + 41, -44 + Y)
+		title:SetHeight(12)
+		local quick = Button(frame, "", 62, 18 + x + 40, -44 + Y - 14, function()
+			if arg1 == "RightButton" then
+				if s == 18 then
+					Morph(M.SetShot, 0)
+				else
+					Morph(M.SetGlow, s, nil)
+				end
+			elseif s == 18 then
+				P.extraCat = P.ARROW_CAT
+				P.PaintExtraCats()
+				ShowTab("extra")
+				P.FilterExtra()
+			else
+				P.ShowGlowSlot(s)
+			end
+		end, "DmorphOctoQuick" .. s)
+		quick:SetHeight(20)
+		quick:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+		quick:SetScript("OnEnter", function()
+			Tooltip(this, M.SLOT_NAMES[s], s == 18 and "What your ranged weapon fires." or "The glow on this weapon.",
+				"Click to pick one, right-click for your own.")
+		end)
+		quick:SetScript("OnLeave", HideTooltip)
+		ui.quick[s] = quick
+	end
+end
+
+-- The fast race choice on the character panel (user: "should not be hidden"):
+-- every race in one row, a button for the gender; the Races tab holds the rest.
+function P.BuildRaceStrip()
+	local count = table.getn(M.RACES)
+	local size = math.floor((ART_W - 32 - 2 * count) / count)
+	ui.stripGender = 0
+	ui.raceStrip = {}
+	for race = 1, count do
+		local button = CreateFrame("Button", "DmorphOctoStripRace" .. race, frame)
+		button:SetWidth(size)
+		button:SetHeight(size)
+		button:SetPoint("TOPLEFT", frame, "TOPLEFT", 18 + (race - 1) * (size + 2), -476)
+		P.RaceIcon(button, race, 0)
+		button:SetScript("OnClick", function()
+			local c = ui.creator
+			if c then
+				c.race, c.gender, c.index = this.race, this.gender, nil
+			end
+			Morph(M.SetRace, this.race, this.gender)
+		end)
+		button:SetScript("OnEnter", function()
+			Tooltip(this, M.DescribeBody(this.race, this.gender), "Click to morph into this race.")
+		end)
+		button:SetScript("OnLeave", HideTooltip)
+		ui.raceStrip[race] = button
+	end
+	ui.stripGenderButton = Button(frame, "M", 28, 18 + ART_W - 28, -476, function()
+		ui.stripGender = 1 - ui.stripGender
+		local state = M.GetState()
+		if state.race then
+			Morph(M.SetRace, state.race, ui.stripGender)
+		end
+		P.RefreshQuick()
+	end, "DmorphOctoStripGender")
+	ui.stripGenderButton:SetHeight(size)
+	ui.stripGenderButton:SetScript("OnEnter", function()
+		Tooltip(this, "Male or female", "Which the race icons pick. Changes your race morph at once.")
+	end)
+	ui.stripGenderButton:SetScript("OnLeave", HideTooltip)
+end
+
+function P.RefreshRaceStrip()
+	if not ui.raceStrip then
+		return
+	end
+	local state = M.GetState()
+	if state.race and state.gender then
+		ui.stripGender = state.gender
+	end
+	ui.stripGenderButton:SetText(ui.stripGender == 1 and "F" or "M")
+	for race, button in pairs(ui.raceStrip) do
+		button.gender = ui.stripGender
+		local c = button.raceCoords
+		button.raceTex:SetTexCoord(c[1], c[2], c[3] + ui.stripGender * 0.5, c[3] + ui.stripGender * 0.5 + 0.25)
+		if race == state.race then
+			button.ring:Show()
+		else
+			button.ring:Hide()
+		end
+	end
+end
+
+function P.RefreshQuick()
+	P.RefreshRaceStrip()
+	if not ui.quick then
+		return
+	end
+	local function Short(text)
+		if strlen(text) > 9 then
+			return strsub(text, 1, 8) .. ".."
+		end
+		return text
+	end
+	for _, slot in ipairs({ 16, 17 }) do
+		local picked = M.GetGlow(slot)
+		ui.quick[slot]:SetText(picked and (picked == 0 and "None" or Short(M.DescribeGlow(picked))) or "Own")
+	end
+	local shot = M.GetShot and M.GetShot()
+	ui.quick[18]:SetText(shot and shot ~= 0 and "Picked" or "Own")
+end
+
+-- DMorph's own banner and World of Morphcraft logo (tools\build_banner.ps1), over
+-- every page. The Sets page's expansion tiles use Retail's art from the ported
+-- pack (DMorph_Ported\Art, not in the public addon: without it they show names).
+P.OWN_ART = "Interface\\AddOns\\DmorphOcto\\media\\art\\"
+P.ART_PATH = "Interface\\AddOns\\DMorph_Ported\\Art\\"
+P.EXPANSIONS = {
+	{ id = 0, text = "Classic", art = "classic", short = "Cla" }, { id = 1, text = "The Burning Crusade", art = "tbc", short = "TBC" },
+	{ id = 2, text = "Wrath of the Lich King", art = "wrath", short = "WotLK" }, { id = 3, text = "Cataclysm", art = "cata", short = "Cata" },
+	{ id = 4, text = "Mists of Pandaria", art = "mop", short = "MoP" }, { id = 5, text = "Warlords of Draenor", art = "wod", short = "WoD" },
+	{ id = 6, text = "Legion", art = "legion", short = "Leg" }, { id = 7, text = "Battle for Azeroth", art = "bfa", short = "BfA" },
+	{ id = 8, text = "Shadowlands", art = "sl", short = "SL" }, { id = 9, text = "Dragonflight", art = "df", short = "DF" },
+	{ id = 10, text = "The War Within", art = "tww", short = "TWW" }, { id = 11, text = "Midnight", art = "mid", short = "Mid" },
+}
+P.TAB_TITLES = { home = "My look", sets = "Armour sets", items = "Items", extra = "Extras", glows = "Weapon glows", models = "Models", races = "Races", mounts = "Mounts", wardrobe = "Loadouts", weather = "World" }
+
+function P.BuildBanner()
+	local banner = CreateFrame("Frame", "DmorphOctoBanner", frame)
+	banner:SetWidth(PAGE_W)
+	banner:SetHeight(104)
+	banner:SetPoint("TOPLEFT", frame, "TOPLEFT", PAGE_X, -72)
+	Flat(banner, C.deep, C.line)
+	ui.banner = banner
+	-- The painting is two 512x128 tiles side by side.
+	local left = banner:CreateTexture("DmorphOctoBannerArt", "BORDER")
+	left:SetPoint("TOPLEFT", banner, "TOPLEFT", 1, -1)
+	left:SetPoint("BOTTOMRIGHT", banner, "BOTTOM", 0, 1)
+	left:SetTexture(P.OWN_ART .. "banner1")
+	local right = banner:CreateTexture("DmorphOctoBannerArt2", "BORDER")
+	right:SetPoint("TOPLEFT", banner, "TOP", 0, -1)
+	right:SetPoint("BOTTOMRIGHT", banner, "BOTTOMRIGHT", -1, 1)
+	right:SetTexture(P.OWN_ART .. "banner2")
+	-- The wordmark and credit, on the pages that have room (the wordmark fills the texture's top 170 of 256 rows).
+	-- The credit stays in the plain UI font and clear of the gold line along the foot: Morpheus can't be read this small.
+	local logoFrame = CreateFrame("Frame", nil, banner)
+	logoFrame:SetAllPoints(banner)
+	ui.bannerLogo = logoFrame:CreateTexture("DmorphOctoBannerLogo", "OVERLAY")
+	ui.bannerLogo:SetWidth(236)
+	ui.bannerLogo:SetHeight(78)
+	ui.bannerLogo:SetPoint("TOPRIGHT", banner, "TOPRIGHT", -10, -3)
+	ui.bannerLogo:SetTexture(P.OWN_ART .. "logo")
+	ui.bannerLogo:SetTexCoord(0, 1, 0, 170 / 256)
+	ui.bannerCredit = Font(logoFrame:CreateFontString("DmorphOctoBannerCredit", "OVERLAY", "GameFontNormalSmall"), 12, nil, true)
+	ui.bannerCredit:SetPoint("TOP", ui.bannerLogo, "BOTTOM", 0, -2)
+	ui.bannerCredit:SetText("DMorph - Created by Upsilon-Keenhoof-Rag")
+	ui.bannerCredit:SetTextColor(0.94, 0.89, 0.78)
+	ui.bannerTitle = Font(logoFrame:CreateFontString("DmorphOctoBannerTitle", "OVERLAY", "GameFontNormal"), 16)
+	ui.bannerTitle:SetFont(FONTS.title, 20, "")
+	ui.bannerTitle:SetPoint("TOPLEFT", banner, "TOPLEFT", 12, -4)
+	ui.bannerTitle:SetTextColor(C.gold[1], C.gold[2], C.gold[3])
+	ui.subHint = Font(logoFrame:CreateFontString("DmorphOctoSubHint", "OVERLAY", "GameFontNormalSmall"), 11)
+	ui.subHint:SetPoint("TOPLEFT", banner, "TOPLEFT", 12, -34)
+	ui.subHint:SetTextColor(0.9, 0.9, 0.9)
+	local level = banner:GetFrameLevel() + 2
+	for i = 1, table.getn(TABS) do
+		if TABS[i].group then
+			ui.tabs[TABS[i].key]:SetFrameLevel(level)
+		end
+	end
+	for _, button in pairs(ui.subParents) do
+		button:SetFrameLevel(level)
+	end
+	-- Sets: one matching tile per expansion, in order, All first: that expansion's
+	-- painting with its own logo. Without the pack's art a tile shows its name.
+	ui.expButtons = {}
+	local function ExpButton(index)
+		local info = P.EXPANSIONS[index]
+		local button = Button(banner, "", 86, 6 + math.mod(index, 7) * 88, -24 - math.floor(index / 7) * 41, function()
+			Prefs().setExpansion = P.EXPANSIONS[index] and P.EXPANSIONS[index].id or nil
+			P.PaintExpansions()
+			P.FilterSetsNow()
+			P.ShowBanner("sets")
+		end, "DmorphOctoExp" .. index)
+		button:SetHeight(38)
+		button:SetFrameLevel(level)
+		if info then
+			button.art = button:CreateTexture(nil, "BORDER")
+			button.art:SetPoint("TOPLEFT", button, "TOPLEFT", 1, -1)
+			button.art:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -1, 1)
+			button.art:SetTexCoord(0.36, 0.64, 0, 1)
+			button.art:SetTexture(P.ART_PATH .. info.art)
+			local logo = button:CreateTexture(nil, "ARTWORK")
+			logo:SetWidth(76)
+			logo:SetHeight(38)
+			logo:SetPoint("CENTER", button, "CENTER", 0, 0)
+			if not logo:SetTexture(P.ART_PATH .. "logo_" .. info.art) then
+				button:SetText(info.short)
+			end
+			button:SetScript("OnEnter", function()
+				Tooltip(this, info.text)
+			end)
+			button:SetScript("OnLeave", HideTooltip)
+		else
+			button:SetText("All")
+			button.label:SetFont(FONTS.title, 18, "")
+			button.label:SetTextColor(C.gold[1], C.gold[2], C.gold[3])
+		end
+		button.pick = CreateFrame("Frame", nil, button)
+		button.pick:SetFrameLevel(level + 1)
+		button.pick:SetAllPoints(button)
+		button.pick:SetBackdrop({ edgeFile = WHITE, edgeSize = 2 })
+		button.pick:SetBackdropBorderColor(C.gold[1], C.gold[2], C.gold[3], 1)
+		ui.expButtons[index] = button
+	end
+	for i = 0, table.getn(P.EXPANSIONS) do
+		ExpButton(i)
+	end
+end
+
+function P.PaintExpansions()
+	local picked = Prefs().setExpansion
+	for i = 0, table.getn(P.EXPANSIONS) do
+		local mine = P.EXPANSIONS[i] and P.EXPANSIONS[i].id
+		local button = ui.expButtons[i]
+		if mine == picked then
+			button.pick:Show()
+			if button.art then
+				button.art:SetVertexColor(1, 1, 1)
+			end
+		else
+			button.pick:Hide()
+			if button.art then
+				button.art:SetVertexColor(0.5, 0.5, 0.5)
+			end
+		end
+	end
+end
+
+function P.ShowBanner(open, anySub)
+	local title = P.TAB_TITLES[open] or ""
+	local hint = P.TAB_HINTS[open] or ""
+	if open == "sets" then
+		local picked, chosen = Prefs().setExpansion, nil
+		for i = 1, table.getn(P.EXPANSIONS) do
+			if P.EXPANSIONS[i].id == picked then
+				chosen = P.EXPANSIONS[i]
+			end
+		end
+		title = chosen and chosen.text or "Armour sets"
+		hint = ""
+	end
+	ui.bannerTitle:SetText(title)
+	ui.subHint:SetText(hint)
+	if open == "sets" then
+		ui.bannerLogo:Hide()
+		ui.bannerCredit:Hide()
+	else
+		ui.bannerLogo:Show()
+		ui.bannerCredit:Show()
+	end
+	for i = 0, table.getn(P.EXPANSIONS) do
+		if open == "sets" then
+			ui.expButtons[i]:Show()
+		else
+			ui.expButtons[i]:Hide()
+		end
+	end
+	if open == "sets" then
+		P.PaintExpansions()
+	end
+end
+
+-- What each top tab without a smaller row is for, in that row's place.
+P.TAB_HINTS = {
+	home = "What you have on. Click anything to change it.",
+	sets = "Whole armour sets, one click to wear.",
+	extra = "Wings, bags, trails and more, on top of your look.",
+	glows = "Weapon enchant effects.",
+	races = "Any race, with your own face or an NPC's.",
+	items = "Any item, in any slot.",
+	models = "Become any creature in the game.",
+	mounts = "A new look for whatever you ride.",
+	wardrobe = "Your saved looks, on all your characters.",
+	weather = "Weather and time of day, on your screen only.",
+}
+
+function P.TabButton(name, text, size, key, parent)
+	local tab = CreateFrame("Button", name, parent)
+	Flat(tab, C.btn, C.line)
+	tab.label = Font(tab:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall"), size, nil, true)
+	tab.label:SetPoint("CENTER", tab, "CENTER", 0, 0)
+	tab.label:SetText(text)
+	Hover(tab, 0.18)
+	tab.key = key
+	tab:SetScript("OnClick", function()
+		PlaySound("igCharacterInfoTab")
+		ShowTab(this.key)
+	end)
+	return tab
+end
+
 local function BuildTabs()
+	ui.subParents = {}
+	local TOP_Y, SUB_Y = -42, -150
+	local top = {}
 	for i = 1, table.getn(TABS) do
 		local info = TABS[i]
-		local tab = CreateFrame("Button", "DmorphOctoTab" .. string.gsub(info.text, " ", ""), frame)
-		tab:SetHeight(26)
-		Flat(tab, C.btn, C.line)
-		tab.label = Font(tab:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall"), 12)
-		tab.label:SetPoint("CENTER", tab, "CENTER", 0, 0)
-		tab.label:SetText(info.text)
-		Hover(tab, 0.18)
-		tab.key = info.key
-		tab:SetScript("OnClick", function()
-			PlaySound("igCharacterInfoTab")
-			ShowTab(this.key)
-		end)
+		local tab = P.TabButton("DmorphOctoTab" .. (info.name or info.text), info.text, info.group and 11 or 12, info.key, frame)
+		tab:SetHeight(info.group and 22 or 26)
 		ui.tabs[info.key] = tab
-		local page = CreateFrame("Frame", "DmorphOctoPage" .. info.text, frame)
+		if not info.group then
+			table.insert(top, tab)
+		end
+		local page = CreateFrame("Frame", "DmorphOctoPage" .. (info.name or info.text), frame)
 		page:SetPoint("TOPLEFT", frame, "TOPLEFT", PAGE_X, PAGE_Y)
 		page:SetWidth(PAGE_W)
 		page:SetHeight(PAGE_H)
@@ -4251,30 +4917,44 @@ local function BuildTabs()
 		page:Hide()
 		ui.pages[info.key] = page
 	end
-	-- Each tab as wide as its name, the room left shared out evenly.
-	local count, used = table.getn(TABS), 0
+	-- Each top tab as wide as its name, the room left shared out evenly.
+	local count, used = table.getn(top), 0
 	for i = 1, count do
-		used = used + ui.tabs[TABS[i].key].label:GetStringWidth()
+		used = used + top[i].label:GetStringWidth()
 	end
 	local pad = math.floor((PAGE_W - (count - 1) * TAB_GAP - used) / count)
-	-- Eleven tabs (2.29.0) may not fit at 12 pt: then a size smaller.
-	if pad < 6 then
-		used = 0
-		for i = 1, count do
-			local label = ui.tabs[TABS[i].key].label
-			Font(label, 10)
-			used = used + label:GetStringWidth()
-		end
-		pad = math.floor((PAGE_W - (count - 1) * TAB_GAP - used) / count)
-	end
 	local x = PAGE_X
 	for i = 1, count do
-		local tab = ui.tabs[TABS[i].key]
-		local width = math.floor(tab.label:GetStringWidth() + pad)
-		tab:SetWidth(width)
-		tab:SetPoint("TOPLEFT", frame, "TOPLEFT", x, -42)
+		local width = math.floor(top[i].label:GetStringWidth() + pad)
+		top[i]:SetWidth(width)
+		top[i]:SetPoint("TOPLEFT", frame, "TOPLEFT", x, TOP_Y)
 		x = x + width + TAB_GAP
 	end
+	-- The smaller row: the parent's own page first, then its group.
+	for parentIndex = 1, table.getn(TABS) do
+		local parent = TABS[parentIndex]
+		local kids = {}
+		for i = 1, table.getn(TABS) do
+			if TABS[i].group == parent.key then
+				table.insert(kids, ui.tabs[TABS[i].key])
+			end
+		end
+		if table.getn(kids) > 0 then
+			local own = P.TabButton("DmorphOctoSub" .. parent.text, parent.text, 11, parent.key, frame)
+			own:SetHeight(22)
+			ui.subParents[parent.key] = own
+			local sx = PAGE_X
+			table.insert(kids, 1, own)
+			for i = 1, table.getn(kids) do
+				local width = math.floor(kids[i].label:GetStringWidth() + 22)
+				kids[i]:SetWidth(width)
+				kids[i]:SetPoint("TOPLEFT", frame, "TOPLEFT", sx, SUB_Y)
+				sx = sx + width + TAB_GAP
+			end
+		end
+	end
+	P.BuildBanner()
+	P.BuildHomePage(ui.pages.home)
 	BuildModelsPage(ui.pages.models)
 	BuildMountsPage(ui.pages.mounts)
 	BuildFavouritesPage(ui.pages.favourites)
@@ -4469,6 +5149,9 @@ local function Build()
 	local title = Font(frame:CreateFontString("DmorphOctoTitle", "OVERLAY", "GameFontNormal"), 16, C.text)
 	title:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -9)
 	title:SetText("|cffb46bffD|rMorph  |cff9b98a8for OctoWoW|r")
+	local testing = Font(frame:CreateFontString("DmorphOctoTesting", "OVERLAY", "GameFontNormal"), 13, C.text)
+	testing:SetPoint("TOP", frame, "TOP", 0, -10)
+	testing:SetText("|cffffd100Still Being Bug Tested And Tweaked. Extras Mainly.|r")
 	local close = CreateFrame("Button", "DmorphOctoFrameClose", frame)
 	close:SetWidth(22)
 	close:SetHeight(22)
@@ -4496,17 +5179,17 @@ local function Build()
 	BuildTabs()
 	BuildGrip()
 
-	ui.status = Label(frame, "", "GameFontHighlightSmall", 20, -466, "DmorphOctoFrameStatus")
-	ui.status:SetWidth(W - 40)
+	ui.status = Label(frame, "", "GameFontHighlightSmall", 20, -537, "DmorphOctoFrameStatus")
+	ui.status:SetWidth(320)
 	ui.status:SetHeight(26)
 	-- The footer: a thin line, setup, a hint, sharing, the version.
 	local foot = frame:CreateTexture(nil, "ARTWORK")
 	foot:SetTexture(WHITE)
 	foot:SetVertexColor(C.line[1], C.line[2], C.line[3], 1)
-	foot:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -494)
-	foot:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -12, -494)
+	foot:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -570)
+	foot:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -12, -570)
 	foot:SetHeight(1)
-	ui.setupButton = Button(frame, "", 160, 18, -502, ShowSetupPanel, "DmorphOctoSetupButton")
+	ui.setupButton = Button(frame, "", 160, 18, -578, ShowSetupPanel, "DmorphOctoSetupButton")
 	ui.setupButton:SetScript("OnEnter", function()
 		local helper, wanted = M.GetHelperVersion()
 		local line = "DmorphHelper: not running (optional)."
@@ -4519,9 +5202,9 @@ local function Build()
 	ui.setupButton:SetScript("OnLeave", HideTooltip)
 	UpdateSetupButton()
 	Label(frame, "DMorph users see each other's morphs. /dmorph help: commands.",
-		"GameFontDisableSmall", 190, -508)
+		"GameFontDisableSmall", 190, -584)
 	BuildSetupPanel()
-	local share = Button(frame, "Sharing", 80, W - 200, -502, ShareMenu, "DmorphOctoShare")
+	local share = Button(frame, "Sharing", 80, W - 200, -578, ShareMenu, "DmorphOctoShare")
 	share:SetScript("OnEnter", function()
 		local _, _, known, morphed = M.GetShareStatus()
 		Tooltip(this, "Sharing with DMorph users", "Who sees whose morph. Only friendly players can be morphed.",
@@ -4529,7 +5212,7 @@ local function Build()
 	end)
 	share:SetScript("OnLeave", HideTooltip)
 	local version = Font(frame:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall"), 10, C.dim)
-	version:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -34, -508)
+	version:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -34, -584)
 	version:SetText("v" .. M.VERSION)
 end
 
