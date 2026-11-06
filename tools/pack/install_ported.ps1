@@ -241,6 +241,8 @@ $toc = @(
 )
 [IO.File]::WriteAllLines((Join-Path $listDir "DMorph_Ported.toc"), [string[]]$toc, (New-Object System.Text.UTF8Encoding $false))
 if (Test-Path $oldList) { Remove-Item $oldList }
+$packArt = Join-Path $PSScriptRoot "Art"
+if (Test-Path $packArt) { Copy-Item $packArt $listDir -Recurse -Force }
 "Put Ported.lua in Interface\AddOns\DMorph_Ported (DMorph updates don't touch it)."
 
 # DmorphHelper shows the ported weapons and armour; DMorph's own installer

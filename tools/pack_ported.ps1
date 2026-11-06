@@ -116,6 +116,8 @@ $manifest = @(
   ("made`t" + (Get-Date -Format "yyyy-MM-dd HH:mm"))
 ) + $entries
 [IO.File]::WriteAllLines((Join-Path $Out "manifest.txt"), [string[]]$manifest)
+$art = Join-Path ([IO.Path]::GetDirectoryName($list)) "Art"
+if (Test-Path $art) { Copy-Item $art (Join-Path $Out "Art") -Recurse }
 Copy-Item (Join-Path $PSScriptRoot "pack\install_ported.ps1") $Out
 Copy-Item (Join-Path $PSScriptRoot "MpqDbc.cs") $Out
 # The pack's double-click files live in tools\pack, so nobody runs them from DMorph's own folder.
