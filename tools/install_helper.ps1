@@ -70,8 +70,20 @@ if ($Remove) {
   if (Test-Path $target) {
     try { Remove-Item $target } catch { throw "Couldn't delete $target. Close the game first, then run this again." }
   }
+  $hdOff = Join-Path $GameDir "DmorphHelper_HD.txt"
+  if (Test-Path $hdOff) { Remove-Item $hdOff }
   "DmorphHelper is removed: it's out of dlls.txt and the game folder."
   return
+}
+
+# A ported pack's body textures (patch-6) are double size: without this file the helper keeps the normal
+# skin and they paint wrongly, on the character screen too (Khijazi's screenshot, 7 Nov).
+if (Test-Path (Join-Path $GameDir "Data\patch-6.mpq")) {
+  $hd = Join-Path $GameDir "DmorphHelper_HD.txt"
+  if (-not (Test-Path $hd)) {
+    [IO.File]::WriteAllText($hd, "DMorph HD skin: delete this file to go back to the normal 256x256 skin.")
+    "Turned on the HD skin the ported pack needs."
+  }
 }
 
 if (-not (Test-Path $source)) { throw "$source is missing. Get the whole DmorphOcto folder (download it again) and try again." }
