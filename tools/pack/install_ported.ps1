@@ -36,7 +36,8 @@ if (-not $Remove -and -not (Test-Path $manifestPath) -and $pack -match '\\Dmorph
 Add-Type -Path (Join-Path $pack "MpqDbc.cs")
 function Test-Ported([string]$path) {
   $m = $null
-  try { $m = New-Object Mpq $path; return $m.Has("DmorphPort.txt") } catch { return $false } finally { if ($m) { $m.Close() } }
+  # $null: the file couldn't be opened (the game has it open, or a copy went wrong).
+  try { $m = New-Object Mpq $path; return $m.Has("DmorphPort.txt") } catch { return $null } finally { if ($m) { $m.Close() } }
 }
 function Test-Game([string]$dir) {
   return $dir -and (Test-Path (Join-Path $dir "WoW.exe")) -and (Test-Path (Join-Path $dir "Data"))
@@ -201,10 +202,15 @@ foreach ($f in $patches) {
   $target = Join-Path $dataDir $f.Name
   if (Test-Path $target) {
     $item = Get-Item $target
-    if (-not (Test-Ported $target)) {
+    # The pack's own file copied in by hand (same size and hash) is installed, whatever else is true.
+    if ($item.Length -eq $f.Size -and (Get-FileHash $target -Algorithm SHA256).Hash -eq $f.Hash) { "Data\$($f.Name) is already installed."; continue }
+    $ported = Test-Ported $target
+    if ($null -eq $ported) {
+      throw "$target can't be opened. Close the game (and anything else using its files) and run the installer again. Nothing was installed."
+    }
+    if (-not $ported) {
       throw "$target is one of the game's own patches, and the pack has a file with the same name. Nothing was installed. Tell whoever sent the pack (the porting tool must use another letter)."
     }
-    if ($item.Length -eq $f.Size -and (Get-FileHash $target -Algorithm SHA256).Hash -eq $f.Hash) { "Data\$($f.Name) is already installed."; continue }
     $space -= $item.Length
   }
   [void]$copy.Add($f)
