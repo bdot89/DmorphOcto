@@ -78,7 +78,9 @@ if ($Remove) {
 
 # A ported pack's body textures (patch-6) are double size: without this file the helper keeps the normal
 # skin and they paint wrongly, on the character screen too (Khijazi's screenshot, 7 Nov).
-if (Test-Path (Join-Path $GameDir "Data\patch-6.mpq")) {
+# Since 8 Nov the HD skins are inside the pack's patch-Y and patch-6 is gone: the pack's list
+# (DMorph_Ported) is the sign a pack is installed (Jurki crashed at 0x477D15 without the switch).
+if ((Test-Path (Join-Path $GameDir "Data\patch-6.mpq")) -or (Test-Path (Join-Path $GameDir "Interface\AddOns\DMorph_Ported\Ported.lua"))) {
   $hd = Join-Path $GameDir "DmorphHelper_HD.txt"
   if (-not (Test-Path $hd)) {
     [IO.File]::WriteAllText($hd, "DMorph HD skin: delete this file to go back to the normal 256x256 skin.")
