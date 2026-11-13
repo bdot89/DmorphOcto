@@ -141,6 +141,15 @@ if ($Remove) {
   }
   if (Test-Path (Join-Path $listDir "DMorph_Ported.toc")) { Remove-Item $listDir -Recurse; "Removed the DMorph_Ported addon (the pack's list)" }
   if (Test-Path $oldList) { Remove-Item $oldList; "Removed DMorph's Data\Ported.lua" }
+  $movedDir = Join-Path $dataDir "DMorph_moved"
+  if (Test-Path $movedDir) {
+    foreach ($m in @(Get-ChildItem $movedDir -File -Filter 'patch-*.mpq')) {
+      $back = Join-Path $dataDir ($m.Name -replace '-\d{14}(?=\.mpq$)', '')
+      if (Test-Path $back) { "Left Data\DMorph_moved\$($m.Name) there (Data has a file with that name)."; continue }
+      Move-Item $m.FullName $back; "Put back Data\$([IO.Path]::GetFileName($back)) (another mod's file)."
+    }
+    if (-not (Get-ChildItem $movedDir -Force)) { Remove-Item $movedDir }
+  }
   ""
   "The ported models are removed. DmorphHelper stays (DMorph uses it for glows, looks and size)."
   return
@@ -197,6 +206,9 @@ if ($bad.Count -gt 0) {
 
 # What happens to each patch, worked out before anything is copied.
 $copy = New-Object System.Collections.ArrayList
+$moveAside = New-Object System.Collections.ArrayList
+# Patch names OctoWoW itself ships (unmarked on a clean install, 13 Nov).
+$octoOwn = @('0','1','2','3','4','5','6','7','8','9','A','C','L','O','W')
 $space = [int64]0
 foreach ($f in $patches) {
   $target = Join-Path $dataDir $f.Name
@@ -209,7 +221,16 @@ foreach ($f in $patches) {
       throw "$target can't be opened. Close the game (and anything else using its files) and run the installer again. Nothing was installed."
     }
     if (-not $ported) {
-      throw "$target is one of the game's own patches, and the pack has a file with the same name. Nothing was installed. Tell whoever sent the pack (the porting tool must use another letter)."
+      # OctoWoW's own patches are never touched. Another mod's file with the pack's name (Stormhand's HD gear
+      # as patch-G, 13 Nov) is moved aside into Data\DMorph_moved, and Remove Ported.bat puts it back.
+      $letter = $f.Name.Substring(6, 1).ToUpper()
+      if ($octoOwn -contains $letter) {
+        throw "$target is one of OctoWoW's own patches, and the pack has a file with the same name. Nothing was installed. Tell whoever sent the pack (the porting tool must use another letter)."
+      }
+      [void]$moveAside.Add($item)
+      [void]$copy.Add($f)
+      $space += $f.Size
+      continue
     }
     $space -= $item.Length
   }
@@ -223,6 +244,14 @@ if ($drive.AvailableFreeSpace -lt $space + 50MB) {
   throw ("the game's drive needs {0:N1} GB more free space (it has {1:N1} GB). Nothing was installed." -f ($space / 1GB), ($drive.AvailableFreeSpace / 1GB))
 }
 
+foreach ($m in $moveAside) {
+  $movedDir = Join-Path $dataDir "DMorph_moved"
+  if (-not (Test-Path $movedDir)) { [void](New-Item -ItemType Directory $movedDir) }
+  $dest = Join-Path $movedDir $m.Name
+  if (Test-Path $dest) { $dest = Join-Path $movedDir ($m.BaseName + "-" + (Get-Date -Format yyyyMMddHHmmss) + $m.Extension) }
+  try { Move-Item $m.FullName $dest } catch { throw "Couldn't move $($m.FullName) aside. Close the game first, then run this again. Nothing was installed." }
+  Write-Host ("Moved another mod's Data\{0} into Data\DMorph_moved (it has a name the pack needs; Remove Ported.bat puts it back)." -f $m.Name) -ForegroundColor Yellow
+}
 # Ported patches from an older pack would mix with this one's list.
 foreach ($s in $stale) {
   try { Remove-Item $s.FullName } catch { throw "Couldn't delete the old $($s.FullName). Close the game first, then run this again." }
