@@ -4,7 +4,7 @@
 
 ### Become anything. Ride anything. Wear anything. ✨
 
-**DMorph** is a free morph addon for WoW 1.12 (OctoWoW), **version 3.1.0**. Turn into a dragon 🐉, ride a mechanical chicken 🐔, swap your race 🧝, light your blade on fire 🔥, put on wings 🪽, make it snow in Orgrimmar ❄️, and dress up in any armour set in the game 🛡️, all from one slick purple window.
+**DMorph** is a free morph addon for WoW 1.12 (OctoWoW), **version 3.2.0**. Turn into a dragon 🐉, ride a mechanical chicken 🐔, swap your race 🧝, light your blade on fire 🔥, put on wings 🪽, make it snow in Orgrimmar ❄️, and dress up in any armour set in the game 🛡️, all from one slick purple window.
 
 > 🔒 **100% client-side and safe:** morphs only change what *you* and other DMorph users see. Everyone else, and the server, sees your real character.
 
@@ -158,7 +158,7 @@ You can skip this step: everything else still works, just without glows, real lo
 1. Start the game from **OctoLauncher** (not WoW.exe).
 2. Click the polymorph button by the minimap 🐑, or type **/dmorph**
 3. Check the **Setup** button at the bottom left of the window:
-   - 🟢 Green "Setup OK": you're ready. It also shows which DmorphHelper version is running (for example "Helper v23").
+   - 🟢 Green "Setup OK": you're ready. It also shows which DmorphHelper version is running (for example "Helper v24").
    - 🟡 Yellow "Old helper": close the game and run Install DmorphHelper.bat again.
    - 🔴 Red "Setup: fix me": click it. It tells you what isn't working and how to fix it.
 
@@ -190,6 +190,7 @@ Open the window with the minimap button, /dmorph, or a key under Key Bindings > 
 
 - **Every list tab** has a preview box on the right: it shows what you hover (else what you have on). Mouse wheel or **- / +** zooms, drag turns it, right-drag moves it, **Reset** puts it back. **Previous / Next** under it put on the one above or below in the list.
 - **My look (first tab):** what you're wearing, slot by slot, plus your glows, extras and loadouts. Click a line to change it; **Save this look** keeps it as a loadout.
+- **Follow gear (My look > Weapons):** each real weapon you equip keeps its own morph and glow. Swap to your fishing pole and it shows as a fishing pole; swap back and your look comes back. A weapon you never had on gets the last look of its kind (two-hander, one-hand + shield, two one-handers), so you get a preset per weapon setup. Click to turn it on or off, right-click to forget every weapon's look.
 - **Dressing room (left):** your character, with your weapons and a row of every race (and M / F) under it. Drag to turn, mouse wheel to zoom, right-drag to move. The Size slider under it changes your size in 1% steps (mouse wheel over it for one step; right-click: normal size). A race morph gets that race's size by itself (a Tauren as a Human is human-sized) unless you picked one.
 - **Item slots around the model:** left-click for items for that slot, right-click for your own gear. A purple frame marks a morphed slot; a hidden slot shows the empty-slot picture.
 - **Reset model / Reset everything:** your own body back / clear every morph.
@@ -223,6 +224,7 @@ Type these in the chat box. They never reach the server. Each also works after /
 - **.outfit save name** / **.outfit name** / **.outfit delete name** - save, wear or delete outfits
 - **.share on/off** / **.share others on/off** - sharing with other DMorph users
 - **.dmorph check** - is everything working, and how to fix it
+- **.dmorph follow on/off/forget** - weapons follow your gear (see Follow gear above)
 
 Item slots: 1 head, 3 shoulder, 4 shirt, 5 chest, 6 waist, 7 legs, 8 feet, 9 wrist, 10 hands, 15 back, 16 main hand, 17 off hand, 18 ranged, 19 tabard.
 

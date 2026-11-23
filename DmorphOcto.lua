@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "3.1.0"
+local VERSION = "3.2.0"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1493,6 +1493,35 @@ function InitDB()
 		end
 	end
 	db.weaponSheath = weaponSheath
+	-- Weapons follow your gear (M.FollowWeapons): each remembered look is { i = item, g = glow }.
+	local memory = { items = {}, kinds = {} }
+	local function CleanLook(look)
+		if type(look) == "table" and (look.i == nil or type(look.i) == "number") and (look.g == nil or type(look.g) == "number") then
+			return { i = look.i, g = look.g }
+		end
+	end
+	if type(db.weaponMemory) == "table" then
+		if type(db.weaponMemory.items) == "table" then
+			for key, look in pairs(db.weaponMemory.items) do
+				if type(key) == "string" and strfind(key, "^1[678]:%d+$") then
+					memory.items[key] = CleanLook(look)
+				end
+			end
+		end
+		if type(db.weaponMemory.kinds) == "table" then
+			for _, kind in ipairs({ "two", "shield", "dual", "one" }) do
+				local slots = db.weaponMemory.kinds[kind]
+				if type(slots) == "table" then
+					memory.kinds[kind] = { [16] = CleanLook(slots[16]), [17] = CleanLook(slots[17]) }
+				end
+			end
+		end
+		if type(db.weaponMemory.last) == "string" then
+			memory.last = db.weaponMemory.last
+		end
+	end
+	db.weaponMemory = memory
+	db.weaponFollowOff = db.weaponFollowOff and true or nil
 	for _, key in ipairs({ "glowReal", "glowWritten" }) do
 		local kept = {}
 		if type(db[key]) == "table" then
@@ -2455,7 +2484,7 @@ local MISSING_HELPER = "DmorphHelper.dll isn't loaded, so weapon glows, your siz
 M.MISSING_HELPER = MISSING_HELPER
 -- The DmorphHelper_Version() the DLL in helper\ reports. An older one in the
 -- game folder (DMorph was updated, the DLL wasn't copied again) is flagged.
-local HELPER_VERSION = 23
+local HELPER_VERSION = 24
 -- Rows 1-5 of the Races tab, in DmorphHelper_GetLook's order.
 local OWN_LOOK_NPC = { "npcSkin", "npcFace", "npcHairStyle", "npcHairColour" }
 
@@ -3334,8 +3363,43 @@ local function WatchHelper()
 			db.lookWritten = nil
 		end
 	end
+	-- 3.2.0 (Khijazi: "switching/equipping a different item makes your character pop in
+	-- and out"): writing a glow back rebuilds your model, and a weapon swap made the
+	-- server write the new weapon's enchant every time. DmorphHelper v24 HOLDS a picked
+	-- glow: the server's writes are kept aside as the real one, the field keeps yours,
+	-- and nothing is rebuilt. Older helpers: written back as before.
+	local canHold = type(DmorphHelper_HoldItemEnchants) == "function" and type(DmorphHelper_GetRealItemEnchants) == "function"
 	for slot in pairs(GLOW_SLOT) do
-		local ok, p, t = pcall(DmorphHelper_GetItemEnchants, "player", slot)
+		local pick = glowPreview[slot] or db.glows[slot]
+		local done = false
+		if canHold then
+			local ok, p, t, held = pcall(DmorphHelper_GetRealItemEnchants, slot)
+			if ok and type(p) == "number" then
+				-- Not held yet but showing a glow we wrote (an older helper's way): the real one is the one we kept.
+				local written, kept = db.glowWritten[slot], db.glowReal[slot]
+				if held ~= 1 and written and written[1] == p and written[2] == t and kept then
+					p, t = kept[1], kept[2]
+				end
+				db.glowReal[slot] = { p, t }
+				if pick then
+					local okHold, holding = pcall(DmorphHelper_HoldItemEnchants, slot, pick, 0, p, t)
+					done = okHold and holding == 1
+					if done then
+						db.glowWritten[slot] = { pick, 0 }
+					end
+				else
+					if held == 1 then
+						pcall(DmorphHelper_HoldItemEnchants, slot)
+					end
+					db.glowWritten[slot] = nil
+					done = true
+				end
+			end
+		end
+		local ok, p, t = false
+		if not done then
+			ok, p, t = pcall(DmorphHelper_GetItemEnchants, "player", slot)
+		end
 		if ok and type(p) == "number" then
 			local written = db.glowWritten[slot]
 			if not (written and written[1] == p and written[2] == t) then
@@ -3343,7 +3407,6 @@ local function WatchHelper()
 			end
 			local want
 			-- A glow hovered in the Glows tab shows until the mouse moves on (M.PreviewGlow).
-			local pick = glowPreview[slot] or db.glows[slot]
 			if pick then
 				want = { pick, 0 }
 			elseif written then
@@ -3814,6 +3877,7 @@ function M.ResetAll()
 			ok, err = slotOK, slotErr
 		end
 	end
+	M.ForgetWeaponLooks()
 	return Result(ok, err, "Model and items reset.")
 end
 
@@ -4344,6 +4408,7 @@ local function ShowHelp()
 	Print(".weather <clear/rain/snow/sandstorm> [light/heavy/5-100%] - the weather on your screen (.weather off: the server's; needs DmorphHelper)")
 	Print(".time <hh:mm or dawn/noon/dusk/night> - the time of day on your screen (.time off: the real one; needs DmorphHelper)")
 	Print(".glow <mainhand/offhand/ranged> <enchantID> - a weapon's enchant glow (0 none, own your own); needs DmorphHelper.dll")
+	Print("/dmorph follow on|off|forget - weapons follow your gear: each real weapon keeps its own morph and glow")
 	Print(".share on/off - whether other DMorph users see your morph; .share others on/off - whether you see theirs")
 	Print(".dmorph status - show what is morphed; .dmorph check - is everything DMorph needs running, and how to fix it. Keys: Key Bindings > DMorph.")
 	if not HasMorphAPI() then
@@ -4616,6 +4681,18 @@ function commands.dmorph(args)
 			return Print("Item check on, and every item morph it puts back is named in chat.")
 		end
 		return Print("Usage: /dmorph itemcheck on | off | log")
+	elseif action == "follow" then
+		local what = strlower(args[2] or "")
+		local ok, message
+		if what == "on" or what == "off" then
+			ok, message = M.SetWeaponFollow(what == "on")
+		elseif what == "forget" then
+			ok, message = M.ForgetWeaponLooks()
+		else
+			return Print("Usage: /dmorph follow on | off | forget (weapons follow your gear: "
+				.. (M.GetWeaponFollow() and "on" or "off") .. ")")
+		end
+		return Print(message)
 	elseif action == "" and M.ToggleUI then
 		return M.ToggleUI()
 	end
@@ -4973,6 +5050,152 @@ local function GearCheck(force)
 	end
 end
 M.GearCheck = GearCheck
+
+-- Weapons follow your gear (3.2.0). Khijazi (17 Nov): "a preset for two-handed weapons
+-- only, one-handed + shield, one-handed + one-handed"; the user: "fishing rods etc
+-- keep the DMorph look, which messes stuff up: could items get their own morph saved
+-- to item IDs so it remembers?" Each real weapon remembers the morph and glow shown in
+-- its slot (main hand, off hand, ranged): saved when you swap it away, put back when
+-- you put it on again. A weapon you never had on gets the last look of its kind (two-
+-- hander, one-hand + shield or held item, two one-handers, one-hand alone), else
+-- keeps what's there; a fishing pole shows itself. db.weaponMemory = { items =
+-- { ["slot:itemID"] = { i = morph, g = glow } }, kinds = { kind = { [slot] = {...} } },
+-- last = what you had on }; db.weaponFollowOff turns it off. Per character.
+M.FOLLOW_SLOTS = { 16, 17, 18 }
+M.FOLLOW_KINDS = { two = "two-hander", shield = "one-hand + shield", dual = "two one-handers", one = "one-hand" }
+M.FOLLOW_WAIT = 0.4 -- a swap settles first (a macro swaps main and off hand in two steps)
+-- The real item ID in a slot, or nil.
+function M.RealItem(slot)
+	local link = GetInventoryItemLink("player", slot)
+	local _, _, id = strfind(link or "", "item:(%d+)")
+	return tonumber(id)
+end
+function M.EquipLoc(itemID)
+	if not itemID then
+		return nil
+	end
+	local ok, _, _, _, _, _, _, _, loc = pcall(GetItemInfo, itemID)
+	return ok and loc or nil
+end
+-- What your hands hold, as a kind (M.FOLLOW_KINDS), and a key for your real weapons.
+function M.WeaponContext()
+	local main, off = M.RealItem(16), M.RealItem(17)
+	local kind = "one"
+	local offLoc = M.EquipLoc(off)
+	if M.EquipLoc(main) == "INVTYPE_2HWEAPON" then
+		kind = "two"
+	elseif offLoc == "INVTYPE_SHIELD" or offLoc == "INVTYPE_HOLDABLE" then
+		kind = "shield"
+	elseif off then
+		kind = "dual"
+	end
+	local key = kind
+	for i = 1, 3 do
+		key = key .. ":" .. (M.RealItem(M.FOLLOW_SLOTS[i]) or 0)
+	end
+	return kind, key
+end
+function M.IsFishingPole(itemID)
+	local ok, _, _, _, _, class, subclass = pcall(GetItemInfo, itemID or 0)
+	return ok and subclass == "Fishing Pole" or M.GetItemType(itemID or 0) == 220
+end
+function M.WeaponShown(slot)
+	return { i = db.items[slot], g = db.glows[slot] }
+end
+-- Saves what each weapon slot shows under the context you're leaving (its key).
+function M.SaveWeaponLooks(key)
+	local memory = db.weaponMemory
+	local _, _, kind, r16, r17, r18 = strfind(key or "", "^(%a+):(%d+):(%d+):(%d+)$")
+	if not kind then
+		return
+	end
+	local real = { [16] = tonumber(r16), [17] = tonumber(r17), [18] = tonumber(r18) }
+	memory.kinds[kind] = memory.kinds[kind] or {}
+	for i = 1, 3 do
+		local slot = M.FOLLOW_SLOTS[i]
+		if real[slot] > 0 then
+			memory.items[slot .. ":" .. real[slot]] = M.WeaponShown(slot)
+		end
+		if slot ~= 18 then
+			memory.kinds[kind][slot] = M.WeaponShown(slot)
+		end
+	end
+end
+-- Puts on what the weapons you have on now remember. -> how many slots changed.
+function M.LoadWeaponLooks(kind)
+	local memory, changed = db.weaponMemory, 0
+	for i = 1, 3 do
+		local slot = M.FOLLOW_SLOTS[i]
+		local real = M.RealItem(slot)
+		local look = real and memory.items[slot .. ":" .. real]
+		if not look and slot == 16 and M.IsFishingPole(real) then
+			look = {} -- your own rod, no glow
+		end
+		if not look and slot ~= 18 then
+			look = memory.kinds[kind] and memory.kinds[kind][slot]
+		end
+		if look then
+			if db.items[slot] ~= look.i then
+				db.items[slot] = look.i
+				ApplyItem(slot)
+				changed = changed + 1
+			end
+			if db.glows[slot] ~= look.g then
+				db.glows[slot] = look.g
+				changed = changed + 1
+			end
+		end
+	end
+	return changed
+end
+-- Run once your gear has settled after a change (and on entering the world).
+function M.FollowWeapons()
+	InitDB()
+	if db.weaponFollowOff or not sessionReady then
+		return
+	end
+	local kind, key = M.WeaponContext()
+	local memory = db.weaponMemory
+	if memory.last == key then
+		return
+	end
+	if memory.last then
+		M.SaveWeaponLooks(memory.last)
+		if M.LoadWeaponLooks(kind) > 0 then
+			WatchHelper()
+			Notify()
+		end
+	end
+	memory.last = key
+end
+function M.GetWeaponFollow()
+	InitDB()
+	return not db.weaponFollowOff
+end
+function M.SetWeaponFollow(on)
+	InitDB()
+	db.weaponFollowOff = not on or nil
+	-- Starting again: what you have on now is the starting point (nothing is loaded).
+	local _, key = M.WeaponContext()
+	db.weaponMemory.last = on and key or nil
+	Notify()
+	if on then
+		return true, "Weapons follow your gear: each weapon you equip keeps its own morph and glow, "
+			.. "and one you never had on gets the last look of its kind (two-hander, one-hand + shield, two one-handers)."
+	end
+	return true, "Weapons follow your gear: off. Your weapon morphs stay as they are when you swap."
+end
+-- Forgets every weapon's remembered look (Reset everything does it too).
+function M.ForgetWeaponLooks()
+	InitDB()
+	db.weaponMemory = { items = {}, kinds = {} }
+	if not db.weaponFollowOff then
+		local _, key = M.WeaponContext()
+		db.weaponMemory.last = key
+	end
+	Notify()
+	return true, "Forgot every weapon's look."
+end
 itemFrame:RegisterEvent("UNIT_INVENTORY_CHANGED")
 itemFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 itemFrame:RegisterEvent("PLAYER_DEAD")
@@ -4989,11 +5212,13 @@ itemFrame:SetScript("OnEvent", function()
 		-- all in (or after LOGIN_WAIT seconds), see below.
 		itemCheck.loginWait = not MorphedItemsLoaded() and 0 or nil
 		itemCheck.cameraWait = 0
+		itemCheck.followWait = 1.5 -- your weapons, once the game has your gear
 		return
 	end
 	if event == "UNIT_INVENTORY_CHANGED" then
 		if arg1 == "player" then
 			GearCheck()
+			itemCheck.followWait = M.FOLLOW_WAIT
 		end
 		return
 	end
@@ -5050,6 +5275,13 @@ itemFrame:SetScript("OnUpdate", function()
 	-- back to your own race's height after a reload or teleport: the game sets it up when
 	-- your model is built, and a race morph comes on after that. Building it again with
 	-- the morph on, as switching race does, a moment after you arrive.
+	if itemCheck.followWait then
+		itemCheck.followWait = itemCheck.followWait - arg1
+		if itemCheck.followWait <= 0 and sessionReady then
+			itemCheck.followWait = nil
+			M.FollowWeapons()
+		end
+	end
 	if itemCheck.cameraWait then
 		itemCheck.cameraWait = itemCheck.cameraWait + arg1
 		if itemCheck.cameraWait >= 1.5 and sessionReady then

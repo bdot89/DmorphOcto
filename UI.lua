@@ -3418,7 +3418,7 @@ function P.BuildHomePage(page)
 		end)
 		ui.homeRows[slot].left:SetText(M.SLOT_NAMES[slot])
 	end
-	Card("Weapon glows", 340, -8, 282, 78)
+	Card("Weapons", 340, -8, 282, 102)
 	for i, slot in ipairs({ 16, 17 }) do
 		local s = slot
 		ui["homeGlow" .. s] = Row("DmorphOctoHomeGlow" .. s, 343, -30 - (i - 1) * 24, 276, function()
@@ -3426,23 +3426,41 @@ function P.BuildHomePage(page)
 		end)
 		ui["homeGlow" .. s].left:SetText(M.SLOT_NAMES[s])
 	end
-	Card("Extras", 340, -90, 282, 54)
-	ui.homeExtra = Row("DmorphOctoHomeExtra", 343, -112, 276, function()
+	-- 3.2.0: weapons follow your gear (M.FollowWeapons). Click: on / off; right-click: forget.
+	ui.homeFollow = Row("DmorphOctoHomeFollow", 343, -78, 276, function()
+		if arg1 == "RightButton" then
+			Morph(M.ForgetWeaponLooks)
+		else
+			Morph(M.SetWeaponFollow, not M.GetWeaponFollow())
+		end
+	end)
+	ui.homeFollow:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+	ui.homeFollow.left:SetText("Follow gear")
+	ui.homeFollow.icon:SetTexture("Interface\\Icons\\INV_Fishingpole_02")
+	ui.homeFollow:SetScript("OnEnter", function()
+		Tooltip(this, "Weapons follow your gear",
+			"Each real weapon keeps its own morph and glow (a fishing pole shows itself).",
+			"New ones get the last look of their kind: two-hander, one-hand + shield, two one-handers.",
+			"Click: on / off. Right-click: forget every weapon's look.")
+	end)
+	ui.homeFollow:SetScript("OnLeave", HideTooltip)
+	Card("Extras", 340, -114, 282, 54)
+	ui.homeExtra = Row("DmorphOctoHomeExtra", 343, -136, 276, function()
 		ShowTab("extra")
 	end)
 	ui.homeExtra.left:SetText("Wearing")
 	ui.homeExtra.icon:SetTexture("Interface\\Icons\\INV_Misc_Bag_08")
-	local outfits = Card("Loadouts", 340, -148, 282, 192)
+	local outfits = Card("Loadouts", 340, -172, 282, 168)
 	ui.homeOutfits = {}
 	for i = 1, 8 do
 		local n = i
-		local row = Row("DmorphOctoHomeOutfit" .. i, 346 + math.mod(i - 1, 2) * 136, -172 - math.floor((i - 1) / 2) * 40, 134, function()
+		local row = Row("DmorphOctoHomeOutfit" .. i, 346 + math.mod(i - 1, 2) * 136, -196 - math.floor((i - 1) / 2) * 36, 134, function()
 			local name = ui.homeOutfitNames and ui.homeOutfitNames[n]
 			if name then
 				Morph(M.LoadOutfit, name)
 			end
 		end)
-		row:SetHeight(36)
+		row:SetHeight(33)
 		Flat(row, C.btn, C.line)
 		row.icon:Hide()
 		row.right:ClearAllPoints()
@@ -3502,6 +3520,13 @@ function P.RefreshHome()
 		local row = ui["homeGlow" .. slot]
 		CopyIcon(row, slot)
 		row.right:SetText(picked and (picked == 0 and "No glow" or M.DescribeGlow(picked)) or "Your own")
+	end
+	if M.GetWeaponFollow() then
+		ui.homeFollow.right:SetText("On: each weapon keeps its look")
+		ui.homeFollow.right:SetTextColor(C.text[1], C.text[2], C.text[3])
+	else
+		ui.homeFollow.right:SetText("Off")
+		ui.homeFollow.right:SetTextColor(C.dim[1], C.dim[2], C.dim[3])
 	end
 	local worn = M.GetExtraWear()
 	local names = {}

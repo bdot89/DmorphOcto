@@ -2123,7 +2123,7 @@ local function installHelper(look)
 		return type(v) == "number" and v >= 0 and v <= max and v == math.floor(v)
 	end
 	function DmorphHelper_Version()
-		return 23
+		return 24
 	end
 	-- v14: riders of some mount displays get another pose (game.posesWork: the
 	-- helper could patch the game).
@@ -2348,16 +2348,16 @@ DmorphOctoDB, DmorphOctoAccount = nil, nil
 loadWithHelper()
 Mock.Tick(1.1)
 slash("dmorph status")
-check(contains(allChat(), "DmorphHelper v23 is loaded"), "status shows the helper's version")
+check(contains(allChat(), "DmorphHelper v24 is loaded"), "status shows the helper's version")
 slash("dmorph check")
 check(contains(allChat(), "DmorphHelper: |cff33ff99OK"), "the check says the helper runs")
-check(contains(allChat(), "Running v23 (this DMorph comes with v23)"), "and which version runs")
+check(contains(allChat(), "Running v24 (this DMorph comes with v24)"), "and which version runs")
 local openedForSetup = not (DmorphOctoFrame and DmorphOctoFrame:IsVisible())
 if openedForSetup then
 	slash("")
 end
 Mock.Click(DmorphOctoSetupButton)
-check(contains(DmorphOctoSetupButton.text, "Helper v23") and contains(DmorphOctoSetupText2.text, "Running v23"),
+check(contains(DmorphOctoSetupButton.text, "Helper v24") and contains(DmorphOctoSetupText2.text, "Running v24"),
 	"the Setup button and panel show the helper version")
 Mock.Click(DmorphOctoSetupClose)
 local currentVersion = DmorphHelper_Version
@@ -2749,6 +2749,72 @@ slash("glow mainhand own")
 check(game.enchants[16][1] == 803 and game.enchants[16][2] == 5, "your own glow puts the real enchant back")
 Mock.Tick(1.1)
 check(game.enchants[16][1] == 803, "and the watcher leaves it alone afterwards")
+-- 3.2.0 / DmorphHelper v24 (Khijazi: a weapon swap "makes your character pop in and out"):
+-- a picked glow is held. The server's enchant writes are kept aside as the real one
+-- and the field keeps the glow, so nothing is written back and nothing rebuilt.
+do
+	game.held, game.glowRebuilds = {}, 0
+	local ownSet = DmorphHelper_SetItemEnchants
+	DmorphHelper_SetItemEnchants = function(unit, slot, p, t)
+		local e = game.enchants[slot]
+		if e[1] ~= p or e[2] ~= t then
+			game.glowRebuilds = game.glowRebuilds + 1
+		end
+		ownSet(unit, slot, p, t)
+	end
+	function DmorphHelper_HoldItemEnchants(slot, p, t, rp, rt)
+		local e = game.enchants[slot]
+		if p == nil then
+			if game.held[slot] then
+				local real = game.held[slot]
+				game.held[slot] = nil
+				if e[1] ~= real[1] or e[2] ~= real[2] then
+					game.enchants[slot] = { real[1], real[2] }
+					game.glowRebuilds = game.glowRebuilds + 1
+				end
+			end
+			return 1
+		end
+		if not game.held[slot] then
+			game.held[slot] = rp and { rp, rt } or { e[1], e[2] }
+		end
+		if e[1] ~= p or e[2] ~= t then
+			game.enchants[slot] = { p, t }
+			game.glowRebuilds = game.glowRebuilds + 1
+		end
+		return 1
+	end
+	function DmorphHelper_GetRealItemEnchants(slot)
+		local real = game.held[slot] or game.enchants[slot]
+		return real[1], real[2], game.held[slot] and 1 or 0, 1, 0
+	end
+	-- What the server writes goes past the hold, as the helper's SetBlock hook does.
+	local function serverWrites(slot, p, t)
+		if game.held[slot] then
+			game.held[slot] = { p, t }
+		else
+			game.enchants[slot] = { p, t }
+		end
+	end
+	slash("glow mainhand 1900")
+	Mock.Tick(1.1)
+	check(game.enchants[16][1] == 1900 and game.held[16] and game.held[16][1] == 803 or false,
+		"v24: a picked glow is held, the real enchant kept aside")
+	local rebuilt = game.glowRebuilds
+	serverWrites(16, 2564, 0) -- another weapon put on: its own enchant
+	Mock.Tick(2.2)
+	check(game.enchants[16][1] == 1900 and game.glowRebuilds == rebuilt,
+		"a weapon swap's enchant write doesn't touch the glow: no rewrite, no rebuild (no pop)")
+	local _, real = DmorphOcto.GetGlow(16)
+	check(real == 2564, "the new weapon's own enchant is known as the real one")
+	slash("glow mainhand own")
+	Mock.Tick(1.1)
+	check(game.enchants[16][1] == 2564 and not game.held[16], "your own glow lets go and shows the new weapon's enchant")
+	DmorphHelper_HoldItemEnchants, DmorphHelper_GetRealItemEnchants = nil, nil
+	DmorphHelper_SetItemEnchants = ownSet
+	game.enchants[16] = { 803, 5 }
+	Mock.Tick(1.1)
+end
 slash("dmorph status")
 check(contains(allChat(), "Glow, ranged: Glow 29"), "status lists the glows")
 -- Item morphs the game put back (in combat, user report) go on again: the
@@ -3559,6 +3625,64 @@ end)()
 	s = DmorphOcto.SkinSpells({ [16] = 900500 }, 1, 0)
 	check(table.getn(s) == 0, "weapon slots wear no skin pieces")
 	DmorphOcto_PortedSkinBase = nil
+end)()
+
+-- 3.2.0, weapons follow your gear (Khijazi: presets for two-hand / one-hand + shield /
+-- two one-handers; user: "fishing rods keep the DMorph look... could items get their own
+-- morph saved to item IDs so it remembers?").
+;(function()
+	Mock.serverItems[5001] = { "Big Axe", 3, "INVTYPE_2HWEAPON", "Weapon", "Two-Handed Axes" }
+	Mock.serverItems[5002] = { "Sword", 3, "INVTYPE_WEAPON", "Weapon", "One-Handed Swords" }
+	Mock.serverItems[5003] = { "Shield", 3, "INVTYPE_SHIELD", "Armor", "Shields" }
+	Mock.serverItems[5004] = { "Dagger", 3, "INVTYPE_WEAPON", "Weapon", "Daggers" }
+	Mock.serverItems[6256] = { "Fishing Pole", 1, "INVTYPE_2HWEAPON", "Weapon", "Fishing Pole" }
+	local function wear(main, off)
+		Mock.gear[16] = main and { main } or nil
+		Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
+		Mock.Tick(0.1)
+		Mock.gear[17] = off and { off } or nil
+		Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
+		Mock.Tick(0.6)
+	end
+	DmorphOcto.SetItem(16, 0)
+	DmorphOcto.SetItem(17, 0)
+	DmorphOcto.SetWeaponFollow(true)
+	check(DmorphOcto.GetWeaponFollow(), "weapons follow your gear")
+	wear(5001, nil)
+	DmorphOcto.SetItem(16, 19019) -- the axe looks like Thunderfury
+	wear(5002, 5003)
+	check(vh.items[16] == 19019, "a weapon never worn before keeps what's there")
+	DmorphOcto.SetItem(16, 18832)
+	DmorphOcto.SetItem(17, 18205)
+	wear(5001, nil)
+	check(vh.items[16] == 19019 and vh.items[17] == nil, "the axe gets its own look back, and nothing shows in the off hand")
+	wear(6256, nil)
+	check(vh.items[16] == nil, "a fishing pole shows itself")
+	wear(5002, 5003)
+	check(vh.items[16] == 18832 and vh.items[17] == 18205, "sword and shield (swapped in two steps) get their looks back")
+	wear(5004, 5003)
+	check(vh.items[16] == 18832 and vh.items[17] == 18205, "a new one-hander with the shield gets the one-hand + shield look")
+	wear(5001, nil)
+	DmorphOcto.SetItem(16, 0)
+	wear(5002, 5003)
+	wear(5001, nil)
+	check(vh.items[16] == nil, "a weapon you set to your own look stays your own")
+	DmorphOcto.SetItem(16, 17182)
+	DmorphOcto.SetWeaponFollow(false)
+	wear(5002, 5003)
+	check(vh.items[16] == 17182, "off: the morph stays as it is when you swap")
+	DmorphOcto.SetWeaponFollow(true)
+	DmorphOcto.ForgetWeaponLooks()
+	wear(5001, nil)
+	check(vh.items[16] == 17182, "forgotten: nothing comes back")
+	DmorphOcto.SetItem(16, 0)
+	DmorphOcto.SetItem(17, 0)
+	Mock.gear[16], Mock.gear[17] = nil, nil
+	Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
+	Mock.Tick(0.6)
+	for _, id in ipairs({ 5001, 5002, 5003, 5004, 6256 }) do
+		Mock.serverItems[id] = nil
+	end
 end)()
 
 print(format("%d checks, %d failures", checks, failures))

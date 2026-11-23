@@ -14,6 +14,8 @@
 //   DmorphHelper_Version()                                   -> version
 //   DmorphHelper_GetItemEnchants(unit, slot)                 -> permanent, temporary, item shown (v13)
 //   DmorphHelper_SetItemEnchants(unit, slot, permanent, temporary)
+//   DmorphHelper_HoldItemEnchants(slot[, permanent, temporary]) (v24: your own weapon glow, kept against the server; slot alone lets go)
+//   DmorphHelper_GetRealItemEnchants(slot)                   -> real permanent, temporary, held, hooked, writes kept away
 //   DmorphHelper_GetLook(unit)                               -> skin, face, hairStyle, hairColour, facialHair
 //   DmorphHelper_SetLook(unit, skin, face, hairStyle, hairColour, facialHair)
 //   DmorphHelper_GetScale(unit)                              -> scale (1 = normal size)
@@ -59,7 +61,7 @@
 #define GAME_FASTCALL __attribute__((fastcall))
 #define GAME_THISCALL __attribute__((thiscall))
 
-#define HELPER_VERSION 23
+#define HELPER_VERSION 24
 
 // Game functions, build 5875 (from VanillaHelpers' Offsets.h).
 #define FUN_INVALID_FUNCTION_PTR_CHECK 0x42A320
@@ -288,6 +290,144 @@ static int GAME_FASTCALL Script_SetItemEnchants(void *L) {
         Reload(unit);
     }
     return 0;
+}
+
+static BOOL IsJump(uintptr_t address);
+
+// v24, held glows (Khijazi, 17 Nov: "switching/equipping a different item makes
+// your character pop in and out"). Swapping a weapon makes the server write the
+// new weapon's enchants into the slot's fields; the addon then wrote the picked
+// glow back with SetItemEnchants, whose full rebuild was the pop. Now a picked
+// glow is HELD: the server's writes to your own main hand, off hand and ranged
+// enchant fields go through CGObject_C::SetBlock (0x6142E0, the same hook
+// VanillaHelpers uses to keep item morphs: fields[index] = value), where they are
+// kept as the real values and the picked ones stay in the field. Nothing in the
+// field changes, so the game redraws nothing. Hooked on first use only, like
+// VanillaHelpers does; either hook may come first (both are MinHook detours).
+#define FUN_CGOBJECT_C_SET_BLOCK 0x6142E0
+#define HOLD_FIRST_SLOT 16
+#define HOLD_SLOTS 3 // 16 main hand, 17 off hand, 18 ranged
+typedef int(GAME_THISCALL *SetBlock_t)(void *object, uint32_t index, uint32_t value);
+static SetBlock_t SetBlock_o = NULL;
+static int g_holdHooked = 0; // 1 hooked, -1 couldn't
+static uint32_t g_holdGuid[2];
+static uint8_t g_held[HOLD_SLOTS];
+static uint32_t g_holdWant[HOLD_SLOTS][2];
+static uint32_t g_holdReal[HOLD_SLOTS][2];
+static uint32_t g_holdKept; // server writes kept away (for /dmorph check)
+
+static int GAME_THISCALL SetBlock_h(void *object, uint32_t index, uint32_t value) {
+    // Cheap test first: this runs for every field of every object the server updates.
+    uint32_t first = PLAYER_VISIBLE_ITEM_1_0 + (HOLD_FIRST_SLOT - 1) * VISIBLE_ITEM_STRIDE;
+    if (index > first && index < first + HOLD_SLOTS * VISIBLE_ITEM_STRIDE) {
+        uint32_t k = (index - first) / VISIBLE_ITEM_STRIDE;
+        uint32_t j = (index - first) % VISIBLE_ITEM_STRIDE; // 1 permanent, 2 temporary
+        if ((j == 1 || j == 2) && g_held[k]) {
+            uint32_t *f = Fields(object);
+            if (f && f[0] == g_holdGuid[0] && f[1] == g_holdGuid[1]) {
+                g_holdReal[k][j - 1] = value;
+                if (value != g_holdWant[k][j - 1]) {
+                    g_holdKept++;
+                }
+                value = g_holdWant[k][j - 1];
+            }
+        }
+    }
+    return SetBlock_o(object, index, value);
+}
+
+static int HoldHook(void) {
+    if (g_holdHooked) {
+        return g_holdHooked > 0;
+    }
+    g_holdHooked = -1;
+    // The game's own start, or another DLL's detour (a jump).
+    static const uint8_t stock[9] = { 0x55, 0x8B, 0xEC, 0x8B, 0x41, 0x08, 0x8B, 0x4D, 0x0C };
+    if ((memcmp((const void *)FUN_CGOBJECT_C_SET_BLOCK, stock, sizeof stock) == 0 || IsJump(FUN_CGOBJECT_C_SET_BLOCK)) &&
+        MH_CreateHook((LPVOID)FUN_CGOBJECT_C_SET_BLOCK, (LPVOID)&SetBlock_h, (LPVOID *)&SetBlock_o) == MH_OK &&
+        MH_EnableHook((LPVOID)FUN_CGOBJECT_C_SET_BLOCK) == MH_OK) {
+        g_holdHooked = 1;
+    }
+    return g_holdHooked > 0;
+}
+
+static const char *HOLD_USAGE = "Usage: DmorphHelper_HoldItemEnchants(slot 16-18, permanent, temporary[, realPermanent, realTemporary]) or (slot) to let go";
+
+// DmorphHelper_HoldItemEnchants(slot, permanent, temporary): shows and holds a glow on
+// your own weapon slot (one rebuild if the field changes, none after). (slot) alone
+// lets go and puts the real values back. -> 1 held / 0 couldn't hook (use SetItemEnchants).
+static int GAME_FASTCALL Script_HoldItemEnchants(void *L) {
+    uint32_t slot = NumberArg(L, 1, HOLD_FIRST_SLOT, HOLD_FIRST_SLOT + HOLD_SLOTS - 1, HOLD_USAGE);
+    uint32_t k = slot - HOLD_FIRST_SLOT;
+    void *me = Me();
+    if (!me) {
+        LuaError(L, "Unit not found.");
+        return 0;
+    }
+    uint32_t *fields = Fields(me);
+    uint32_t *f = fields + PLAYER_VISIBLE_ITEM_1_0 + (slot - 1) * VISIBLE_ITEM_STRIDE;
+    // Another character since: nothing held is ours any more.
+    if (fields[0] != g_holdGuid[0] || fields[1] != g_holdGuid[1]) {
+        memset(g_held, 0, sizeof g_held);
+        g_holdGuid[0] = fields[0];
+        g_holdGuid[1] = fields[1];
+    }
+    if (!LuaIsNumber(L, 2)) {
+        if (g_held[k]) {
+            g_held[k] = 0;
+            if (f[1] != g_holdReal[k][0] || f[2] != g_holdReal[k][1]) {
+                f[1] = g_holdReal[k][0];
+                f[2] = g_holdReal[k][1];
+                Reload(me);
+            }
+        }
+        LuaPushNumber(L, 1);
+        return 1;
+    }
+    uint32_t permanent = NumberArg(L, 2, 0, 1000000, HOLD_USAGE);
+    uint32_t temporary = NumberArg(L, 3, 0, 1000000, HOLD_USAGE);
+    if (!HoldHook()) {
+        LuaPushNumber(L, 0);
+        return 1;
+    }
+    if (!g_held[k]) {
+        // The real values: given by the addon (it wrote a glow there the older way), else the field's.
+        int given = LuaIsNumber(L, 4) && LuaIsNumber(L, 5);
+        g_holdReal[k][0] = given ? NumberArg(L, 4, 0, 1000000, HOLD_USAGE) : f[1];
+        g_holdReal[k][1] = given ? NumberArg(L, 5, 0, 1000000, HOLD_USAGE) : f[2];
+    }
+    g_holdWant[k][0] = permanent;
+    g_holdWant[k][1] = temporary;
+    g_held[k] = 1;
+    if (f[1] != permanent || f[2] != temporary) {
+        f[1] = permanent;
+        f[2] = temporary;
+        Reload(me);
+    }
+    LuaPushNumber(L, 1);
+    return 1;
+}
+
+// DmorphHelper_GetRealItemEnchants(slot) -> the server's permanent, temporary for your own
+// weapon slot (under a held glow: its last writes), held (1/0), hooked (1/0/-1), writes kept away.
+static int GAME_FASTCALL Script_GetRealItemEnchants(void *L) {
+    uint32_t slot = NumberArg(L, 1, HOLD_FIRST_SLOT, HOLD_FIRST_SLOT + HOLD_SLOTS - 1,
+                              "Usage: DmorphHelper_GetRealItemEnchants(slot 16-18)");
+    uint32_t k = slot - HOLD_FIRST_SLOT;
+    void *me = Me();
+    if (!me) {
+        LuaError(L, "Unit not found.");
+        return 0;
+    }
+    uint32_t *fields = Fields(me);
+    uint32_t *f = fields + PLAYER_VISIBLE_ITEM_1_0 + (slot - 1) * VISIBLE_ITEM_STRIDE;
+    int held = g_held[k] && fields[0] == g_holdGuid[0] && fields[1] == g_holdGuid[1];
+    LuaPushNumber(L, held ? g_holdReal[k][0] : f[1]);
+    LuaPushNumber(L, held ? g_holdReal[k][1] : f[2]);
+    LuaPushNumber(L, held ? 1 : 0);
+    LuaPushNumber(L, g_holdHooked);
+    LuaPushNumber(L, g_holdKept);
+    return 5;
 }
 
 static const char *LOOK_USAGE = "Usage: DmorphHelper_GetLook(unit)";
@@ -1348,6 +1488,8 @@ static void GAME_FASTCALL LoadScriptFunctions_h(void) {
     RegisterFunction("DmorphHelper_Version", (uintptr_t)&Script_Version);
     RegisterFunction("DmorphHelper_GetItemEnchants", (uintptr_t)&Script_GetItemEnchants);
     RegisterFunction("DmorphHelper_SetItemEnchants", (uintptr_t)&Script_SetItemEnchants);
+    RegisterFunction("DmorphHelper_HoldItemEnchants", (uintptr_t)&Script_HoldItemEnchants);
+    RegisterFunction("DmorphHelper_GetRealItemEnchants", (uintptr_t)&Script_GetRealItemEnchants);
     RegisterFunction("DmorphHelper_GetLook", (uintptr_t)&Script_GetLook);
     RegisterFunction("DmorphHelper_SetLook", (uintptr_t)&Script_SetLook);
     RegisterFunction("DmorphHelper_GetScale", (uintptr_t)&Script_GetScale);
