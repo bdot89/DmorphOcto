@@ -16,6 +16,8 @@
 //   DmorphHelper_SetItemEnchants(unit, slot, permanent, temporary)
 //   DmorphHelper_HoldItemEnchants(slot[, permanent, temporary]) (v24: your own weapon glow, kept against the server; slot alone lets go)
 //   DmorphHelper_GetRealItemEnchants(slot)                   -> real permanent, temporary, held, hooked, writes kept away
+//   DmorphHelper_QuietItemBegin(slot) / _QuietItemEnd()      (v25: around SetUnitVisibleItemID: one slot redrawn, no full rebuild)
+//   DmorphHelper_GetQuietItems()                             -> hooked, rebuilds held back, slots redrawn
 //   DmorphHelper_GetLook(unit)                               -> skin, face, hairStyle, hairColour, facialHair
 //   DmorphHelper_SetLook(unit, skin, face, hairStyle, hairColour, facialHair)
 //   DmorphHelper_GetScale(unit)                              -> scale (1 = normal size)
@@ -61,7 +63,7 @@
 #define GAME_FASTCALL __attribute__((fastcall))
 #define GAME_THISCALL __attribute__((thiscall))
 
-#define HELPER_VERSION 24
+#define HELPER_VERSION 25
 
 // Game functions, build 5875 (from VanillaHelpers' Offsets.h).
 #define FUN_INVALID_FUNCTION_PTR_CHECK 0x42A320
@@ -428,6 +430,99 @@ static int GAME_FASTCALL Script_GetRealItemEnchants(void *L) {
     LuaPushNumber(L, g_holdHooked);
     LuaPushNumber(L, g_holdKept);
     return 5;
+}
+
+// v25, quiet item morphs (Keenhoof, 23 Nov: with a morph on the shield, "when he equips or
+// unequips a shield the whole model pops"). Follow gear switches the off hand's morph then,
+// and VanillaHelpers shows every item morph change with ReloadUnitDisplay: display 15435
+// and back, UpdateDisplayInfo (0x60ABE0) twice, a full rebuild. The game redraws one slot
+// on its own: the PLAYER_VISIBLE_ITEM field callback (0x5E2810, through OctoWoW's queue at
+// 0xD08000, which merges calls and only replays one if the slot's values changed since) calls
+// 0x5DEE30 (thiscall: player, byte offset of the slot's 12-value block past UNIT_END, i.e.
+// 0x118 + (slot - 1) * 0x30, pointer to the block's OLD values; ret 8): weapons are attached
+// again, armour repainted, as for a real equip, which doesn't blink.
+// DmorphHelper_QuietItemBegin(slot) keeps the slot's old values and lets your own model's
+// UpdateDisplayInfo calls pass by for a moment (at most QUIET_MS); the addon then sets the
+// morph through VanillaHelpers as always (its overrides stay right); DmorphHelper_QuietItemEnd()
+// redraws just that slot if it changed. -> 1, or 0 if the hook couldn't go on (then nothing
+// is held back and VanillaHelpers rebuilds as before).
+#define FUN_VISIBLE_ITEM_CHANGED 0x5DEE30
+#define PLAYER_VISIBLE_ITEM_1_CREATOR (PLAYER_VISIBLE_ITEM_1_0 - 2)
+#define UNIT_END 0xBC
+#define QUIET_MS 500
+typedef void(GAME_THISCALL *SlotChanged_t)(void *unit, uint32_t offset, uint32_t *old);
+static UpdateDisplayInfo_t QuietDisplay_o = NULL;
+static int g_quietHooked = 0; // 1 hooked, -1 couldn't
+static void *g_quietUnit = NULL;
+static DWORD g_quietSince;
+static uint32_t g_quietSlot;
+static uint32_t g_quietOld[VISIBLE_ITEM_STRIDE];
+static uint32_t g_quietSkipped, g_quietRedraws;
+
+static void GAME_THISCALL QuietDisplay_h(void *unit) {
+    if (unit && unit == g_quietUnit && GetTickCount() - g_quietSince < QUIET_MS) {
+        g_quietSkipped++;
+        return;
+    }
+    QuietDisplay_o(unit);
+}
+
+static int QuietHook(void) {
+    if (g_quietHooked) {
+        return g_quietHooked > 0;
+    }
+    g_quietHooked = -1;
+    static const uint8_t stock[8] = { 0x56, 0x8B, 0xF1, 0xE8, 0x27, 0x02, 0x00, 0x00 };
+    if ((memcmp((const void *)FUN_CGUNIT_C_UPDATE_DISPLAY_INFO, stock, sizeof stock) == 0 ||
+         IsJump(FUN_CGUNIT_C_UPDATE_DISPLAY_INFO)) &&
+        MH_CreateHook((LPVOID)FUN_CGUNIT_C_UPDATE_DISPLAY_INFO, (LPVOID)&QuietDisplay_h, (LPVOID *)&QuietDisplay_o) == MH_OK &&
+        MH_EnableHook((LPVOID)FUN_CGUNIT_C_UPDATE_DISPLAY_INFO) == MH_OK) {
+        g_quietHooked = 1;
+    }
+    return g_quietHooked > 0;
+}
+
+static uint32_t *SlotBlock(void *unit, uint32_t slot) {
+    return Fields(unit) + PLAYER_VISIBLE_ITEM_1_CREATOR + (slot - 1) * VISIBLE_ITEM_STRIDE;
+}
+
+static int GAME_FASTCALL Script_QuietItemBegin(void *L) {
+    uint32_t slot = NumberArg(L, 1, 1, 19, "Usage: DmorphHelper_QuietItemBegin(slot 1-19)");
+    void *me = Me();
+    g_quietUnit = NULL;
+    if (!me || !QuietHook()) {
+        LuaPushNumber(L, 0);
+        return 1;
+    }
+    memcpy(g_quietOld, SlotBlock(me, slot), sizeof g_quietOld);
+    g_quietSlot = slot;
+    g_quietSince = GetTickCount();
+    g_quietUnit = me;
+    LuaPushNumber(L, 1);
+    return 1;
+}
+
+static int GAME_FASTCALL Script_QuietItemEnd(void *L) {
+    void *unit = g_quietUnit;
+    g_quietUnit = NULL;
+    int redrawn = 0;
+    // Still you (no loading screen in between) and the slot changed: redraw just it.
+    if (unit && unit == Me() && memcmp(g_quietOld, SlotBlock(unit, g_quietSlot), sizeof g_quietOld) != 0) {
+        uint32_t offset = (PLAYER_VISIBLE_ITEM_1_CREATOR - UNIT_END) * 4 + (g_quietSlot - 1) * VISIBLE_ITEM_STRIDE * 4;
+        ((SlotChanged_t)FUN_VISIBLE_ITEM_CHANGED)(unit, offset, g_quietOld);
+        g_quietRedraws++;
+        redrawn = 1;
+    }
+    LuaPushNumber(L, redrawn);
+    return 1;
+}
+
+// -> hooked (1/0/-1), rebuilds held back, slots redrawn.
+static int GAME_FASTCALL Script_GetQuietItems(void *L) {
+    LuaPushNumber(L, g_quietHooked);
+    LuaPushNumber(L, g_quietSkipped);
+    LuaPushNumber(L, g_quietRedraws);
+    return 3;
 }
 
 static const char *LOOK_USAGE = "Usage: DmorphHelper_GetLook(unit)";
@@ -1490,6 +1585,9 @@ static void GAME_FASTCALL LoadScriptFunctions_h(void) {
     RegisterFunction("DmorphHelper_SetItemEnchants", (uintptr_t)&Script_SetItemEnchants);
     RegisterFunction("DmorphHelper_HoldItemEnchants", (uintptr_t)&Script_HoldItemEnchants);
     RegisterFunction("DmorphHelper_GetRealItemEnchants", (uintptr_t)&Script_GetRealItemEnchants);
+    RegisterFunction("DmorphHelper_QuietItemBegin", (uintptr_t)&Script_QuietItemBegin);
+    RegisterFunction("DmorphHelper_QuietItemEnd", (uintptr_t)&Script_QuietItemEnd);
+    RegisterFunction("DmorphHelper_GetQuietItems", (uintptr_t)&Script_GetQuietItems);
     RegisterFunction("DmorphHelper_GetLook", (uintptr_t)&Script_GetLook);
     RegisterFunction("DmorphHelper_SetLook", (uintptr_t)&Script_SetLook);
     RegisterFunction("DmorphHelper_GetScale", (uintptr_t)&Script_GetScale);

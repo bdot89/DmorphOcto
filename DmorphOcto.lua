@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "3.2.0"
+local VERSION = "3.2.1"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -2215,7 +2215,15 @@ local function ApplyItem(slot)
 	if worn ~= nil and styleData.pending then
 		styleData.pending[slot] = nil
 	end
+	-- 3.2.1 / DmorphHelper v25 (Keenhoof: equipping or taking off a shield with a morph on it
+	-- "pops the whole model"): VanillaHelpers rebuilds the whole model for an item morph; the
+	-- helper holds that back and redraws just this slot, the way the game shows a real equip.
+	local quiet = not M.loudItems and type(DmorphHelper_QuietItemBegin) == "function"
+		and type(DmorphHelper_QuietItemEnd) == "function" and pcall(DmorphHelper_QuietItemBegin, slot)
 	local ok, err = Morph(SetUnitVisibleItemID, "player", slot, worn)
+	if quiet then
+		pcall(DmorphHelper_QuietItemEnd)
+	end
 	if ok and why then
 		return true, (SLOT_NAMES[slot] or "Weapon") .. ": this weapon " .. why .. ", so it's held as it is."
 	end
@@ -2484,7 +2492,7 @@ local MISSING_HELPER = "DmorphHelper.dll isn't loaded, so weapon glows, your siz
 M.MISSING_HELPER = MISSING_HELPER
 -- The DmorphHelper_Version() the DLL in helper\ reports. An older one in the
 -- game folder (DMorph was updated, the DLL wasn't copied again) is flagged.
-local HELPER_VERSION = 24
+local HELPER_VERSION = 25
 -- Rows 1-5 of the Races tab, in DmorphHelper_GetLook's order.
 local OWN_LOOK_NPC = { "npcSkin", "npcFace", "npcHairStyle", "npcHairColour" }
 
@@ -4681,6 +4689,22 @@ function commands.dmorph(args)
 			return Print("Item check on, and every item morph it puts back is named in chat.")
 		end
 		return Print("Usage: /dmorph itemcheck on | off | log")
+	elseif action == "quiet" then
+		local what = strlower(args[2] or "")
+		if what == "on" or what == "off" then
+			M.loudItems = what == "off" or nil
+		end
+		local hooked, held, redrawn = 0, 0, 0
+		if type(DmorphHelper_GetQuietItems) == "function" then
+			local ok, a, b, c = pcall(DmorphHelper_GetQuietItems)
+			if ok then
+				hooked, held, redrawn = a, b, c
+			end
+		end
+		return Print("Quiet item morphs (one slot redrawn, no whole-model pop): " .. (M.loudItems and "off" or "on")
+			.. (type(DmorphHelper_QuietItemBegin) == "function" and "" or " - needs DmorphHelper v25")
+			.. format(". Hook %s, %d rebuilds held back, %d slots redrawn. /dmorph quiet on | off (until /reload)",
+				hooked == 1 and "on" or hooked == -1 and "FAILED" or "not used yet", held or 0, redrawn or 0))
 	elseif action == "follow" then
 		local what = strlower(args[2] or "")
 		local ok, message
