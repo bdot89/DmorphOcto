@@ -4,7 +4,7 @@
 
 ### Become anything. Ride anything. Wear anything. ✨
 
-**DMorph** is a free morph addon for WoW 1.12 (OctoWoW), **version 3.0.0**. Turn into a dragon 🐉, ride a mechanical chicken 🐔, swap your race 🧝, light your blade on fire 🔥, make it snow in Orgrimmar ❄️, and dress up in any armour set in the game 🛡️, all from one slick purple window.
+**DMorph** is a free morph addon for WoW 1.12 (OctoWoW), **version 3.1.0**. Turn into a dragon 🐉, ride a mechanical chicken 🐔, swap your race 🧝, light your blade on fire 🔥, put on wings 🪽, make it snow in Orgrimmar ❄️, and dress up in any armour set in the game 🛡️, all from one slick purple window.
 
 > 🔒 **100% client-side and safe:** morphs only change what *you* and other DMorph users see. Everyone else, and the server, sees your real character.
 
@@ -15,7 +15,7 @@ Unzip, drop the **DmorphOcto** folder into your AddOns, done. Full steps below �
 
 ## 🚀 Want MORE? The Ported Pack
 
-**8,157** creatures · **2,193** mounts · **48,889** weapons & armour · **915** sets · **33** glows, from **The Burning Crusade to Mists of Pandaria**, right inside DMorph. Free and optional, and friends with the pack see your ported looks too 👯
+**8,157** creatures · **2,193** mounts · **45,213** weapons & armour · **1,366** sets · **54** glows, plus wings, bags, cloaks, auras and Retail arrows, from **The Burning Crusade to Midnight**, right inside DMorph. Free and optional, and friends with the pack see your ported looks too 👯
 
 ### 💬 [**DM benito9295 on Discord to get the Ported Pack**](https://discord.com/users/637439763040960564)
 
@@ -31,19 +31,22 @@ Send **benito9295** a message on Discord for the download links and help. How to
 | 🧝 **Every race and gender** | With real skin colours, faces, hair styles, hair colours and beards. You keep your own faction, languages, flight paths and reputation |
 | 🗡️ **13,000+ items & 351 sets** | Every weapon and armour piece, and whole sets in one click. Hover to try it on first |
 | ✨ **Weapon glows** | Crusader, Fiery, Icy and every other enchant glow in the game, on any weapon |
+| 🪽 **Extras** | Spell looks worn on top of everything (Shadowform, shields, auras), and any missile for your bow, gun or wand. With the pack: wings, bags, quivers, banners, 3D cloaks, trails, orbs and halos |
 | 👙 **Slutmog** | Every revealing piece in one list, plus **Birthday suit** 🎂 and **Invisible** slots |
 | ⛈️ **Weather & time of day** | Rain, snow or a sandstorm 🌪️, dawn 🌅, noon ☀️, dusk 🌇 or midnight 🌙, in every zone |
 | 📏 **Your size** | From a tiny 25% 🐭 to a towering 300% 🦖 |
-| 👗 **Wardrobe & favourites** | Save whole outfits ⭐ and star your best finds, shared by all your characters |
+| 👗 **Loadouts & favourites** | Save whole looks ⭐ and star your best finds, shared by all your characters |
 | 👯 **Share with friends** | Other DMorph users see your model, items, mount skin and size, and you see theirs |
-| 🚀 **Optional ported packs** | Thousands more creatures, mounts, armour and glows from The Burning Crusade to Mists of Pandaria |
+| 🚀 **Optional ported packs** | Thousands more creatures, mounts, armour, sets and glows from The Burning Crusade to Midnight, with sharper HD body textures and real 3D armour pieces |
 
 Your look stays through /reload, loading screens and logging in. 💾
 
 
 ## 📸 Screenshots
 
-One window, ten tabs, and your character front and centre: the dressing room on the left always shows you as you'll look in the world, and every list has its own preview box that turns, zooms and moves, so you see everything before you click it. 👀
+One window and your character front and centre: the dressing room on the left always shows you as you'll look in the world, with your weapons and every race one click away under it, and every list has its own preview box that turns, zooms and moves, so you see everything before you click it. 👀 The window opens on **My look**: everything you have on, your glows, extras and saved loadouts, each a click away from changing. The tabs: My look · Sets · Items (+ Slutmog) · Extras · Glows · Models (+ Favourites) · Races · Mounts · Loadouts · World.
+
+> 📷 Some screenshots below still show the window from before 3.0.
 
 ### 🐲 Models: become anything
 ![Models tab](docs/models.jpg)
@@ -63,12 +66,16 @@ Every race and gender, wearing your own face, skin and hair. The arrows step thr
 ### ✨ Glows: every enchant, any weapon
 ![Glows tab](docs/glows.jpg)
 
-Every weapon glow in the game for main hand, off hand and ranged. With the pack, 33 more from The Burning Crusade to Mists of Pandaria: Sunfire, Mongoose, Berserking, Crackling Lightning ⚡, Jade Spirit and more. Hover one and the preview puts it on your weapon.
+Every weapon glow in the game for main hand, off hand and ranged. With the pack, 54 more from The Burning Crusade onwards: Sunfire, Mongoose, Berserking, Crackling Lightning ⚡, Jade Spirit, Rune of Razorice and more. Hover one and the preview puts it on your weapon.
+
+### 🪽 Extras: wear more on top
+
+Spell looks worn over everything else, several at once: Shadowform, shields, auras and glows from the game itself. **Arrows** and **Missiles** change what your bow, gun, crossbow or wand shoots, from flaming arrows to a fire bolt. With the pack there's far more: wings, bags, quivers, banners, 3D cloaks, flower trails, elements, horns, orbs and halos, plus Retail's legendary arrows (Thori'dal, Rae'shalare...). Other DMorph users see them too.
 
 ### 🗡️ Items: every weapon and armour piece
 ![Items tab](docs/items.jpg)
 
-13,000+ weapons and armour pieces, and 48,889 more with the pack. Filter by slot, type, quality and source, hover to try it on, click to wear it. **Invisible** 👻 hides a slot completely. Here: the Scythe of Elune, on a dwarf.
+13,000+ weapons and armour pieces, and 45,213 more with the pack. Filter by slot, type, quality and source, hover to try it on, click to wear it. **Invisible** 👻 hides a slot completely. Here: the Scythe of Elune, on a dwarf.
 
 ### 👙 Slutmog: show some skin
 ![Slutmog tab](docs/slutmog.jpg)
@@ -78,20 +85,20 @@ Every revealing piece in one list: chests, shirts, legs and feet, measured from 
 ### 🛡️ Sets: a whole outfit in one click
 ![Sets tab](docs/sets.jpg)
 
-351 sets, and 1,266 with the pack. One click wears every piece, and the slots a set doesn't cover go bare, so your own gear never peeks through. Hover a set to see every piece on your character first.
+351 sets, and 1,717 with the pack, sorted by expansion with every colour of a set under it. One click wears every piece, and the slots a set doesn't cover go bare, so your own gear never peeks through. Hover a set to see every piece on your character first.
 
-### 👗 Wardrobe: save your looks
-![Wardrobe tab](docs/wardrobe.jpg)
+### 👗 Loadouts: save your looks
+![Loadouts tab](docs/wardrobe.jpg)
 
-Save your whole look as an outfit: model, items, glows, mount skin and size. Outfits are shared by all your characters and come back in one click.
+Save your whole look as a loadout: model, items, glows, extras, missile, mount skin and size. Loadouts are shared by all your characters and come back in one click, also from My look.
 
 ### ⭐ Favourites: your best finds at hand
 ![Favourites tab](docs/favourites.jpg)
 
 Right-click any model or mount skin to star it. Your favourites follow you to every character.
 
-### ⛈️ Weather: your sky, your time
-![Weather tab](docs/weather.jpg)
+### ⛈️ World: your sky, your time
+![World tab](docs/weather.jpg)
 
 Clear skies, rain 🌧️, snow ❄️ or a sandstorm 🌪️, from light to heavy, and any time of day: dawn, noon, dusk or midnight. It stays on in every zone, and only you see it.
 
@@ -151,7 +158,7 @@ You can skip this step: everything else still works, just without glows, real lo
 1. Start the game from **OctoLauncher** (not WoW.exe).
 2. Click the polymorph button by the minimap 🐑, or type **/dmorph**
 3. Check the **Setup** button at the bottom left of the window:
-   - 🟢 Green "Setup OK": you're ready. It also shows which DmorphHelper version is running (for example "Helper v16").
+   - 🟢 Green "Setup OK": you're ready. It also shows which DmorphHelper version is running (for example "Helper v23").
    - 🟡 Yellow "Old helper": close the game and run Install DmorphHelper.bat again.
    - 🔴 Red "Setup: fix me": click it. It tells you what isn't working and how to fix it.
 
@@ -182,18 +189,20 @@ A ported pack (see below) keeps its list in its own folder, Interface\AddOns\DMo
 Open the window with the minimap button, /dmorph, or a key under Key Bindings > DMorph. Escape closes it.
 
 - **Every list tab** has a preview box on the right: it shows what you hover (else what you have on). Mouse wheel or **- / +** zooms, drag turns it, right-drag moves it, **Reset** puts it back. **Previous / Next** under it put on the one above or below in the list.
-- **Dressing room (left):** your character. Drag to turn, mouse wheel to zoom, right-drag to move. The Size slider under it changes your size in 1% steps (mouse wheel over it for one step; right-click: normal size). A race morph gets that race's size by itself (a Tauren as a Human is human-sized) unless you picked one.
+- **My look (first tab):** what you're wearing, slot by slot, plus your glows, extras and loadouts. Click a line to change it; **Save this look** keeps it as a loadout.
+- **Dressing room (left):** your character, with your weapons and a row of every race (and M / F) under it. Drag to turn, mouse wheel to zoom, right-drag to move. The Size slider under it changes your size in 1% steps (mouse wheel over it for one step; right-click: normal size). A race morph gets that race's size by itself (a Tauren as a Human is human-sized) unless you picked one.
 - **Item slots around the model:** left-click for items for that slot, right-click for your own gear. A purple frame marks a morphed slot; a hidden slot shows the empty-slot picture.
 - **Reset model / Reset everything:** your own body back / clear every morph.
 - **Models tab:** every model. Click one to become it. Right-click to add it to Favourites. **Grid view** shows 8 turning models at a time instead of the list.
 - **Mounts tab:** pick which mount gets the skin, then click a model. Previous / Next step through the list. Remove skin takes it off.
 - **Favourites tab:** your starred models and mount skins.
 - **Races tab:** click a portrait to become that race with your own face. The arrow rows change skin colour, face, hair and facial hair. The dice picks a random look.
+- **Extras tab:** pick a category on the left, then click a look to put it on or take it off (several at once). **Arrows** / **Missiles** pick what your ranged attacks shoot; click the picked one again for your own.
 - **Glows tab:** pick main hand, off hand or ranged, then click a glow. Glows from a ported pack say "Ported"; type "ported" in the search box to list only those.
 - **Items and Sets tabs:** filter by type, quality and source (ported items and sets have their own "Ported" filter). Hover an item or set to see your character wearing it, then click to wear it. **Invisible** (Items tab) shows nothing in that slot. **Hold** (Items tab, main and off hand) wears a weapon as a one-hander (one-hand stance, sheathed at your side) or a two-hander (two-hand stance, on your back), whatever it really is. The off hand also lists two-handers, held one-handed there, so you can dual-wield two of them. The preview keeps your zoom from item to item. **Own gear: hidden / shown** (Sets tab) picks whether the slots a set has no piece for show nothing (the default) or your own gear.
 - **Slutmog tab:** revealing pieces of every slot; the buttons narrow it to chest, shirt, legs, feet or OctoWoW's Unseen Fashion items. **Birthday suit** (also at the top of the dressing room) shows no armour at all.
-- **Wardrobe tab:** save and load whole outfits.
-- **Weather tab:** pick clear skies or light, normal or heavy rain, snow or sandstorm; the Strength slider fine-tunes it. Time of day: Dawn, Noon, Dusk, Midnight or the Time slider. Server's weather and Real time give the real ones back. Only you see them; weather shows outdoors only.
+- **Loadouts tab:** save and load whole looks.
+- **World tab:** pick clear skies or light, normal or heavy rain, snow or sandstorm; the Strength slider fine-tunes it. Time of day: Dawn, Noon, Dusk, Midnight or the Time slider. Server's weather and Real time give the real ones back. Only you see them; weather shows outdoors only.
 - **Setup (bottom left):** shows whether everything works, which DmorphHelper version is running, and how to fix what doesn't.
 - **Sharing (bottom):** whether others see your morph, and whether you see theirs.
 
@@ -232,7 +241,7 @@ Item slots: 1 head, 3 shoulder, 4 shirt, 5 chest, 6 waist, 7 legs, 8 feet, 9 wri
 
 ## 🚀 Ported Pack (optional)
 
-Want a LOT more models? DMorph has no later-expansion models, and doesn't need them. The Ported Pack adds them: extra patch files with **8,157 creature looks** (2,193 of them mounts), **12,798 weapons and shields**, **36,091 armour looks**, **915 armour sets** and **33 weapon glows**, converted from a newer WoW install, plus a list for DMorph (the DMorph_Ported addon). They show in DMorph's lists under **Ported (later expansions)**. These are Blizzard's files, so the pack isn't on GitHub: 💬 [**DM benito9295 on Discord**](https://discord.com/users/637439763040960564) for the download links.
+Want a LOT more models? DMorph has no later-expansion models, and doesn't need them. The Ported Pack adds them: extra patch files with **8,157 creature looks** (2,193 of them mounts), **12,798 weapons and shields**, **32,415 armour looks**, **1,366 armour sets** (sorted by expansion, every colour), **54 weapon glows**, wings, bags, cloaks, auras and Retail arrows for Extras, real 3D armour pieces and sharper HD body textures, converted from a newer WoW install, plus a list for DMorph (the DMorph_Ported addon). They show in DMorph's lists under **Ported (later expansions)**. These are Blizzard's files, so the pack isn't on GitHub: 💬 [**DM benito9295 on Discord**](https://discord.com/users/637439763040960564) for the download links.
 
 **✅ Before you start:** DMorph 2.19.0 or newer installed (see How to install), about **50 GB of free space** (the download is about 15 GB, most of it can be deleted afterwards), and the **game closed**.
 
