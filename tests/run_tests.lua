@@ -2123,7 +2123,7 @@ local function installHelper(look)
 		return type(v) == "number" and v >= 0 and v <= max and v == math.floor(v)
 	end
 	function DmorphHelper_Version()
-		return 25
+		return 26
 	end
 	-- v14: riders of some mount displays get another pose (game.posesWork: the
 	-- helper could patch the game).
@@ -2348,16 +2348,16 @@ DmorphOctoDB, DmorphOctoAccount = nil, nil
 loadWithHelper()
 Mock.Tick(1.1)
 slash("dmorph status")
-check(contains(allChat(), "DmorphHelper v25 is loaded"), "status shows the helper's version")
+check(contains(allChat(), "DmorphHelper v26 is loaded"), "status shows the helper's version")
 slash("dmorph check")
 check(contains(allChat(), "DmorphHelper: |cff33ff99OK"), "the check says the helper runs")
-check(contains(allChat(), "Running v25 (this DMorph comes with v25)"), "and which version runs")
+check(contains(allChat(), "Running v26 (this DMorph comes with v26)"), "and which version runs")
 local openedForSetup = not (DmorphOctoFrame and DmorphOctoFrame:IsVisible())
 if openedForSetup then
 	slash("")
 end
 Mock.Click(DmorphOctoSetupButton)
-check(contains(DmorphOctoSetupButton.text, "Helper v25") and contains(DmorphOctoSetupText2.text, "Running v25"),
+check(contains(DmorphOctoSetupButton.text, "Helper v26") and contains(DmorphOctoSetupText2.text, "Running v26"),
 	"the Setup button and panel show the helper version")
 Mock.Click(DmorphOctoSetupClose)
 local currentVersion = DmorphHelper_Version
@@ -2900,10 +2900,11 @@ do
 	check(math.abs((DmorphOcto.GetSharedScale() or 0) - 1.35) < 0.001, "a race morph's own size is shared")
 	local before = game.rebuilds
 	Mock.Fire("PLAYER_ENTERING_WORLD")
-	Mock.Tick(0.5)
-	check(game.rebuilds == before, "arriving: no rebuild at once")
-	Mock.Tick(1.2)
-	check(game.rebuilds >= before + 1, "a race morph is rebuilt a moment after you arrive, for the camera")
+	Mock.Tick(0.1)
+	check(game.rebuilds >= before + 1, "a race morph is rebuilt on the first frame after you arrive (camera), not later in play")
+	before = game.rebuilds
+	Mock.Tick(1.5)
+	check(game.rebuilds == before, "and not again a moment later")
 	DmorphOcto.ResetModel()
 	Mock.Tick(1.1)
 	before = game.rebuilds
@@ -3014,6 +3015,23 @@ local loaded = game.rebuilds
 Mock.Tick(1.1)
 check(waiting == beforeLogin and loaded == beforeLogin + 1 and game.rebuilds == loaded,
 	"after a loading screen the model is rebuilt once, when the morphed items are in")
+-- v26: that is now a redraw of the morphed slots only (no pop).
+do
+	local redrawn = {}
+	function DmorphHelper_RedrawSlot(slot)
+		table.insert(redrawn, slot)
+	end
+	Mock.serverItems[2504] = nil
+	local before = game.rebuilds
+	Mock.Fire("PLAYER_ENTERING_WORLD")
+	Mock.Tick(1)
+	Mock.Tick(1)
+	Mock.serverItems[2504] = { "Worn Shortbow", 1, "INVTYPE_RANGED" }
+	Mock.Tick(1.4)
+	check(game.rebuilds == before and strfind("," .. table.concat(redrawn, ",") .. ",", ",3,") ~= nil,
+		"v26: once the items are in, only the morphed slots are redrawn")
+	DmorphHelper_RedrawSlot = nil
+end
 Mock.serverItems[2504] = nil
 DmorphOcto.SetItem(3, 0)
 end
@@ -3131,6 +3149,74 @@ slash("demorph all")
 Mock.Tick(1.1)
 check(sameLook(game.look, REAL) and game.enchants[16][1] == 803 and game.enchants[18][1] == 0,
 	"resetting everything puts your real look and glows back")
+-- 3.2.2 / DmorphHelper v26 (user: "still full character popping... stop this for good"): a
+-- picked look is held; the server writing your look fields again rewrites and rebuilds nothing.
+do
+	local held, lookRebuilds = nil, 0
+	function DmorphHelper_HoldLook(a, b, c, d, e, ra, rb, rc, rd, re)
+		if a == nil then
+			if held then
+				local real = held
+				held = nil
+				if not sameLook(game.look, real) then
+					game.look = real
+					lookRebuilds = lookRebuilds + 1
+				end
+			end
+			return 1
+		end
+		if not held then
+			held = ra and { ra, rb, rc, rd, re } or game.look
+		end
+		if not sameLook(game.look, { a, b, c, d, e }) then
+			game.look = { a, b, c, d, e }
+			lookRebuilds = lookRebuilds + 1
+		end
+		return 1
+	end
+	function DmorphHelper_GetRealLook()
+		local l = held or game.look
+		return l[1], l[2], l[3], l[4], l[5], held and 1 or 0
+	end
+	DmorphOcto.StepOwnLook(1, 1)
+	Mock.Tick(1.1)
+	check(held and sameLook(held, REAL) and not sameLook(game.look, REAL) or false, "v26: a picked look is held, the real one kept aside")
+	local rebuilt, writes = lookRebuilds, game.lookWrites
+	held = { REAL[1], REAL[2], REAL[3], REAL[4], REAL[5] } -- the server writes the look fields again
+	Mock.Tick(2.2)
+	check(lookRebuilds == rebuilt and game.lookWrites == writes, "the server writing your look again: no rewrite, no rebuild (no pop)")
+	slash("demorph all")
+	Mock.Tick(1.1)
+	check(sameLook(game.look, REAL) and held == nil, "resetting lets go and shows your real look")
+	DmorphHelper_HoldLook, DmorphHelper_GetRealLook = nil, nil
+end
+-- The pop log names each whole-character rebuild.
+do
+	local pops = {}
+	function DmorphHelper_GetPops()
+		return table.getn(pops), 100000
+	end
+	function DmorphHelper_GetPop(i)
+		local p = pops[table.getn(pops) - i + 1]
+		if p then
+			return p[1], p[2], p[3], 2
+		end
+	end
+	DmorphOcto.WatchPops()
+	slash("dmorph pops")
+	check(contains(lastChat(), "No whole-character pops"), "/dmorph pops with none yet")
+	slash("dmorph pops watch")
+	check(contains(lastChat(), "Pop watch on"), "/dmorph pops watch turns live naming on")
+	table.insert(pops, { 300, "VanillaHelpers.dll+2a1f", "" })
+	Mock.Tick(1.1)
+	check(contains(allChat(), "Pop") and contains(allChat(), "VanillaHelpers (a morph went on or off)"),
+		"a new pop is named in chat as it happens")
+	table.insert(pops, { 100, "DmorphHelper.dll+1234", "race byte repaired" })
+	slash("dmorph pops")
+	check(contains(allChat(), "DMorph: race byte repaired"), "/dmorph pops lists them with DMorph's reason")
+	slash("dmorph pops off")
+	DmorphHelper_GetPops, DmorphHelper_GetPop = nil, nil
+end
 check(game.ownRace == 1, "the helper keeps your own race without a race morph too (loading screens)")
 game.race = 2 -- the morph's race left behind with your own model showing
 Mock.Tick(1.1)

@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "3.2.1"
+local VERSION = "3.2.2"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -1801,7 +1801,7 @@ bodyFrame:SetScript("OnUpdate", function()
 	if this.rushed and this.since >= BODY_REPAINT then
 		this.rushed = nil
 		if type(DmorphHelper_Rebuild) == "function" then
-			pcall(DmorphHelper_Rebuild, "player")
+			pcall(DmorphHelper_Rebuild, "player", "quick race changes: one repaint")
 		end
 	end
 	if this.since >= BODY_SETTLE then
@@ -1833,7 +1833,7 @@ local function RepairRace()
 	if race ~= want and pcall(DmorphHelper_SetRace, "player", want) then
 		raceRepairs = raceRepairs + 1
 		if type(DmorphHelper_Rebuild) == "function" then
-			pcall(DmorphHelper_Rebuild, "player")
+			pcall(DmorphHelper_Rebuild, "player", "race byte repaired")
 		end
 	end
 end
@@ -2492,7 +2492,7 @@ local MISSING_HELPER = "DmorphHelper.dll isn't loaded, so weapon glows, your siz
 M.MISSING_HELPER = MISSING_HELPER
 -- The DmorphHelper_Version() the DLL in helper\ reports. An older one in the
 -- game folder (DMorph was updated, the DLL wasn't copied again) is flagged.
-local HELPER_VERSION = 25
+local HELPER_VERSION = 26
 -- Rows 1-5 of the Races tab, in DmorphHelper_GetLook's order.
 local OWN_LOOK_NPC = { "npcSkin", "npcFace", "npcHairStyle", "npcHairColour" }
 
@@ -3311,6 +3311,66 @@ M.CheckItems = CheckItems
 -- head, waist, legs, feet, hands while tanking). The model is rebuilt from the
 -- morphs then, as VanillaHelpers does when a morph goes on: at most once a
 -- second, and gear events right after our own rebuild are ignored (no loop).
+-- Pop log (DmorphHelper v26): every whole-model rebuild of your character, and who asked.
+function M.DescribePop(source, reason)
+	source, reason = source or "?", reason or ""
+	if reason ~= "" then
+		return "DMorph: " .. reason
+	end
+	if strfind(strlower(source), "vanillahelpers") then
+		return "VanillaHelpers (a morph went on or off) [" .. source .. "]"
+	end
+	if strfind(strlower(source), "^wow%.exe") then
+		return "the game itself [" .. source .. "]"
+	end
+	return source
+end
+-- Lines for the latest n pops, newest first.
+function M.GetPopLines(n)
+	local lines = {}
+	if type(DmorphHelper_GetPops) ~= "function" or type(DmorphHelper_GetPop) ~= "function" then
+		return lines
+	end
+	local ok, count = pcall(DmorphHelper_GetPops)
+	for i = 1, math.min(n, ok and count or 0) do
+		local got, ago, source, reason, calls = pcall(DmorphHelper_GetPop, i)
+		if got and ago then
+			table.insert(lines, format("%ds ago: %s%s", math.floor(ago / 1000), M.DescribePop(source, reason),
+				(calls or 1) > 2 and format(" (x%d)", math.floor(calls / 2)) or ""))
+		end
+	end
+	return lines
+end
+-- With /dmorph pops watch on, each new pop is named in chat as it happens.
+function M.WatchPops()
+	if type(DmorphHelper_GetPops) ~= "function" then
+		return
+	end
+	local ok, count = pcall(DmorphHelper_GetPops)
+	if not ok or type(count) ~= "number" then
+		return
+	end
+	local seen = M.popsSeen or count
+	M.popsSeen = count
+	if DmorphOctoAccount and DmorphOctoAccount.popWatch and count > seen then
+		local lines = M.GetPopLines(math.min(count - seen, 5))
+		for i = table.getn(lines), 1, -1 do
+			Print("|cffff6060Pop|r " .. lines[i])
+		end
+	end
+end
+
+-- Draws every morphed slot again, one at a time (DmorphHelper v26). -> false without it.
+function M.RedrawItems()
+	if type(DmorphHelper_RedrawSlot) ~= "function" or M.loudItems then
+		return false
+	end
+	for slot in pairs(db.items) do
+		pcall(DmorphHelper_RedrawSlot, slot)
+	end
+	return true
+end
+
 local function RebuildForItems()
 	if not (itemCheck.on and sessionReady and HasHelper() and type(DmorphHelper_Rebuild) == "function") or not next(db.items) then
 		itemCheck.rebuildPending = nil
@@ -3323,7 +3383,8 @@ local function RebuildForItems()
 	itemCheck.rebuildPending = nil
 	itemCheck.lastRebuild = itemCheck.clock
 	itemCheck.ignoreUntil = itemCheck.clock + 0.5
-	if pcall(DmorphHelper_Rebuild, "player") then
+	-- v26: each morphed slot drawn again on its own, not the whole model.
+	if M.RedrawItems() or pcall(DmorphHelper_Rebuild, "player", "item morphs loaded after login") then
 		itemCheck.rebuilds = (itemCheck.rebuilds or 0) + 1
 		if itemCheck.log then
 			Print("Your gear changed: your model was rebuilt with your item morphs.")
@@ -3339,11 +3400,50 @@ local function WatchHelper()
 	end
 	RepairRace()
 	CheckItems()
+	M.WatchPops()
 	WatchScale()
 	WatchExtra()
 	WatchAmmo()
 	WatchShot()
-	local current = ReadLook()
+	-- 3.2.2 / DmorphHelper v26 (user: "still full character popping... stop this for good"):
+	-- the server writes your look fields again now and then (PLAYER_BYTES_2 also holds being
+	-- rested), and putting your picked look back rebuilt the whole model each time. The helper
+	-- now HOLDS the look: the server's writes are kept aside as the real one.
+	local lookDone = false
+	if type(DmorphHelper_HoldLook) == "function" and type(DmorphHelper_GetRealLook) == "function" then
+		local ok, a, b, c, d, e, held = pcall(DmorphHelper_GetRealLook)
+		if ok and type(a) == "number" then
+			local real = { a, b, c, d, e }
+			-- Showing a look we wrote the older way: the real one is the one we kept.
+			if held ~= 1 and db.lookWritten and SameValues(real, db.lookWritten) and db.lookReal then
+				real = CopyLook(db.lookReal)
+			end
+			db.lookReal = real
+			local race, gender = M.GetBodyRace()
+			local want = race and db.looks[race .. ":" .. gender]
+			if not want and race then
+				local fitted = M.FittedLook(M.GetLookOptions(race, gender), real)
+				if fitted and not SameValues(fitted, real) then
+					want = fitted
+				end
+			end
+			if want then
+				local okHold, holding = pcall(DmorphHelper_HoldLook, want[1], want[2], want[3], want[4], want[5],
+					real[1], real[2], real[3], real[4], real[5])
+				lookDone = okHold and holding == 1
+				if lookDone then
+					db.lookWritten = CopyLook(want)
+				end
+			else
+				if held == 1 then
+					pcall(DmorphHelper_HoldLook)
+				end
+				db.lookWritten = nil
+				lookDone = true
+			end
+		end
+	end
+	local current = not lookDone and ReadLook()
 	if current then
 		if not SameValues(current, db.lookWritten) then
 			db.lookReal = current
@@ -4233,9 +4333,9 @@ function M.WearSet(index)
 				end
 			end
 		end
-		-- Already wearing it: one rebuild puts back anything the game redrew.
-		if changed == 0 and HasHelper() and type(DmorphHelper_Rebuild) == "function" then
-			pcall(DmorphHelper_Rebuild, "player")
+		-- Already wearing it: its slots are drawn again (v26: one slot at a time, no pop).
+		if changed == 0 and HasHelper() and not M.RedrawItems() and type(DmorphHelper_Rebuild) == "function" then
+			pcall(DmorphHelper_Rebuild, "player", "set worn again")
 		end
 	end
 	local later = ""
@@ -4689,6 +4789,23 @@ function commands.dmorph(args)
 			return Print("Item check on, and every item morph it puts back is named in chat.")
 		end
 		return Print("Usage: /dmorph itemcheck on | off | log")
+	elseif action == "pops" then
+		if type(DmorphHelper_GetPops) ~= "function" then
+			return Print("The pop log needs DmorphHelper v26: close the game and run Install DmorphHelper.bat.")
+		end
+		local what = strlower(args[2] or "")
+		if what == "watch" or what == "on" or what == "off" then
+			DmorphOctoAccount.popWatch = not (what == "off" or (what == "watch" and DmorphOctoAccount.popWatch)) or nil
+			return Print("Pop watch " .. (DmorphOctoAccount.popWatch and "on: every whole-character pop is named in chat as it happens."
+				or "off.") .. " /dmorph pops lists the latest.")
+		end
+		local lines = M.GetPopLines(10)
+		Print(table.getn(lines) == 0 and "No whole-character pops since the game started."
+			or "Whole-character pops, newest first (/dmorph pops watch names each as it happens):")
+		for i = 1, table.getn(lines) do
+			Print("  " .. lines[i])
+		end
+		return
 	elseif action == "quiet" then
 		local what = strlower(args[2] or "")
 		if what == "on" or what == "off" then
@@ -5308,10 +5425,10 @@ itemFrame:SetScript("OnUpdate", function()
 	end
 	if itemCheck.cameraWait then
 		itemCheck.cameraWait = itemCheck.cameraWait + arg1
-		if itemCheck.cameraWait >= 1.5 and sessionReady then
+		if sessionReady then -- 3.2.2: on the first frame, as the world appears, not a pop 1.5 s into play
 			itemCheck.cameraWait = nil
 			if MorphRace() and HasHelper() and type(DmorphHelper_Rebuild) == "function" then
-				pcall(DmorphHelper_Rebuild, "player")
+				pcall(DmorphHelper_Rebuild, "player", "race morph camera height")
 			end
 		end
 	end

@@ -4,7 +4,7 @@
 
 ### Become anything. Ride anything. Wear anything. ✨
 
-**DMorph** is a free morph addon for WoW 1.12 (OctoWoW), **version 3.2.1**. Turn into a dragon 🐉, ride a mechanical chicken 🐔, swap your race 🧝, light your blade on fire 🔥, put on wings 🪽, make it snow in Orgrimmar ❄️, and dress up in any armour set in the game 🛡️, all from one slick purple window.
+**DMorph** is a free morph addon for WoW 1.12 (OctoWoW), **version 3.2.2**. Turn into a dragon 🐉, ride a mechanical chicken 🐔, swap your race 🧝, light your blade on fire 🔥, put on wings 🪽, make it snow in Orgrimmar ❄️, and dress up in any armour set in the game 🛡️, all from one slick purple window.
 
 > 🔒 **100% client-side and safe:** morphs only change what *you* and other DMorph users see. Everyone else, and the server, sees your real character.
 
@@ -158,7 +158,7 @@ You can skip this step: everything else still works, just without glows, real lo
 1. Start the game from **OctoLauncher** (not WoW.exe).
 2. Click the polymorph button by the minimap 🐑, or type **/dmorph**
 3. Check the **Setup** button at the bottom left of the window:
-   - 🟢 Green "Setup OK": you're ready. It also shows which DmorphHelper version is running (for example "Helper v25").
+   - 🟢 Green "Setup OK": you're ready. It also shows which DmorphHelper version is running (for example "Helper v26").
    - 🟡 Yellow "Old helper": close the game and run Install DmorphHelper.bat again.
    - 🔴 Red "Setup: fix me": click it. It tells you what isn't working and how to fix it.
 
@@ -225,6 +225,7 @@ Type these in the chat box. They never reach the server. Each also works after /
 - **.share on/off** / **.share others on/off** - sharing with other DMorph users
 - **.dmorph check** - is everything working, and how to fix it
 - **.dmorph follow on/off/forget** - weapons follow your gear (see Follow gear above)
+- **.dmorph pops** / **.dmorph pops watch** - every time your whole character redrew (popped) and what caused it; watch names each one in chat as it happens
 
 Item slots: 1 head, 3 shoulder, 4 shirt, 5 chest, 6 waist, 7 legs, 8 feet, 9 wrist, 10 hands, 15 back, 16 main hand, 17 off hand, 18 ranged, 19 tabard.
 

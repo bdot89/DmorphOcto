@@ -18,6 +18,10 @@
 //   DmorphHelper_GetRealItemEnchants(slot)                   -> real permanent, temporary, held, hooked, writes kept away
 //   DmorphHelper_QuietItemBegin(slot) / _QuietItemEnd()      (v25: around SetUnitVisibleItemID: one slot redrawn, no full rebuild)
 //   DmorphHelper_GetQuietItems()                             -> hooked, rebuilds held back, slots redrawn
+//   DmorphHelper_HoldLook(skin, face, hairStyle, hairColour, facialHair[, real five]) / () (v26: your look, kept against the server)
+//   DmorphHelper_GetRealLook()                               -> the real five, held
+//   DmorphHelper_RedrawSlot(slot)                            (v26: one slot redrawn, no full rebuild)
+//   DmorphHelper_GetPops() / _GetPop(i)                      (v26: every whole-model rebuild of you: count, now / ms ago, source, reason, calls)
 //   DmorphHelper_GetLook(unit)                               -> skin, face, hairStyle, hairColour, facialHair
 //   DmorphHelper_SetLook(unit, skin, face, hairStyle, hairColour, facialHair)
 //   DmorphHelper_GetScale(unit)                              -> scale (1 = normal size)
@@ -57,13 +61,14 @@
 #include <windows.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "MinHook.h"
 
 #define GAME_FASTCALL __attribute__((fastcall))
 #define GAME_THISCALL __attribute__((thiscall))
 
-#define HELPER_VERSION 25
+#define HELPER_VERSION 26
 
 // Game functions, build 5875 (from VanillaHelpers' Offsets.h).
 #define FUN_INVALID_FUNCTION_PTR_CHECK 0x42A320
@@ -230,6 +235,15 @@ static void Reload(void *unit) {
     UpdateDisplayInfo(unit);
 }
 
+// v26 pop log: why the helper itself rebuilds (the reason is copied, Lua strings move).
+static char g_reason[64];
+static void ReloadFor(void *unit, const char *why) {
+    strncpy(g_reason, why ? why : "", sizeof g_reason - 1);
+    g_reason[sizeof g_reason - 1] = 0;
+    Reload(unit);
+    g_reason[0] = 0;
+}
+
 static int GAME_FASTCALL Script_Version(void *L) {
     LuaPushNumber(L, HELPER_VERSION);
     return 1;
@@ -289,7 +303,7 @@ static int GAME_FASTCALL Script_SetItemEnchants(void *L) {
     if (f[1] != permanent || f[2] != temporary) {
         f[1] = permanent;
         f[2] = temporary;
-        Reload(unit);
+        ReloadFor(unit, "glow written (older way)");
     }
     return 0;
 }
@@ -317,8 +331,37 @@ static uint8_t g_held[HOLD_SLOTS];
 static uint32_t g_holdWant[HOLD_SLOTS][2];
 static uint32_t g_holdReal[HOLD_SLOTS][2];
 static uint32_t g_holdKept; // server writes kept away (for /dmorph check)
+// v26: your picked skin, face and hair are held the same way (PLAYER_BYTES, and the low byte
+// of PLAYER_BYTES_2 = facial hair; the server writes BYTES_2 for other things too, such as
+// being rested, and every write used to have the addon put the look back with a rebuild).
+static uint8_t g_lookHeld;
+static uint32_t g_lookWant[2], g_lookReal[2]; // PLAYER_BYTES, facial hair
+
+// Holds belong to one character: another one logged in drops them.
+static void HoldOwner(uint32_t *fields) {
+    if (fields[0] != g_holdGuid[0] || fields[1] != g_holdGuid[1]) {
+        memset(g_held, 0, sizeof g_held);
+        g_lookHeld = 0;
+        g_holdGuid[0] = fields[0];
+        g_holdGuid[1] = fields[1];
+    }
+}
 
 static int GAME_THISCALL SetBlock_h(void *object, uint32_t index, uint32_t value) {
+    if ((index == PLAYER_BYTES || index == PLAYER_BYTES_2) && g_lookHeld) {
+        uint32_t *f = Fields(object);
+        if (f && f[0] == g_holdGuid[0] && f[1] == g_holdGuid[1]) {
+            if (index == PLAYER_BYTES) {
+                g_lookReal[0] = value;
+                value = g_lookWant[0];
+            } else {
+                g_lookReal[1] = value & 0xFF;
+                value = (value & 0xFFFFFF00u) | g_lookWant[1];
+            }
+            g_holdKept++;
+        }
+        return SetBlock_o(object, index, value);
+    }
     // Cheap test first: this runs for every field of every object the server updates.
     uint32_t first = PLAYER_VISIBLE_ITEM_1_0 + (HOLD_FIRST_SLOT - 1) * VISIBLE_ITEM_STRIDE;
     if (index > first && index < first + HOLD_SLOTS * VISIBLE_ITEM_STRIDE) {
@@ -368,19 +411,14 @@ static int GAME_FASTCALL Script_HoldItemEnchants(void *L) {
     }
     uint32_t *fields = Fields(me);
     uint32_t *f = fields + PLAYER_VISIBLE_ITEM_1_0 + (slot - 1) * VISIBLE_ITEM_STRIDE;
-    // Another character since: nothing held is ours any more.
-    if (fields[0] != g_holdGuid[0] || fields[1] != g_holdGuid[1]) {
-        memset(g_held, 0, sizeof g_held);
-        g_holdGuid[0] = fields[0];
-        g_holdGuid[1] = fields[1];
-    }
+    HoldOwner(fields); // another character since: nothing held is ours any more
     if (!LuaIsNumber(L, 2)) {
         if (g_held[k]) {
             g_held[k] = 0;
             if (f[1] != g_holdReal[k][0] || f[2] != g_holdReal[k][1]) {
                 f[1] = g_holdReal[k][0];
                 f[2] = g_holdReal[k][1];
-                Reload(me);
+                ReloadFor(me, "glow taken off");
             }
         }
         LuaPushNumber(L, 1);
@@ -404,7 +442,7 @@ static int GAME_FASTCALL Script_HoldItemEnchants(void *L) {
     if (f[1] != permanent || f[2] != temporary) {
         f[1] = permanent;
         f[2] = temporary;
-        Reload(me);
+        ReloadFor(me, "glow picked");
     }
     LuaPushNumber(L, 1);
     return 1;
@@ -459,12 +497,84 @@ static uint32_t g_quietSlot;
 static uint32_t g_quietOld[VISIBLE_ITEM_STRIDE];
 static uint32_t g_quietSkipped, g_quietRedraws;
 
+// v26 pop log (user, 25 Nov: "there is still full character popping... stop this for good"):
+// every whole-model rebuild of your own character that does happen, with the code that asked
+// (module + offset of the caller) and, for the helper's own, why. Calls within POP_JOIN_MS of
+// the last one from the same place count as one pop (a rebuild is two calls).
+#define POP_LOG 32
+#define POP_JOIN_MS 150
+typedef struct {
+    DWORD tick;
+    uint32_t calls;
+    char source[48];
+    char reason[64];
+} PopEntry;
+static PopEntry g_pops[POP_LOG];
+static uint32_t g_popCount; // all pops seen
+
+static void LogPop(void *caller) {
+    char source[48] = "?";
+    HMODULE mod = NULL;
+    char path[MAX_PATH];
+    if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                           (LPCSTR)caller, &mod) && mod && GetModuleFileNameA(mod, path, sizeof path)) {
+        const char *name = strrchr(path, '\\');
+        name = name ? name + 1 : path;
+        uintptr_t at = (uintptr_t)caller;
+        if (mod != GetModuleHandleA(NULL)) {
+            at -= (uintptr_t)mod; // other DLLs load at changing addresses
+        }
+        _snprintf(source, sizeof source - 1, "%.30s+%lx", name, (unsigned long)at);
+    }
+    DWORD now = GetTickCount();
+    if (g_popCount) {
+        PopEntry *last = &g_pops[(g_popCount - 1) % POP_LOG];
+        if (now - last->tick < POP_JOIN_MS && strcmp(last->reason, g_reason) == 0 &&
+            (g_reason[0] || strcmp(last->source, source) == 0)) {
+            last->calls++;
+            last->tick = now;
+            return;
+        }
+    }
+    PopEntry *e = &g_pops[g_popCount % POP_LOG];
+    e->tick = now;
+    e->calls = 1;
+    strcpy(e->source, source);
+    strcpy(e->reason, g_reason);
+    g_popCount++;
+}
+
 static void GAME_THISCALL QuietDisplay_h(void *unit) {
     if (unit && unit == g_quietUnit && GetTickCount() - g_quietSince < QUIET_MS) {
         g_quietSkipped++;
         return;
     }
+    if (unit && unit == Me()) {
+        LogPop(__builtin_return_address(0));
+    }
     QuietDisplay_o(unit);
+}
+
+typedef void(GAME_FASTCALL *LuaPushString_t)(void *L, const char *s);
+#define LuaPushString ((LuaPushString_t)0x6F3890)
+// DmorphHelper_GetPops() -> pops seen, ms now (GetTickCount); DmorphHelper_GetPop(i) (1 = latest)
+// -> ms ago, source, reason, calls.
+static int GAME_FASTCALL Script_GetPops(void *L) {
+    LuaPushNumber(L, g_popCount);
+    LuaPushNumber(L, GetTickCount());
+    return 2;
+}
+static int GAME_FASTCALL Script_GetPop(void *L) {
+    uint32_t i = NumberArg(L, 1, 1, POP_LOG, "Usage: DmorphHelper_GetPop(1-32)");
+    if (i > g_popCount) {
+        return 0;
+    }
+    PopEntry *e = &g_pops[(g_popCount - i) % POP_LOG];
+    LuaPushNumber(L, GetTickCount() - e->tick);
+    LuaPushString(L, e->source);
+    LuaPushString(L, e->reason);
+    LuaPushNumber(L, e->calls);
+    return 4;
 }
 
 static int QuietHook(void) {
@@ -517,6 +627,23 @@ static int GAME_FASTCALL Script_QuietItemEnd(void *L) {
     return 1;
 }
 
+// v26: DmorphHelper_RedrawSlot(slot 1-19) redraws one of your own slots as it is now (what the
+// whole-model rebuilds were for: the login check that ported items loaded, a set worn again).
+static int GAME_FASTCALL Script_RedrawSlot(void *L) {
+    uint32_t slot = NumberArg(L, 1, 1, 19, "Usage: DmorphHelper_RedrawSlot(slot 1-19)");
+    void *me = Me();
+    if (!me) {
+        LuaError(L, "Unit not found.");
+        return 0;
+    }
+    uint32_t old[VISIBLE_ITEM_STRIDE];
+    memcpy(old, SlotBlock(me, slot), sizeof old);
+    uint32_t offset = (PLAYER_VISIBLE_ITEM_1_CREATOR - UNIT_END) * 4 + (slot - 1) * VISIBLE_ITEM_STRIDE * 4;
+    ((SlotChanged_t)FUN_VISIBLE_ITEM_CHANGED)(me, offset, old);
+    g_quietRedraws++;
+    return 0;
+}
+
 // -> hooked (1/0/-1), rebuilds held back, slots redrawn.
 static int GAME_FASTCALL Script_GetQuietItems(void *L) {
     LuaPushNumber(L, g_quietHooked);
@@ -553,9 +680,84 @@ static int GAME_FASTCALL Script_SetLook(void *L) {
     if (f[PLAYER_BYTES] != bytes || f[PLAYER_BYTES_2] != bytes2) {
         f[PLAYER_BYTES] = bytes;
         f[PLAYER_BYTES_2] = bytes2;
-        Reload(unit);
+        ReloadFor(unit, "skin, face or hair changed");
     }
     return 0;
+}
+
+// v26: DmorphHelper_HoldLook(skin, face, hairStyle, hairColour, facialHair[, the real five])
+// shows and holds a look on your own character (one rebuild when it changes, none when the
+// server writes the fields again); HoldLook() lets go and puts the real look back.
+// -> 1 held, 0 the hook couldn't go on (use SetLook).
+static const char *HOLD_LOOK_USAGE = "Usage: DmorphHelper_HoldLook(skin, face, hairStyle, hairColour, facialHair[, real five]) or () to let go";
+static int GAME_FASTCALL Script_HoldLook(void *L) {
+    void *me = Me();
+    if (!me) {
+        LuaError(L, "Unit not found.");
+        return 0;
+    }
+    uint32_t *f = Fields(me);
+    HoldOwner(f);
+    if (!LuaIsNumber(L, 1)) {
+        if (g_lookHeld) {
+            g_lookHeld = 0;
+            uint32_t bytes2 = (f[PLAYER_BYTES_2] & 0xFFFFFF00u) | g_lookReal[1];
+            if (f[PLAYER_BYTES] != g_lookReal[0] || f[PLAYER_BYTES_2] != bytes2) {
+                f[PLAYER_BYTES] = g_lookReal[0];
+                f[PLAYER_BYTES_2] = bytes2;
+                ReloadFor(me, "own skin, face or hair back");
+            }
+        }
+        LuaPushNumber(L, 1);
+        return 1;
+    }
+    uint32_t v[10];
+    for (int i = 0; i < 5; i++) {
+        v[i] = NumberArg(L, i + 1, 0, 255, HOLD_LOOK_USAGE);
+    }
+    int given = LuaIsNumber(L, 6);
+    for (int i = 5; i < 10; i++) {
+        v[i] = given ? NumberArg(L, i + 1, 0, 255, HOLD_LOOK_USAGE) : 0;
+    }
+    if (!HoldHook()) {
+        LuaPushNumber(L, 0);
+        return 1;
+    }
+    if (!g_lookHeld) {
+        g_lookReal[0] = given ? (v[5] | (v[6] << 8) | (v[7] << 16) | (v[8] << 24)) : f[PLAYER_BYTES];
+        g_lookReal[1] = given ? v[9] : (f[PLAYER_BYTES_2] & 0xFF);
+    }
+    g_lookWant[0] = v[0] | (v[1] << 8) | (v[2] << 16) | (v[3] << 24);
+    g_lookWant[1] = v[4];
+    g_lookHeld = 1;
+    uint32_t bytes2 = (f[PLAYER_BYTES_2] & 0xFFFFFF00u) | g_lookWant[1];
+    if (f[PLAYER_BYTES] != g_lookWant[0] || f[PLAYER_BYTES_2] != bytes2) {
+        f[PLAYER_BYTES] = g_lookWant[0];
+        f[PLAYER_BYTES_2] = bytes2;
+        ReloadFor(me, "skin, face or hair changed");
+    }
+    LuaPushNumber(L, 1);
+    return 1;
+}
+
+// -> the server's skin, face, hairStyle, hairColour, facialHair (under a held look: its last
+// writes), held (1/0).
+static int GAME_FASTCALL Script_GetRealLook(void *L) {
+    void *me = Me();
+    if (!me) {
+        LuaError(L, "Unit not found.");
+        return 0;
+    }
+    uint32_t *f = Fields(me);
+    int held = g_lookHeld && f[0] == g_holdGuid[0] && f[1] == g_holdGuid[1];
+    uint32_t bytes = held ? g_lookReal[0] : f[PLAYER_BYTES];
+    LuaPushNumber(L, bytes & 0xFF);
+    LuaPushNumber(L, (bytes >> 8) & 0xFF);
+    LuaPushNumber(L, (bytes >> 16) & 0xFF);
+    LuaPushNumber(L, (bytes >> 24) & 0xFF);
+    LuaPushNumber(L, held ? g_lookReal[1] : (f[PLAYER_BYTES_2] & 0xFF));
+    LuaPushNumber(L, held ? 1 : 0);
+    return 6;
 }
 
 static const char *SCALE_USAGE = "Usage: DmorphHelper_GetScale(unit)";
@@ -777,8 +979,10 @@ static int GAME_FASTCALL Script_SetOwnRace(void *L) {
 }
 
 // Rebuilds a model (for a change the game made without rebuilding it).
+// v26: an optional second argument names why, for the pop log.
 static int GAME_FASTCALL Script_Rebuild(void *L) {
-    Reload(PlayerArg(L, 1, REBUILD_USAGE));
+    void *unit = PlayerArg(L, 1, REBUILD_USAGE);
+    ReloadFor(unit, LuaIsString(L, 2) ? LuaToString(L, 2) : "DMorph rebuild");
     return 0;
 }
 
@@ -1588,6 +1792,11 @@ static void GAME_FASTCALL LoadScriptFunctions_h(void) {
     RegisterFunction("DmorphHelper_QuietItemBegin", (uintptr_t)&Script_QuietItemBegin);
     RegisterFunction("DmorphHelper_QuietItemEnd", (uintptr_t)&Script_QuietItemEnd);
     RegisterFunction("DmorphHelper_GetQuietItems", (uintptr_t)&Script_GetQuietItems);
+    RegisterFunction("DmorphHelper_HoldLook", (uintptr_t)&Script_HoldLook);
+    RegisterFunction("DmorphHelper_GetRealLook", (uintptr_t)&Script_GetRealLook);
+    RegisterFunction("DmorphHelper_RedrawSlot", (uintptr_t)&Script_RedrawSlot);
+    RegisterFunction("DmorphHelper_GetPops", (uintptr_t)&Script_GetPops);
+    RegisterFunction("DmorphHelper_GetPop", (uintptr_t)&Script_GetPop);
     RegisterFunction("DmorphHelper_GetLook", (uintptr_t)&Script_GetLook);
     RegisterFunction("DmorphHelper_SetLook", (uintptr_t)&Script_SetLook);
     RegisterFunction("DmorphHelper_GetScale", (uintptr_t)&Script_GetScale);
@@ -1788,6 +1997,9 @@ static void InstallHook(void) {
     if (MH_Initialize() != MH_OK) {
         return;
     }
+#ifndef DMORPH_DIAG
+    QuietHook(); // v26: the pop log sees every rebuild of you from the start
+#endif
     {
         static const uint8_t stock[9] = { 0x55, 0x8B, 0xEC, 0x83, 0xEC, 0x58, 0x53, 0x8B, 0xD9 };
         if (memcmp((const void *)FUN_M2_UPDATE_BONES, stock, sizeof stock) == 0 &&
