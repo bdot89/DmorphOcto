@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "3.2.3"
+local VERSION = "3.2.4"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -2172,6 +2172,39 @@ function M.MapAlias(id)
 	return id and portedAlias[id] or id
 end
 
+-- Sets an item morph on your own slot (nil = your real item) without a whole-model rebuild.
+-- 3.2.1 / v25: the helper holds VanillaHelpers' rebuild back (a hook on UpdateDisplayInfo) and
+-- redraws just the slot, as the game shows a real equip. 3.2.4 / v27 (Khijazi: "Hook FAILED",
+-- another DLL had patched that function): without the hook the slot is written first, so
+-- VanillaHelpers finds it already showing the morph and has nothing to rebuild; for a new morph
+-- it's first asked to "morph" the slot into what it shows (no change), which makes it remember
+-- the real item right. Taking a morph off writes the real item back first the same way.
+function M.SetSlotQuietly(slot, worn)
+	local canQuiet = not M.loudItems and type(DmorphHelper_QuietItemBegin) == "function"
+		and type(DmorphHelper_QuietItemEnd) == "function"
+	if not canQuiet then
+		return Morph(SetUnitVisibleItemID, "player", slot, worn)
+	end
+	local began, hooked = pcall(DmorphHelper_QuietItemBegin, slot)
+	local ok, err
+	if began and hooked ~= 1 and type(DmorphHelper_WriteSlotItem) == "function" then
+		if worn ~= nil then
+			local got, _, _, shown = pcall(DmorphHelper_GetItemEnchants, "player", slot)
+			if got and type(shown) == "number" then
+				Morph(SetUnitVisibleItemID, "player", slot, shown)
+			end
+			pcall(DmorphHelper_WriteSlotItem, slot, worn)
+		else
+			pcall(DmorphHelper_WriteSlotItem, slot, M.RealItem(slot) or 0)
+		end
+	end
+	ok, err = Morph(SetUnitVisibleItemID, "player", slot, worn)
+	if began then
+		pcall(DmorphHelper_QuietItemEnd)
+	end
+	return ok, err
+end
+
 local function ApplyItem(slot)
 	if db.items[slot] then
 		db.items[slot] = M.MapAlias(db.items[slot])
@@ -2218,12 +2251,7 @@ local function ApplyItem(slot)
 	-- 3.2.1 / DmorphHelper v25 (Keenhoof: equipping or taking off a shield with a morph on it
 	-- "pops the whole model"): VanillaHelpers rebuilds the whole model for an item morph; the
 	-- helper holds that back and redraws just this slot, the way the game shows a real equip.
-	local quiet = not M.loudItems and type(DmorphHelper_QuietItemBegin) == "function"
-		and type(DmorphHelper_QuietItemEnd) == "function" and pcall(DmorphHelper_QuietItemBegin, slot)
-	local ok, err = Morph(SetUnitVisibleItemID, "player", slot, worn)
-	if quiet then
-		pcall(DmorphHelper_QuietItemEnd)
-	end
+	local ok, err = M.SetSlotQuietly(slot, worn)
 	if ok and why then
 		return true, (SLOT_NAMES[slot] or "Weapon") .. ": this weapon " .. why .. ", so it's held as it is."
 	end
@@ -2492,7 +2520,7 @@ local MISSING_HELPER = "DmorphHelper.dll isn't loaded, so weapon glows, your siz
 M.MISSING_HELPER = MISSING_HELPER
 -- The DmorphHelper_Version() the DLL in helper\ reports. An older one in the
 -- game folder (DMorph was updated, the DLL wasn't copied again) is flagged.
-local HELPER_VERSION = 26
+local HELPER_VERSION = 27
 -- Rows 1-5 of the Races tab, in DmorphHelper_GetLook's order.
 local OWN_LOOK_NPC = { "npcSkin", "npcFace", "npcHairStyle", "npcHairColour" }
 
@@ -3360,11 +3388,36 @@ function M.SetPopWatch(on)
 	end
 	return true, "Pop watch off."
 end
--- The text to send in a report: versions and the latest pops, one line.
+-- The helper's hook on the game's model rebuild (the pop log and quiet item morphs need it):
+-- 1 on, -1 failed, 0 not tried; and a line saying so.
+function M.GetQuietHook()
+	if type(DmorphHelper_GetQuietItems) ~= "function" then
+		return 0
+	end
+	local ok, hooked, held, redrawn, status, bytes = pcall(DmorphHelper_GetQuietItems)
+	if not ok then
+		return 0
+	end
+	return hooked or 0, held or 0, redrawn or 0, status, bytes
+end
+function M.DescribeQuietHook()
+	local hooked, held, redrawn, status, bytes = M.GetQuietHook()
+	if hooked == 1 then
+		return format("Hook on, %d rebuilds held back, %d slots redrawn.", held, redrawn)
+	elseif hooked == -1 then
+		return format("Hook FAILED (MinHook %s, bytes %s): items use the no-hook way, %d slots redrawn; the pop log is off.",
+			tostring(status or "?"), tostring(bytes or "?"), redrawn)
+	end
+	return "Hook not tried yet."
+end
+-- The text to send in a report: versions, the hook and the latest pops, one line.
 function M.GetPopReport()
 	local helper = M.GetHelperVersion and M.GetHelperVersion()
 	local lines = M.GetPopLines(10)
-	local text = "DMorph " .. VERSION .. ", helper v" .. (helper or "none") .. " | "
+	local text = "DMorph " .. VERSION .. ", helper v" .. (helper or "none") .. " | " .. M.DescribeQuietHook() .. " | "
+	if M.GetQuietHook() ~= 1 then
+		return text .. "POP LOG NOT RUNNING (send this line anyway)"
+	end
 	if table.getn(lines) == 0 then
 		return text .. (M.HasPopLog() and "no pops since the game started" or "no pop log (needs helper v26)")
 	end
@@ -4839,17 +4892,9 @@ function commands.dmorph(args)
 		if what == "on" or what == "off" then
 			M.loudItems = what == "off" or nil
 		end
-		local hooked, held, redrawn = 0, 0, 0
-		if type(DmorphHelper_GetQuietItems) == "function" then
-			local ok, a, b, c = pcall(DmorphHelper_GetQuietItems)
-			if ok then
-				hooked, held, redrawn = a, b, c
-			end
-		end
 		return Print("Quiet item morphs (one slot redrawn, no whole-model pop): " .. (M.loudItems and "off" or "on")
 			.. (type(DmorphHelper_QuietItemBegin) == "function" and "" or " - needs DmorphHelper v25")
-			.. format(". Hook %s, %d rebuilds held back, %d slots redrawn. /dmorph quiet on | off (until /reload)",
-				hooked == 1 and "on" or hooked == -1 and "FAILED" or "not used yet", held or 0, redrawn or 0))
+			.. ". " .. M.DescribeQuietHook() .. " /dmorph quiet on | off (until /reload)")
 	elseif action == "follow" then
 		local what = strlower(args[2] or "")
 		local ok, message

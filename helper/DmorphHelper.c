@@ -17,7 +17,8 @@
 //   DmorphHelper_HoldItemEnchants(slot[, permanent, temporary]) (v24: your own weapon glow, kept against the server; slot alone lets go)
 //   DmorphHelper_GetRealItemEnchants(slot)                   -> real permanent, temporary, held, hooked, writes kept away
 //   DmorphHelper_QuietItemBegin(slot) / _QuietItemEnd()      (v25: around SetUnitVisibleItemID: one slot redrawn, no full rebuild)
-//   DmorphHelper_GetQuietItems()                             -> hooked, rebuilds held back, slots redrawn
+//   DmorphHelper_GetQuietItems()                             -> hooked, rebuilds held back, slots redrawn, MinHook status, first bytes (v27)
+//   DmorphHelper_WriteSlotItem(slot, itemID)                 (v27: the item your slot shows, no redraw: the no-hook way)
 //   DmorphHelper_HoldLook(skin, face, hairStyle, hairColour, facialHair[, real five]) / () (v26: your look, kept against the server)
 //   DmorphHelper_GetRealLook()                               -> the real five, held
 //   DmorphHelper_RedrawSlot(slot)                            (v26: one slot redrawn, no full rebuild)
@@ -68,7 +69,7 @@
 #define GAME_FASTCALL __attribute__((fastcall))
 #define GAME_THISCALL __attribute__((thiscall))
 
-#define HELPER_VERSION 26
+#define HELPER_VERSION 27
 
 // Game functions, build 5875 (from VanillaHelpers' Offsets.h).
 #define FUN_INVALID_FUNCTION_PTR_CHECK 0x42A320
@@ -577,18 +578,26 @@ static int GAME_FASTCALL Script_GetPop(void *L) {
     return 4;
 }
 
+// v27 (Khijazi: "Hook FAILED"): no check of the first bytes any more (another DLL had patched
+// UpdateDisplayInfo some other way than a plain jump); MinHook itself refuses code it can't
+// move. A failure is retried on the next use and its details kept for /dmorph quiet.
+static int g_quietErr; // MinHook status of the last try
+static uint8_t g_quietBytes[8]; // the function's first bytes at that try
 static int QuietHook(void) {
-    if (g_quietHooked) {
-        return g_quietHooked > 0;
+    if (g_quietHooked > 0) {
+        return 1;
     }
-    g_quietHooked = -1;
-    static const uint8_t stock[8] = { 0x56, 0x8B, 0xF1, 0xE8, 0x27, 0x02, 0x00, 0x00 };
-    if ((memcmp((const void *)FUN_CGUNIT_C_UPDATE_DISPLAY_INFO, stock, sizeof stock) == 0 ||
-         IsJump(FUN_CGUNIT_C_UPDATE_DISPLAY_INFO)) &&
-        MH_CreateHook((LPVOID)FUN_CGUNIT_C_UPDATE_DISPLAY_INFO, (LPVOID)&QuietDisplay_h, (LPVOID *)&QuietDisplay_o) == MH_OK &&
-        MH_EnableHook((LPVOID)FUN_CGUNIT_C_UPDATE_DISPLAY_INFO) == MH_OK) {
-        g_quietHooked = 1;
+    memcpy(g_quietBytes, (const void *)FUN_CGUNIT_C_UPDATE_DISPLAY_INFO, sizeof g_quietBytes);
+    MH_STATUS status = MH_CreateHook((LPVOID)FUN_CGUNIT_C_UPDATE_DISPLAY_INFO, (LPVOID)&QuietDisplay_h,
+                                     (LPVOID *)&QuietDisplay_o);
+    if (status == MH_OK || status == MH_ERROR_ALREADY_CREATED) {
+        status = MH_EnableHook((LPVOID)FUN_CGUNIT_C_UPDATE_DISPLAY_INFO);
+        if (status == MH_ERROR_ENABLED) {
+            status = MH_OK;
+        }
     }
+    g_quietErr = status;
+    g_quietHooked = status == MH_OK ? 1 : -1;
     return g_quietHooked > 0;
 }
 
@@ -600,16 +609,35 @@ static int GAME_FASTCALL Script_QuietItemBegin(void *L) {
     uint32_t slot = NumberArg(L, 1, 1, 19, "Usage: DmorphHelper_QuietItemBegin(slot 1-19)");
     void *me = Me();
     g_quietUnit = NULL;
-    if (!me || !QuietHook()) {
+    if (!me) {
         LuaPushNumber(L, 0);
         return 1;
     }
+    // v27: the slot is kept even without the hook, for the addon's no-hook way (it writes
+    // the slot first with DmorphHelper_WriteSlotItem) and QuietItemEnd's one-slot redraw.
+    int hooked = QuietHook();
     memcpy(g_quietOld, SlotBlock(me, slot), sizeof g_quietOld);
     g_quietSlot = slot;
     g_quietSince = GetTickCount();
     g_quietUnit = me;
-    LuaPushNumber(L, 1);
+    LuaPushNumber(L, hooked ? 1 : 0);
     return 1;
+}
+
+// v27: DmorphHelper_WriteSlotItem(slot, itemID) writes the item your own slot shows, nothing
+// else (no redraw). With it written first, VanillaHelpers finds the slot already showing the
+// morph and doesn't rebuild the model; QuietItemEnd then redraws just the slot.
+static int GAME_FASTCALL Script_WriteSlotItem(void *L) {
+    static const char *usage = "Usage: DmorphHelper_WriteSlotItem(slot 1-19, itemID)";
+    uint32_t slot = NumberArg(L, 1, 1, 19, usage);
+    uint32_t item = NumberArg(L, 2, 0, 2147483647.0, usage);
+    void *me = Me();
+    if (!me) {
+        LuaError(L, "Unit not found.");
+        return 0;
+    }
+    Fields(me)[PLAYER_VISIBLE_ITEM_1_0 + (slot - 1) * VISIBLE_ITEM_STRIDE] = item;
+    return 0;
 }
 
 static int GAME_FASTCALL Script_QuietItemEnd(void *L) {
@@ -645,11 +673,21 @@ static int GAME_FASTCALL Script_RedrawSlot(void *L) {
 }
 
 // -> hooked (1/0/-1), rebuilds held back, slots redrawn.
+// v27: then the MinHook status of the last try and the function's first 8 bytes (hex) then.
 static int GAME_FASTCALL Script_GetQuietItems(void *L) {
+    if (g_quietHooked <= 0) {
+        QuietHook(); // try again: another DLL may have finished patching since
+    }
+    char bytes[32];
+    _snprintf(bytes, sizeof bytes - 1, "%02X %02X %02X %02X %02X %02X %02X %02X", g_quietBytes[0], g_quietBytes[1],
+              g_quietBytes[2], g_quietBytes[3], g_quietBytes[4], g_quietBytes[5], g_quietBytes[6], g_quietBytes[7]);
+    bytes[sizeof bytes - 1] = 0;
     LuaPushNumber(L, g_quietHooked);
     LuaPushNumber(L, g_quietSkipped);
     LuaPushNumber(L, g_quietRedraws);
-    return 3;
+    LuaPushNumber(L, g_quietErr);
+    LuaPushString(L, bytes);
+    return 5;
 }
 
 static const char *LOOK_USAGE = "Usage: DmorphHelper_GetLook(unit)";
@@ -1792,6 +1830,7 @@ static void GAME_FASTCALL LoadScriptFunctions_h(void) {
     RegisterFunction("DmorphHelper_QuietItemBegin", (uintptr_t)&Script_QuietItemBegin);
     RegisterFunction("DmorphHelper_QuietItemEnd", (uintptr_t)&Script_QuietItemEnd);
     RegisterFunction("DmorphHelper_GetQuietItems", (uintptr_t)&Script_GetQuietItems);
+    RegisterFunction("DmorphHelper_WriteSlotItem", (uintptr_t)&Script_WriteSlotItem);
     RegisterFunction("DmorphHelper_HoldLook", (uintptr_t)&Script_HoldLook);
     RegisterFunction("DmorphHelper_GetRealLook", (uintptr_t)&Script_GetRealLook);
     RegisterFunction("DmorphHelper_RedrawSlot", (uintptr_t)&Script_RedrawSlot);

@@ -2123,7 +2123,7 @@ local function installHelper(look)
 		return type(v) == "number" and v >= 0 and v <= max and v == math.floor(v)
 	end
 	function DmorphHelper_Version()
-		return 26
+		return 27
 	end
 	-- v14: riders of some mount displays get another pose (game.posesWork: the
 	-- helper could patch the game).
@@ -2348,16 +2348,16 @@ DmorphOctoDB, DmorphOctoAccount = nil, nil
 loadWithHelper()
 Mock.Tick(1.1)
 slash("dmorph status")
-check(contains(allChat(), "DmorphHelper v26 is loaded"), "status shows the helper's version")
+check(contains(allChat(), "DmorphHelper v27 is loaded"), "status shows the helper's version")
 slash("dmorph check")
 check(contains(allChat(), "DmorphHelper: |cff33ff99OK"), "the check says the helper runs")
-check(contains(allChat(), "Running v26 (this DMorph comes with v26)"), "and which version runs")
+check(contains(allChat(), "Running v27 (this DMorph comes with v27)"), "and which version runs")
 local openedForSetup = not (DmorphOctoFrame and DmorphOctoFrame:IsVisible())
 if openedForSetup then
 	slash("")
 end
 Mock.Click(DmorphOctoSetupButton)
-check(contains(DmorphOctoSetupButton.text, "Helper v26") and contains(DmorphOctoSetupText2.text, "Running v26"),
+check(contains(DmorphOctoSetupButton.text, "Helper v27") and contains(DmorphOctoSetupText2.text, "Running v27"),
 	"the Setup button and panel show the helper version")
 Mock.Click(DmorphOctoSetupClose)
 local currentVersion = DmorphHelper_Version
@@ -3223,9 +3223,13 @@ do
 	check(contains(DmorphOctoSetupPopWatch.text, "Pop watch: off"), "Setup shows Pop watch off")
 	Mock.Click(DmorphOctoSetupPopWatch)
 	check(contains(DmorphOctoSetupPopWatch.text, "Pop watch: on") and DmorphOcto.GetPopWatch(), "one click turns it on")
+	function DmorphHelper_GetQuietItems()
+		return 1, 4, 2, 0, "E9 00 00 00 00 90 90 90"
+	end
 	Mock.Click(DmorphOctoSetupPopCopy)
+	DmorphHelper_GetQuietItems = nil
 	local report = DmorphOctoSetupPopReport:GetText() or ""
-	check(DmorphOctoSetupPopReport:IsShown() and DmorphOctoSetupPopReport.focus and contains(report, "DMorph 3.2.3")
+	check(DmorphOctoSetupPopReport:IsShown() and DmorphOctoSetupPopReport.focus and contains(report, "DMorph 3.2.4")
 		and contains(report, "race byte repaired") and contains(report, "VanillaHelpers"),
 		"Copy pop report shows the versions and the latest pops, selected to copy")
 	Mock.Click(DmorphOctoSetupPopWatch)
@@ -3813,6 +3817,38 @@ end)()
 	check(table.concat(calls, ",") == "set17", "/dmorph quiet off: VanillaHelpers' own way")
 	slash("dmorph quiet on")
 	check(contains(lastChat(), "Quiet item morphs") and contains(lastChat(), ": on"), "/dmorph quiet reports it")
+	-- 3.2.4 / v27 (Khijazi: "Hook FAILED"): without the hook the slot is written first, so
+	-- VanillaHelpers has nothing to rebuild; a new morph first "morphs" the slot into what it shows.
+	local ownGet, ownStatus = DmorphHelper_GetItemEnchants, DmorphHelper_GetQuietItems
+	local field = {}
+	function DmorphHelper_QuietItemBegin(slot)
+		table.insert(calls, "begin" .. slot)
+		return 0
+	end
+	function DmorphHelper_GetItemEnchants(unit, slot)
+		return 0, 0, field[slot] or 0
+	end
+	function DmorphHelper_WriteSlotItem(slot, id)
+		table.insert(calls, "write" .. slot .. "=" .. id)
+		field[slot] = id
+	end
+	function DmorphHelper_GetQuietItems()
+		return -1, 0, 3, 5, "68 11 22 33 44 C3 90 90"
+	end
+	Mock.gear[17] = { 5003 }
+	field[17] = 5003
+	calls = {}
+	DmorphOcto.SetItem(17, 18205)
+	check(table.concat(calls, ",") == "begin17,set17,write17=18205,set17,end",
+		"no hook: VanillaHelpers is told the shown item, the morph is written, then set (nothing for it to rebuild)")
+	calls = {}
+	DmorphOcto.SetItem(17, 0)
+	check(table.concat(calls, ",") == "begin17,write17=5003,set17,end", "no hook: taking it off writes your real item back first")
+	slash("dmorph quiet")
+	check(contains(lastChat(), "Hook FAILED (MinHook 5, bytes 68 11 22 33 44 C3 90 90)"), "/dmorph quiet says why the hook failed")
+	check(contains(DmorphOcto.GetPopReport(), "POP LOG NOT RUNNING"), "and the pop report says the log isn't running")
+	Mock.gear[17] = nil
+	DmorphHelper_GetItemEnchants, DmorphHelper_GetQuietItems, DmorphHelper_WriteSlotItem = ownGet, ownStatus, nil
 	DmorphHelper_QuietItemBegin, DmorphHelper_QuietItemEnd = nil, nil
 	SetUnitVisibleItemID = ownSet
 end)()
