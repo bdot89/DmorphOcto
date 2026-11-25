@@ -4,7 +4,7 @@
 
 ### Become anything. Ride anything. Wear anything. ✨
 
-**DMorph** is a free morph addon for WoW 1.12 (OctoWoW), **version 3.2.5**. Turn into a dragon 🐉, ride a mechanical chicken 🐔, swap your race 🧝, light your blade on fire 🔥, put on wings 🪽, make it snow in Orgrimmar ❄️, and dress up in any armour set in the game 🛡️, all from one slick purple window.
+**DMorph** is a free morph addon for WoW 1.12 (OctoWoW), **version 3.2.6**. Turn into a dragon 🐉, ride a mechanical chicken 🐔, swap your race 🧝, light your blade on fire 🔥, put on wings 🪽, make it snow in Orgrimmar ❄️, and dress up in any armour set in the game 🛡️, all from one slick purple window.
 
 > 🔒 **100% client-side and safe:** morphs only change what *you* and other DMorph users see. Everyone else, and the server, sees your real character.
 
@@ -158,7 +158,7 @@ You can skip this step: everything else still works, just without glows, real lo
 1. Start the game from **OctoLauncher** (not WoW.exe).
 2. Click the polymorph button by the minimap 🐑, or type **/dmorph**
 3. Check the **Setup** button at the bottom left of the window:
-   - 🟢 Green "Setup OK": you're ready. It also shows which DmorphHelper version is running (for example "Helper v28").
+   - 🟢 Green "Setup OK": you're ready. It also shows which DmorphHelper version is running (for example "Helper v29").
    - 🟡 Yellow "Old helper": close the game and run Install DmorphHelper.bat again.
    - 🔴 Red "Setup: fix me": click it. It tells you what isn't working and how to fix it.
 

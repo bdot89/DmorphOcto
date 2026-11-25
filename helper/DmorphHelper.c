@@ -20,6 +20,7 @@
 //   DmorphHelper_GetQuietItems()                             -> hooked, rebuilds held back, slots redrawn, MinHook status, first bytes (v27)
 //   DmorphHelper_WriteSlotItem(slot, itemID)                 (v27: the item your slot shows, no redraw: the no-hook way)
 //   DmorphHelper_BatchBegin() / _BatchEnd()                  (v28: the helper's rebuilds in between become one)
+//   DmorphHelper_QuietGlows(1/0)                             (v29: glows redraw only their weapon, 0 = whole rebuild) -> weapons redrawn
 //   DmorphHelper_HoldLook(skin, face, hairStyle, hairColour, facialHair[, real five]) / () (v26: your look, kept against the server)
 //   DmorphHelper_GetRealLook()                               -> the real five, held
 //   DmorphHelper_RedrawSlot(slot)                            (v26: one slot redrawn, no full rebuild)
@@ -70,7 +71,7 @@
 #define GAME_FASTCALL __attribute__((fastcall))
 #define GAME_THISCALL __attribute__((thiscall))
 
-#define HELPER_VERSION 28
+#define HELPER_VERSION 29
 
 // Game functions, build 5875 (from VanillaHelpers' Offsets.h).
 #define FUN_INVALID_FUNCTION_PTR_CHECK 0x42A320
@@ -343,17 +344,45 @@ static int GAME_FASTCALL Script_GetItemEnchants(void *L) {
     return 3;
 }
 
+// v29 (Khijazi's pop report after 3.2.5: only "DMorph: glow picked", many times): a glow
+// is part of its weapon, and the game shows a server's enchant change (an oil, a poison)
+// through the visible-item field callback's one-slot redraw (0x5DEE30, see v25), not a
+// rebuild. So a glow is now written and shown the same way: only that weapon is redrawn.
+// DmorphHelper_QuietGlows(0) (/dmorph quiet off) goes back to the whole-model rebuild.
+static int g_loudGlows;
+static uint32_t g_glowRedraws;
+static void ShowEnchants(void *unit, uint32_t slot, uint32_t permanent, uint32_t temporary, const char *why) {
+    // The slot's 12-value block starts 2 before PLAYER_VISIBLE_ITEM_<slot>_0 (the creator GUID).
+    uint32_t *block = Fields(unit) + (PLAYER_VISIBLE_ITEM_1_0 - 2) + (slot - 1) * VISIBLE_ITEM_STRIDE;
+    if (block[3] == permanent && block[4] == temporary) {
+        return;
+    }
+    uint32_t old[VISIBLE_ITEM_STRIDE];
+    memcpy(old, block, sizeof old);
+    block[3] = permanent;
+    block[4] = temporary;
+    if (g_loudGlows) {
+        ReloadFor(unit, why);
+        return;
+    }
+    typedef void(GAME_THISCALL * SlotRedraw_t)(void *unit, uint32_t offset, uint32_t *old);
+    uint32_t offset = (PLAYER_VISIBLE_ITEM_1_0 - 2 - 0xBC) * 4 + (slot - 1) * VISIBLE_ITEM_STRIDE * 4;
+    ((SlotRedraw_t)0x5DEE30)(unit, offset, old);
+    g_glowRedraws++;
+}
+
+static int GAME_FASTCALL Script_QuietGlows(void *L) {
+    g_loudGlows = LuaIsNumber(L, 1) && LuaToNumber(L, 1) == 0;
+    LuaPushNumber(L, g_glowRedraws);
+    return 1;
+}
+
 static int GAME_FASTCALL Script_SetItemEnchants(void *L) {
     void *unit = PlayerArg(L, 1, SET_ENCHANTS_USAGE);
     uint32_t slot = NumberArg(L, 2, 1, 19, SET_ENCHANTS_USAGE);
     uint32_t permanent = NumberArg(L, 3, 0, 1000000, SET_ENCHANTS_USAGE);
     uint32_t temporary = NumberArg(L, 4, 0, 1000000, SET_ENCHANTS_USAGE);
-    uint32_t *f = Fields(unit) + PLAYER_VISIBLE_ITEM_1_0 + (slot - 1) * VISIBLE_ITEM_STRIDE;
-    if (f[1] != permanent || f[2] != temporary) {
-        f[1] = permanent;
-        f[2] = temporary;
-        ReloadFor(unit, "glow written (older way)");
-    }
+    ShowEnchants(unit, slot, permanent, temporary, "glow written (older way)");
     return 0;
 }
 
@@ -464,11 +493,7 @@ static int GAME_FASTCALL Script_HoldItemEnchants(void *L) {
     if (!LuaIsNumber(L, 2)) {
         if (g_held[k]) {
             g_held[k] = 0;
-            if (f[1] != g_holdReal[k][0] || f[2] != g_holdReal[k][1]) {
-                f[1] = g_holdReal[k][0];
-                f[2] = g_holdReal[k][1];
-                ReloadFor(me, "glow taken off");
-            }
+            ShowEnchants(me, slot, g_holdReal[k][0], g_holdReal[k][1], "glow taken off");
         }
         LuaPushNumber(L, 1);
         return 1;
@@ -488,11 +513,7 @@ static int GAME_FASTCALL Script_HoldItemEnchants(void *L) {
     g_holdWant[k][0] = permanent;
     g_holdWant[k][1] = temporary;
     g_held[k] = 1;
-    if (f[1] != permanent || f[2] != temporary) {
-        f[1] = permanent;
-        f[2] = temporary;
-        ReloadFor(me, "glow picked");
-    }
+    ShowEnchants(me, slot, permanent, temporary, "glow picked");
     LuaPushNumber(L, 1);
     return 1;
 }
@@ -1881,6 +1902,7 @@ static void GAME_FASTCALL LoadScriptFunctions_h(void) {
     RegisterFunction("DmorphHelper_WriteSlotItem", (uintptr_t)&Script_WriteSlotItem);
     RegisterFunction("DmorphHelper_BatchBegin", (uintptr_t)&Script_BatchBegin);
     RegisterFunction("DmorphHelper_BatchEnd", (uintptr_t)&Script_BatchEnd);
+    RegisterFunction("DmorphHelper_QuietGlows", (uintptr_t)&Script_QuietGlows);
     RegisterFunction("DmorphHelper_HoldLook", (uintptr_t)&Script_HoldLook);
     RegisterFunction("DmorphHelper_GetRealLook", (uintptr_t)&Script_GetRealLook);
     RegisterFunction("DmorphHelper_RedrawSlot", (uintptr_t)&Script_RedrawSlot);

@@ -2123,7 +2123,7 @@ local function installHelper(look)
 		return type(v) == "number" and v >= 0 and v <= max and v == math.floor(v)
 	end
 	function DmorphHelper_Version()
-		return 28
+		return 29
 	end
 	-- v14: riders of some mount displays get another pose (game.posesWork: the
 	-- helper could patch the game).
@@ -2348,16 +2348,16 @@ DmorphOctoDB, DmorphOctoAccount = nil, nil
 loadWithHelper()
 Mock.Tick(1.1)
 slash("dmorph status")
-check(contains(allChat(), "DmorphHelper v28 is loaded"), "status shows the helper's version")
+check(contains(allChat(), "DmorphHelper v29 is loaded"), "status shows the helper's version")
 slash("dmorph check")
 check(contains(allChat(), "DmorphHelper: |cff33ff99OK"), "the check says the helper runs")
-check(contains(allChat(), "Running v28 (this DMorph comes with v28)"), "and which version runs")
+check(contains(allChat(), "Running v29 (this DMorph comes with v29)"), "and which version runs")
 local openedForSetup = not (DmorphOctoFrame and DmorphOctoFrame:IsVisible())
 if openedForSetup then
 	slash("")
 end
 Mock.Click(DmorphOctoSetupButton)
-check(contains(DmorphOctoSetupButton.text, "Helper v28") and contains(DmorphOctoSetupText2.text, "Running v28"),
+check(contains(DmorphOctoSetupButton.text, "Helper v29") and contains(DmorphOctoSetupText2.text, "Running v29"),
 	"the Setup button and panel show the helper version")
 Mock.Click(DmorphOctoSetupClose)
 local currentVersion = DmorphHelper_Version
@@ -3229,7 +3229,7 @@ do
 	Mock.Click(DmorphOctoSetupPopCopy)
 	DmorphHelper_GetQuietItems = nil
 	local report = DmorphOctoSetupPopReport:GetText() or ""
-	check(DmorphOctoSetupPopReport:IsShown() and DmorphOctoSetupPopReport.focus and contains(report, "DMorph 3.2.5")
+	check(DmorphOctoSetupPopReport:IsShown() and DmorphOctoSetupPopReport.focus and contains(report, "DMorph 3.2.6")
 		and contains(report, "race byte repaired") and contains(report, "VanillaHelpers"),
 		"Copy pop report shows the versions and the latest pops, selected to copy")
 	Mock.Click(DmorphOctoSetupPopWatch)
@@ -3812,11 +3812,19 @@ end)()
 	DmorphOcto.SetItem(17, 18205)
 	check(table.concat(calls, ",") == "begin17,set17,end", "an item morph is set inside the quiet window, ended after")
 	calls = {}
+	local glowsQuiet
+	function DmorphHelper_QuietGlows(on)
+		glowsQuiet = on
+		return 0
+	end
 	slash("dmorph quiet off")
+	check(glowsQuiet == 0, "v29: /dmorph quiet off also puts glows back to the whole rebuild")
 	DmorphOcto.SetItem(17, 0)
 	check(table.concat(calls, ",") == "set17", "/dmorph quiet off: VanillaHelpers' own way")
 	slash("dmorph quiet on")
 	check(contains(lastChat(), "Quiet item morphs") and contains(lastChat(), ": on"), "/dmorph quiet reports it")
+	check(glowsQuiet == 1, "and on: glows redraw only their weapon")
+	DmorphHelper_QuietGlows = nil
 	-- 3.2.4 / v27 (Khijazi: "Hook FAILED"): without the hook the slot is written first, so
 	-- VanillaHelpers has nothing to rebuild; a new morph first "morphs" the slot into what it shows.
 	local ownGet, ownStatus = DmorphHelper_GetItemEnchants, DmorphHelper_GetQuietItems

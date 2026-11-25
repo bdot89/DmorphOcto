@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "3.2.5"
+local VERSION = "3.2.6"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -2520,7 +2520,7 @@ local MISSING_HELPER = "DmorphHelper.dll isn't loaded, so weapon glows, your siz
 M.MISSING_HELPER = MISSING_HELPER
 -- The DmorphHelper_Version() the DLL in helper\ reports. An older one in the
 -- game folder (DMorph was updated, the DLL wasn't copied again) is flagged.
-local HELPER_VERSION = 28
+local HELPER_VERSION = 29
 -- Rows 1-5 of the Races tab, in DmorphHelper_GetLook's order.
 local OWN_LOOK_NPC = { "npcSkin", "npcFace", "npcHairStyle", "npcHairColour" }
 
@@ -4899,6 +4899,9 @@ function commands.dmorph(args)
 		local what = strlower(args[2] or "")
 		if what == "on" or what == "off" then
 			M.loudItems = what == "off" or nil
+			if type(DmorphHelper_QuietGlows) == "function" then
+				pcall(DmorphHelper_QuietGlows, M.loudItems and 0 or 1) -- v29: glows redraw only their weapon
+			end
 		end
 		return Print("Quiet item morphs (one slot redrawn, no whole-model pop): " .. (M.loudItems and "off" or "on")
 			.. (type(DmorphHelper_QuietItemBegin) == "function" and "" or " - needs DmorphHelper v25")
