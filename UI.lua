@@ -5053,6 +5053,11 @@ local function FillSetupPanel()
 		end
 	end
 	UpdateSetupButton()
+	P.PaintPopWatch()
+	if ui.popReport then
+		ui.popReport:Hide()
+		ui.popReportHint:Hide()
+	end
 end
 
 local function ShowSetupPanel()
@@ -5064,7 +5069,7 @@ local function BuildSetupPanel()
 	local panel = CreateFrame("Frame", "DmorphOctoSetup", frame)
 	panel:Hide()
 	panel:SetWidth(580)
-	panel:SetHeight(340)
+	panel:SetHeight(416)
 	panel:SetPoint("CENTER", frame, "CENTER", 0, 10)
 	panel:SetFrameLevel(frame:GetFrameLevel() + 30)
 	panel:EnableMouse(true)
@@ -5083,12 +5088,52 @@ local function BuildSetupPanel()
 		row.text:SetJustifyV("TOP")
 		ui.setupRows[i] = row
 	end
-	Button(panel, "Check again", 110, 16, -306, FillSetupPanel, "DmorphOctoSetupRecheck")
-	Label(panel, "/dmorph check prints this in chat.", "GameFontDisableSmall", 140, -311)
-	Button(panel, "Close", 80, 484, -306, function()
+	-- 3.2.3 (user: "the popwatcher easily enabled by anybody so they can send me reports"):
+	-- Pop watch names each whole-character pop in chat; Copy pop report puts the latest in a
+	-- selected text box (Ctrl+C) to paste into a message.
+	Label(panel, "Character popping?", "GameFontNormal", 16, -312)
+	ui.popWatchButton = Button(panel, "", 150, 160, -308, function()
+		SetStatus(M.SetPopWatch(not M.GetPopWatch())) -- not a morph: no click gate
+		P.PaintPopWatch()
+	end, "DmorphOctoSetupPopWatch")
+	ui.popWatchButton:SetScript("OnEnter", function()
+		Tooltip(this, "Pop watch", "Names every whole-character pop in chat as it happens, with what caused it.",
+			"Stays on until you turn it off.", "Then use Copy pop report and send the text.")
+	end)
+	ui.popWatchButton:SetScript("OnLeave", HideTooltip)
+	Button(panel, "Copy pop report", 130, 316, -308, function()
+		ui.popReport:SetText(M.GetPopReport())
+		ui.popReport:Show()
+		ui.popReport:SetFocus()
+		ui.popReport:HighlightText()
+		ui.popReportHint:Show()
+	end, "DmorphOctoSetupPopCopy")
+	ui.popReport = EditBox(panel, "DmorphOctoSetupPopReport", 548, 16, -336, 2000)
+	ui.popReport:SetScript("OnEditFocusGained", function()
+		this:HighlightText()
+	end)
+	ui.popReport:Hide()
+	ui.popReportHint = Label(panel, "Press Ctrl+C to copy, then paste it into your message.", "GameFontDisableSmall", 16, -360)
+	ui.popReportHint:Hide()
+	Button(panel, "Check again", 110, 16, -382, FillSetupPanel, "DmorphOctoSetupRecheck")
+	Label(panel, "/dmorph check prints this in chat.", "GameFontDisableSmall", 140, -387)
+	Button(panel, "Close", 80, 484, -382, function()
 		ui.setupPanel:Hide()
 	end, "DmorphOctoSetupClose")
 	ui.setupPanel = panel
+end
+
+function P.PaintPopWatch()
+	if not ui.popWatchButton then
+		return
+	end
+	if not M.HasPopLog() then
+		ui.popWatchButton:SetText("|cff999999Pop watch: needs v26|r")
+	elseif M.GetPopWatch() then
+		ui.popWatchButton:SetText("|cff33ff99Pop watch: on|r")
+	else
+		ui.popWatchButton:SetText("Pop watch: off")
+	end
 end
 
 -- The window closes. (Outside Build: Lua 5.0 allows 32 upvalues a function.)

@@ -3215,6 +3215,22 @@ do
 	slash("dmorph pops")
 	check(contains(allChat(), "DMorph: race byte repaired"), "/dmorph pops lists them with DMorph's reason")
 	slash("dmorph pops off")
+	-- 3.2.3: anyone can turn it on and copy a report from the Setup panel.
+	if not (DmorphOctoFrame and DmorphOctoFrame:IsVisible()) then
+		slash("")
+	end
+	Mock.Click(DmorphOctoSetupButton)
+	check(contains(DmorphOctoSetupPopWatch.text, "Pop watch: off"), "Setup shows Pop watch off")
+	Mock.Click(DmorphOctoSetupPopWatch)
+	check(contains(DmorphOctoSetupPopWatch.text, "Pop watch: on") and DmorphOcto.GetPopWatch(), "one click turns it on")
+	Mock.Click(DmorphOctoSetupPopCopy)
+	local report = DmorphOctoSetupPopReport:GetText() or ""
+	check(DmorphOctoSetupPopReport:IsShown() and DmorphOctoSetupPopReport.focus and contains(report, "DMorph 3.2.3")
+		and contains(report, "race byte repaired") and contains(report, "VanillaHelpers"),
+		"Copy pop report shows the versions and the latest pops, selected to copy")
+	Mock.Click(DmorphOctoSetupPopWatch)
+	check(not DmorphOcto.GetPopWatch(), "and another click turns it off")
+	Mock.Click(DmorphOctoSetupClose)
 	DmorphHelper_GetPops, DmorphHelper_GetPop = nil, nil
 end
 check(game.ownRace == 1, "the helper keeps your own race without a race morph too (loading screens)")

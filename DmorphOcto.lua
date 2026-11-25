@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "3.2.2"
+local VERSION = "3.2.3"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -3341,6 +3341,35 @@ function M.GetPopLines(n)
 	end
 	return lines
 end
+-- Pop watch on / off (Setup panel button, /dmorph pops watch). -> ok, message.
+function M.HasPopLog()
+	return type(DmorphHelper_GetPops) == "function" and type(DmorphHelper_GetPop) == "function"
+end
+function M.GetPopWatch()
+	return DmorphOctoAccount and DmorphOctoAccount.popWatch and true or false
+end
+function M.SetPopWatch(on)
+	if not M.HasPopLog() then
+		return false, "The pop log needs DmorphHelper v26: close the game and run Install DmorphHelper.bat."
+	end
+	DmorphOctoAccount = DmorphOctoAccount or {}
+	DmorphOctoAccount.popWatch = on and true or nil
+	if on then
+		return true, "Pop watch on: every whole-character pop is named in chat as it happens. "
+			.. "Setup > Copy pop report gives you the text to send."
+	end
+	return true, "Pop watch off."
+end
+-- The text to send in a report: versions and the latest pops, one line.
+function M.GetPopReport()
+	local helper = M.GetHelperVersion and M.GetHelperVersion()
+	local lines = M.GetPopLines(10)
+	local text = "DMorph " .. VERSION .. ", helper v" .. (helper or "none") .. " | "
+	if table.getn(lines) == 0 then
+		return text .. (M.HasPopLog() and "no pops since the game started" or "no pop log (needs helper v26)")
+	end
+	return text .. table.concat(lines, " | ")
+end
 -- With /dmorph pops watch on, each new pop is named in chat as it happens.
 function M.WatchPops()
 	if type(DmorphHelper_GetPops) ~= "function" then
@@ -3355,7 +3384,7 @@ function M.WatchPops()
 	if DmorphOctoAccount and DmorphOctoAccount.popWatch and count > seen then
 		local lines = M.GetPopLines(math.min(count - seen, 5))
 		for i = table.getn(lines), 1, -1 do
-			Print("|cffff6060Pop|r " .. lines[i])
+			Print("|cffff6060Pop|r " .. lines[i] .. " |cff999999(Setup > Copy pop report)|r")
 		end
 	end
 end
@@ -4795,9 +4824,8 @@ function commands.dmorph(args)
 		end
 		local what = strlower(args[2] or "")
 		if what == "watch" or what == "on" or what == "off" then
-			DmorphOctoAccount.popWatch = not (what == "off" or (what == "watch" and DmorphOctoAccount.popWatch)) or nil
-			return Print("Pop watch " .. (DmorphOctoAccount.popWatch and "on: every whole-character pop is named in chat as it happens."
-				or "off.") .. " /dmorph pops lists the latest.")
+			local _, message = M.SetPopWatch(not (what == "off" or (what == "watch" and M.GetPopWatch())))
+			return Print(message)
 		end
 		local lines = M.GetPopLines(10)
 		Print(table.getn(lines) == 0 and "No whole-character pops since the game started."

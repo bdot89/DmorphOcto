@@ -4,7 +4,7 @@
 
 ### Become anything. Ride anything. Wear anything. ✨
 
-**DMorph** is a free morph addon for WoW 1.12 (OctoWoW), **version 3.2.2**. Turn into a dragon 🐉, ride a mechanical chicken 🐔, swap your race 🧝, light your blade on fire 🔥, put on wings 🪽, make it snow in Orgrimmar ❄️, and dress up in any armour set in the game 🛡️, all from one slick purple window.
+**DMorph** is a free morph addon for WoW 1.12 (OctoWoW), **version 3.2.3**. Turn into a dragon 🐉, ride a mechanical chicken 🐔, swap your race 🧝, light your blade on fire 🔥, put on wings 🪽, make it snow in Orgrimmar ❄️, and dress up in any armour set in the game 🛡️, all from one slick purple window.
 
 > 🔒 **100% client-side and safe:** morphs only change what *you* and other DMorph users see. Everyone else, and the server, sees your real character.
 
@@ -181,6 +181,7 @@ A ported pack (see below) keeps its list in its own folder, Interface\AddOns\DMo
 - **The game won't start after installing:** double-click **Remove DmorphHelper.bat** in the DmorphOcto folder.
 - **DMorph doesn't show in game:** check the folder name and place (Step 2), and that DMorph is ticked in the AddOns list on the character screen.
 - **You turned invisible:** that model can't show in your game. Press Reset model.
+- **Your whole character pops (blinks) and you did not change anything:** click **Setup** (bottom left of the window), then **Pop watch: off** to turn it on. Each pop is now named in chat. When it happens again, click **Setup > Copy pop report**, press **Ctrl+C**, and paste the text to **benito9295** on Discord.
 - **The game crashes with ERROR #132 at 0x0069C... (often with UnitXP_SP3):** a view distance (farClip) above 777 overflows a buffer in the game. DmorphHelper (v7) makes that buffer big enough; without it, type /console farclip 777
 
 
