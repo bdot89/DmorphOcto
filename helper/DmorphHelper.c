@@ -19,6 +19,7 @@
 //   DmorphHelper_QuietItemBegin(slot) / _QuietItemEnd()      (v25: around SetUnitVisibleItemID: one slot redrawn, no full rebuild)
 //   DmorphHelper_GetQuietItems()                             -> hooked, rebuilds held back, slots redrawn, MinHook status, first bytes (v27)
 //   DmorphHelper_WriteSlotItem(slot, itemID)                 (v27: the item your slot shows, no redraw: the no-hook way)
+//   DmorphHelper_BatchBegin() / _BatchEnd()                  (v28: the helper's rebuilds in between become one)
 //   DmorphHelper_HoldLook(skin, face, hairStyle, hairColour, facialHair[, real five]) / () (v26: your look, kept against the server)
 //   DmorphHelper_GetRealLook()                               -> the real five, held
 //   DmorphHelper_RedrawSlot(slot)                            (v26: one slot redrawn, no full rebuild)
@@ -69,7 +70,7 @@
 #define GAME_FASTCALL __attribute__((fastcall))
 #define GAME_THISCALL __attribute__((thiscall))
 
-#define HELPER_VERSION 27
+#define HELPER_VERSION 28
 
 // Game functions, build 5875 (from VanillaHelpers' Offsets.h).
 #define FUN_INVALID_FUNCTION_PTR_CHECK 0x42A320
@@ -238,11 +239,58 @@ static void Reload(void *unit) {
 
 // v26 pop log: why the helper itself rebuilds (the reason is copied, Lua strings move).
 static char g_reason[64];
+// v28 (Khijazi's pop report: "glow picked", "skin, face or hair changed", ... in the same
+// second): between DmorphHelper_BatchBegin() and _BatchEnd() the helper's rebuilds wait, and
+// End does one for all of them.
+static int g_batch;
+static DWORD g_batchSince; // a batch left open (a Lua error before End) stops holding after 1 s
+static void *g_batchUnit;
+static char g_batchReason[64];
 static void ReloadFor(void *unit, const char *why) {
+    if (g_batch && GetTickCount() - g_batchSince > 1000) {
+        g_batch = 0;
+    }
+    if (g_batch) {
+        if (g_batchUnit && g_batchUnit != unit) {
+            g_batch = 0; // another unit: not batched (never happens: the addon batches only you)
+        } else {
+            g_batchUnit = unit;
+            size_t used = strlen(g_batchReason);
+            _snprintf(g_batchReason + used, sizeof g_batchReason - 1 - used, "%s%s", used ? " + " : "", why ? why : "");
+            g_batchReason[sizeof g_batchReason - 1] = 0;
+            return;
+        }
+    }
     strncpy(g_reason, why ? why : "", sizeof g_reason - 1);
     g_reason[sizeof g_reason - 1] = 0;
     Reload(unit);
     g_reason[0] = 0;
+}
+
+static int GAME_FASTCALL Script_BatchBegin(void *L) {
+    g_batch = 1;
+    g_batchSince = GetTickCount();
+    g_batchUnit = NULL;
+    g_batchReason[0] = 0;
+    return 0;
+}
+
+// -> 1 if it rebuilt (once, for everything asked since BatchBegin).
+static int GAME_FASTCALL Script_BatchEnd(void *L) {
+    void *unit = g_batch ? g_batchUnit : NULL;
+    char why[64];
+    strcpy(why, g_batchReason);
+    g_batch = 0;
+    g_batchUnit = NULL;
+    g_batchReason[0] = 0;
+    // Still you (no loading screen came in between).
+    if (unit && unit == ObjectPtr(TYPEMASK_PLAYER, NULL, GetActivePlayer(), 0)) {
+        ReloadFor(unit, why);
+        LuaPushNumber(L, 1);
+    } else {
+        LuaPushNumber(L, 0);
+    }
+    return 1;
 }
 
 static int GAME_FASTCALL Script_Version(void *L) {
@@ -1831,6 +1879,8 @@ static void GAME_FASTCALL LoadScriptFunctions_h(void) {
     RegisterFunction("DmorphHelper_QuietItemEnd", (uintptr_t)&Script_QuietItemEnd);
     RegisterFunction("DmorphHelper_GetQuietItems", (uintptr_t)&Script_GetQuietItems);
     RegisterFunction("DmorphHelper_WriteSlotItem", (uintptr_t)&Script_WriteSlotItem);
+    RegisterFunction("DmorphHelper_BatchBegin", (uintptr_t)&Script_BatchBegin);
+    RegisterFunction("DmorphHelper_BatchEnd", (uintptr_t)&Script_BatchEnd);
     RegisterFunction("DmorphHelper_HoldLook", (uintptr_t)&Script_HoldLook);
     RegisterFunction("DmorphHelper_GetRealLook", (uintptr_t)&Script_GetRealLook);
     RegisterFunction("DmorphHelper_RedrawSlot", (uintptr_t)&Script_RedrawSlot);

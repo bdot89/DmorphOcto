@@ -2123,7 +2123,7 @@ local function installHelper(look)
 		return type(v) == "number" and v >= 0 and v <= max and v == math.floor(v)
 	end
 	function DmorphHelper_Version()
-		return 27
+		return 28
 	end
 	-- v14: riders of some mount displays get another pose (game.posesWork: the
 	-- helper could patch the game).
@@ -2348,16 +2348,16 @@ DmorphOctoDB, DmorphOctoAccount = nil, nil
 loadWithHelper()
 Mock.Tick(1.1)
 slash("dmorph status")
-check(contains(allChat(), "DmorphHelper v27 is loaded"), "status shows the helper's version")
+check(contains(allChat(), "DmorphHelper v28 is loaded"), "status shows the helper's version")
 slash("dmorph check")
 check(contains(allChat(), "DmorphHelper: |cff33ff99OK"), "the check says the helper runs")
-check(contains(allChat(), "Running v27 (this DMorph comes with v27)"), "and which version runs")
+check(contains(allChat(), "Running v28 (this DMorph comes with v28)"), "and which version runs")
 local openedForSetup = not (DmorphOctoFrame and DmorphOctoFrame:IsVisible())
 if openedForSetup then
 	slash("")
 end
 Mock.Click(DmorphOctoSetupButton)
-check(contains(DmorphOctoSetupButton.text, "Helper v27") and contains(DmorphOctoSetupText2.text, "Running v27"),
+check(contains(DmorphOctoSetupButton.text, "Helper v28") and contains(DmorphOctoSetupText2.text, "Running v28"),
 	"the Setup button and panel show the helper version")
 Mock.Click(DmorphOctoSetupClose)
 local currentVersion = DmorphHelper_Version
@@ -3229,7 +3229,7 @@ do
 	Mock.Click(DmorphOctoSetupPopCopy)
 	DmorphHelper_GetQuietItems = nil
 	local report = DmorphOctoSetupPopReport:GetText() or ""
-	check(DmorphOctoSetupPopReport:IsShown() and DmorphOctoSetupPopReport.focus and contains(report, "DMorph 3.2.4")
+	check(DmorphOctoSetupPopReport:IsShown() and DmorphOctoSetupPopReport.focus and contains(report, "DMorph 3.2.5")
 		and contains(report, "race byte repaired") and contains(report, "VanillaHelpers"),
 		"Copy pop report shows the versions and the latest pops, selected to copy")
 	Mock.Click(DmorphOctoSetupPopWatch)
@@ -3851,6 +3851,45 @@ end)()
 	DmorphHelper_GetItemEnchants, DmorphHelper_GetQuietItems, DmorphHelper_WriteSlotItem = ownGet, ownStatus, nil
 	DmorphHelper_QuietItemBegin, DmorphHelper_QuietItemEnd = nil, nil
 	SetUnitVisibleItemID = ownSet
+end)()
+
+-- 3.2.5 / v28 (Khijazi's pop report: look, glow on, glow off in the same second): one watcher
+-- pass asks the helper for at most one rebuild; Follow gear waits until the game knows your weapons.
+;(function()
+	installHelper(REAL)
+	loadWithHelper()
+	Mock.Tick(1.1)
+	local calls = {}
+	function DmorphHelper_BatchBegin()
+		table.insert(calls, "begin")
+	end
+	function DmorphHelper_BatchEnd()
+		table.insert(calls, "end")
+		return 0
+	end
+	Mock.Tick(1.1)
+	check(calls[1] == "begin" and calls[2] == "end", "a watcher pass is one batch: its rebuilds become one")
+	Mock.Fire("PLAYER_ENTERING_WORLD")
+	calls = {}
+	Mock.Tick(0.05)
+	check(calls[1] == "begin", "after a loading screen the watcher runs on the first frame")
+	DmorphHelper_BatchBegin, DmorphHelper_BatchEnd = nil, nil
+	-- An unknown real weapon: Follow gear waits.
+	DmorphOcto.SetWeaponFollow(true)
+	local _, before = DmorphOcto.WeaponContext()
+	Mock.gear[16] = { 5099 }
+	Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
+	Mock.Tick(0.6)
+	local _, now = DmorphOcto.WeaponContext()
+	check(DmorphOctoDB.weaponMemory.last == before and now ~= before, "a weapon the game doesn't know yet: nothing is switched")
+	Mock.serverItems[5099] = { "New Axe", 3, "INVTYPE_2HWEAPON", "Weapon", "Two-Handed Axes" }
+	Mock.Tick(1.1)
+	local _, known = DmorphOcto.WeaponContext()
+	check(DmorphOctoDB.weaponMemory.last == known, "once it's known, Follow gear goes on")
+	Mock.gear[16], Mock.serverItems[5099] = nil, nil
+	Mock.Fire("UNIT_INVENTORY_CHANGED", "player")
+	Mock.Tick(1.1)
+	removeHelper()
 end)()
 
 print(format("%d checks, %d failures", checks, failures))

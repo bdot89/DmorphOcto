@@ -11,7 +11,7 @@
 -- The client runs Lua 5.0: no #, no %, no string.match, no select(), and
 -- table.getn() counts element by element, so long lists keep their own count.
 
-local VERSION = "3.2.4"
+local VERSION = "3.2.5"
 local PREFIX = "|cff33ff99DMorph|r: "
 -- VANILLAHELPERS_VERSION is major * 10000 + minor * 100 + patch; morphing
 -- came in v1.1.0. Older versions load and set it, but can't morph.
@@ -2520,7 +2520,7 @@ local MISSING_HELPER = "DmorphHelper.dll isn't loaded, so weapon glows, your siz
 M.MISSING_HELPER = MISSING_HELPER
 -- The DmorphHelper_Version() the DLL in helper\ reports. An older one in the
 -- game folder (DMorph was updated, the DLL wasn't copied again) is flagged.
-local HELPER_VERSION = 27
+local HELPER_VERSION = 28
 -- Rows 1-5 of the Races tab, in DmorphHelper_GetLook's order.
 local OWN_LOOK_NPC = { "npcSkin", "npcFace", "npcHairStyle", "npcHairColour" }
 
@@ -3480,6 +3480,10 @@ local function WatchHelper()
 	if not (sessionReady and HasHelper()) or helperHold > 0 then
 		return
 	end
+	-- 3.2.5 / v28 (Khijazi's pop report: look, glow on and glow off in the same second): the
+	-- helper's rebuilds asked for in one pass of the watcher become one.
+	local batched = type(DmorphHelper_BatchBegin) == "function" and type(DmorphHelper_BatchEnd) == "function"
+		and pcall(DmorphHelper_BatchBegin)
 	RepairRace()
 	CheckItems()
 	M.WatchPops()
@@ -3611,6 +3615,10 @@ local function WatchHelper()
 				db.glowWritten[slot] = nil
 			end
 		end
+	end
+	-- v28: everything above that needed a rebuild gets one, together.
+	if batched then
+		pcall(DmorphHelper_BatchEnd)
 	end
 end
 
@@ -5368,6 +5376,15 @@ function M.FollowWeapons()
 	if db.weaponFollowOff or not sessionReady then
 		return
 	end
+	-- 3.2.5: not before the game knows your real weapons (just after logging in it may not):
+	-- an unknown one would be taken for the wrong kind and switch looks for nothing.
+	for i = 1, 3 do
+		local real = M.RealItem(M.FOLLOW_SLOTS[i])
+		if real and not GetItemInfo(real) then
+			itemCheck.followWait = 1
+			return
+		end
+	end
 	local kind, key = M.WeaponContext()
 	local memory = db.weaponMemory
 	if memory.last == key then
@@ -5510,6 +5527,12 @@ end)
 -- The DmorphHelper watcher: keeps the picked glows and look on (see Glows and
 -- your own look).
 local helperFrame = CreateFrame("Frame")
+-- 3.2.5: right after a loading screen the watcher runs on the first frame, not up to a second
+-- into play, so a look or glow it has to put back again lands as the world appears.
+helperFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+helperFrame:SetScript("OnEvent", function()
+	helperWait = 0
+end)
 helperFrame:SetScript("OnUpdate", function()
 	helperHold = helperHold - arg1
 	itemCheck.clock = itemCheck.clock + arg1
