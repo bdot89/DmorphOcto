@@ -71,7 +71,7 @@
 #define GAME_FASTCALL __attribute__((fastcall))
 #define GAME_THISCALL __attribute__((thiscall))
 
-#define HELPER_VERSION 29
+#define HELPER_VERSION 30
 
 // Game functions, build 5875 (from VanillaHelpers' Offsets.h).
 #define FUN_INVALID_FUNCTION_PTR_CHECK 0x42A320
@@ -1363,6 +1363,31 @@ static VirtualItem *AddVirtual(uint32_t id) {
     return v;
 }
 
+// The cache calls a waiting lookup's callback as fastcall (id in ecx, guid
+// in edx, then userData and success on the stack, callee pops) - read from
+// the dispatch sites at 0x55BD2A / 0x55BEA8 / 0x55BF39.
+typedef void(GAME_FASTCALL *ItemCallback_t)(uint32_t id, const uint64_t *guid, void *userData, uint32_t success);
+typedef struct {
+    uint32_t virtualId;
+    ItemCallback_t callback;
+    void *userData;
+} VirtualWait;
+
+static void GAME_FASTCALL VirtualArrived(uint32_t id, const uint64_t *guid, void *userData, uint32_t success) {
+    (void)id;
+    VirtualWait *w = (VirtualWait *)userData;
+    if (!w) {
+        return;
+    }
+    ItemCallback_t cb = w->callback;
+    void *ud = w->userData;
+    uint32_t vid = w->virtualId;
+    HeapFree(GetProcessHeap(), 0, w);
+    if (cb) {
+        cb(vid, guid, ud, success);
+    }
+}
+
 static void *GAME_FASTCALL GetItemRecord_h(void *cache, void *edx, uint32_t id, const uint64_t *guid, void *callback,
                                            void *userData, uint32_t askServer) {
     (void)edx;
@@ -1370,8 +1395,22 @@ static void *GAME_FASTCALL GetItemRecord_h(void *cache, void *edx, uint32_t id, 
     if (!v) {
         return GetItemRecord_o(cache, id, guid, callback, userData, askServer);
     }
-    // The template's record (the server is asked for it if it isn't cached yet).
-    uint8_t *t = (uint8_t *)GetItemRecord_o(cache, v->templateId, guid, NULL, NULL, askServer);
+    // The template's record. The game only asks the server for an uncached
+    // record when a callback is given, so always pass ours: it tells the
+    // caller (if it gave a callback) under the virtual ID once it arrives.
+    VirtualWait *w = (VirtualWait *)HeapAlloc(GetProcessHeap(), 0, sizeof(VirtualWait));
+    uint8_t *t;
+    if (w) {
+        w->virtualId = id;
+        w->callback = (ItemCallback_t)callback;
+        w->userData = userData;
+        t = (uint8_t *)GetItemRecord_o(cache, v->templateId, guid, (void *)&VirtualArrived, w, askServer);
+        if (t) {
+            HeapFree(GetProcessHeap(), 0, w); // cached: the callback isn't kept
+        }
+    } else {
+        t = (uint8_t *)GetItemRecord_o(cache, v->templateId, guid, NULL, NULL, askServer);
+    }
     if (!t) {
         return NULL;
     }
