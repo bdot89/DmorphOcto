@@ -463,6 +463,14 @@ local function Overlay(look, ported)
 	return true
 end
 
+-- The plain part only carries the game's own items: DMorph's virtual and ported IDs (880001+) belong in the
+-- ported part, which checks them against the pack. Other IDs stay allowed, as DMorph lets you wear any item
+-- in any slot yourself, and OctoWoW items this PC hasn't looked up yet are still real.
+local VIRTUAL_FROM = 880000
+local function ItemFits(item, slot)
+	return item < VIRTUAL_FROM and not (M.IsPortedItem and M.IsPortedItem(item))
+end
+
 -- A look from its three parts (and a ported part), or nil if they don't read as one.
 local function MakeLook(d, m, it, ported)
 	if not (Decode(d) and Decode(m) and it and (it == "-" or strfind(it, "^[a-s][0-9A-Z]+[a-s0-9A-Z]*$"))) then
@@ -473,8 +481,10 @@ local function MakeLook(d, m, it, ported)
 		for letter, id in string.gfind(it, "([a-s])([0-9A-Z]+)") do
 			local item = Decode(id)
 			-- 0: a slot their set hides (shows nothing); DMorph before 2.16 skips it.
-			if item and item >= 0 and item < 1000000 then
-				look.items[string.byte(letter) - 96] = item
+			-- No virtual or ported IDs here: those drew the player white or invisible (review, 26 Nov).
+			local slot = string.byte(letter) - 96
+			if item == 0 or (item and item > 0 and ItemFits(item, slot)) then
+				look.items[slot] = item
 			end
 		end
 	end
@@ -882,7 +892,8 @@ end
 local function SizeOf(token)
 	local _, _, pct = strfind(token or "", "^s(%d+)$")
 	pct = tonumber(pct)
-	if pct and pct >= 10 and pct <= 1000 and pct ~= 100 then
+	-- At most twice as big (a 10x player's click box covered a raid, review 26 Nov), at least half.
+	if pct and pct >= 50 and pct <= 200 and pct ~= 100 then
 		return pct / 100
 	end
 end
@@ -1109,12 +1120,34 @@ local function ReadPrint(sender, print, guid, size, glowToken, wayToken, extraTo
 	end
 end
 
+-- A channel question is only answered for someone in our group or guild, or standing near us: anyone can join
+-- the channel, and one question naming 20 players made each of them post every 3 s (review, 26 Nov).
+local QUESTION_NAMES = 5
+local function SenderNear(sender)
+	if inGroup[sender] or inGuild[sender] then
+		return true
+	end
+	for _, token in ipairs({ "target", "mouseover" }) do
+		if UnitExists(token) and UnitName(token) == sender and Near(token) then
+			return true
+		end
+	end
+	return false
+end
+
 local function ReadQuestion(sender, rest, way)
 	local me = UnitName("player")
+	-- Questions about others still count (someone asked first); only our own answer needs the asker near.
+	local mayAnswer = true
+	if way == "CHANNEL" then
+		local count = 0
+		for _ in string.gfind(rest, "[^,]+") do count = count + 1 end
+		mayAnswer = count <= QUESTION_NAMES and SenderNear(sender)
+	end
 	for entry in string.gfind(rest, "[^,]+") do
 		local _, _, name, print = strfind(entry, "^([^:]+):?(.*)$")
 		if name == me then
-			if Sharing() then
+			if Sharing() and mayAnswer then
 				audience[sender] = clock
 				if print ~= "" and print == Fingerprint(OwnFull()) then
 					replies[way] = replies[way] or "H"

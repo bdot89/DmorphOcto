@@ -5009,7 +5009,8 @@ end
 -- language you know (see above).
 local orig_SendChatMessage = SendChatMessage
 function SendChatMessage(msg, chatType, language, channel)
-	if type(msg) == "string" then
+	-- Only what you type in Say: ".race tonight?" in guild chat is chat, not a command (review, 26 Nov).
+	if type(msg) == "string" and strupper(chatType or "SAY") == "SAY" then
 		local _, _, line = strfind(msg, "^%s*%.(.*)$")
 		if line and RunCommand(line) then
 			return

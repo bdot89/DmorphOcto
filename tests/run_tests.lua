@@ -1469,6 +1469,13 @@ end
 local function hear(sender, text)
 	Mock.Fire("CHAT_MSG_CHANNEL", "DMO2 " .. text, sender, "", "6. DmorphShare", "", "", 0, 6, "DmorphShare")
 end
+-- A channel question from someone standing near you (on your mouseover), as answers now need.
+local function ask(sender, text)
+	local before = Mock.units.mouseover
+	Mock.units.mouseover = { name = sender, guid = "0x00000000000E0001", friendly = true, display = 52 }
+	hear(sender, text)
+	Mock.units.mouseover = before
+end
 local function hearAddon(sender, text, distribution)
 	Mock.Fire("CHAT_MSG_ADDON", "DMO2", text, distribution, sender)
 end
@@ -1642,16 +1649,28 @@ check(DmorphOctoAccount.noDmorph.OctoWoW.Stranger and DmorphOctoAccount.noDmorph
 -- already has it. One answer covers everyone who asked.
 local look = "3HR 0 a2A3eA"
 quiet()
-hear("Someone", "Q Bob,Tester")
-hear("Other", "Q Tester:" .. fingerprint(look))
+ask("Someone", "Q Bob,Tester")
+ask("Other", "Q Tester:" .. fingerprint(look))
 wait(4)
 sent, count = channelSays("DMO2 L " .. look)
 check(sent and count == 1 and table.getn(Mock.channelSent) == 1, "a question about you is answered once")
 quiet()
-hear("Other", "Q Tester:" .. fingerprint(look))
+ask("Other", "Q Tester:" .. fingerprint(look))
 wait(4)
 check(channelSays("DMO2 H " .. fingerprint(look)) and table.getn(Mock.channelSent) == 1,
 	"an asker with your current look gets only its fingerprint")
+-- 3.2.7 (review): a channel question is answered only for someone near, and never for a list of many names.
+quiet()
+hear("Faraway", "Q Tester")
+wait(4)
+check(table.getn(Mock.channelSent) == 0, "a channel question from someone not near you isn't answered")
+quiet()
+ask("Someone", "Q A,B,C,D,E,Tester")
+wait(4)
+check(table.getn(Mock.channelSent) == 0, "nor one naming more than five players")
+quiet()
+SendChatMessage(".race tonight?", "GUILD")
+check(Mock.sent[table.getn(Mock.sent)] == ".race tonight?", "a dot word in guild chat goes out as chat, not a command")
 quiet()
 hearAddon("Pal", "Q Tester:" .. fingerprint(look), "PARTY")
 wait(4)
@@ -1734,13 +1753,19 @@ hear("Ally", "S 100")
 check(sized[ally] == 1, "and their own size goes back when they reset it")
 hear("Ally", "L 3HR 0 - " .. ally)
 check(sized[ally] == 1, "a look without a size (or from DMorph before 2.6) means normal size")
+-- 3.2.7 (review): at most twice as big, at least half, and no virtual items in the plain part.
+hear("Ally", "S 1000")
+check(sized[ally] == 1, "a size over 200% from someone else is ignored")
+hear("Ally", "L 3HR 0 aJ2DS " .. ally)
+check(morphOf(ally).items[1] == nil, "a virtual item ID in someone's plain look isn't put on")
+hear("Ally", "L 3HR 0 - " .. ally)
 quiet()
 DmorphOctoDB.scale = 2
 say(".item head 0") -- any change tells the sharing code
 wait(3)
 check(channelSays("DMO2 S 200"), "your size goes out to DMorph users around you")
 quiet()
-hear("Someone", "Q Tester")
+ask("Someone", "Q Tester")
 wait(4)
 check(channelSays(" s200"), "and with your look when someone asks")
 DmorphOctoDB.scale = nil
@@ -1798,7 +1823,7 @@ wait(3)
 	wait(3)
 	check(channelSays("DMO2 G gp" .. b36(glow)), "your weapon glow goes out to DMorph users around you")
 	quiet()
-	hear("Someone", "Q Tester")
+	ask("Someone", "Q Tester")
 	wait(4)
 	check(channelSays(" gp" .. b36(glow)), "and with your look when someone asks")
 	DmorphOctoDB.glows[16] = nil
@@ -1879,7 +1904,7 @@ wait(2)
 check(DmorphOctoAccount.shareOff == true and channelSays("DMO2 L 0 0 -"),
 	".share off tells the others to take your morph off")
 quiet()
-hear("Someone", "Q Tester")
+ask("Someone", "Q Tester")
 wait(8)
 check(table.getn(Mock.channelSent) == 0, "and questions about you go unanswered")
 slash("share others off")
@@ -3343,7 +3368,7 @@ wait(6)
 quiet()
 local pally = "0x00000000000A0002"
 Mock.units.target = { name = "Porter", guid = pally, friendly = true, display = 50 }
-hear("Porter", "Q Tester")
+ask("Porter", "Q Tester")
 wait(4)
 local sentLook = channelSays("DMO2 L ")
 local portedPart = "P" .. pack .. "_0_0_p" .. b36(900001)
@@ -3385,7 +3410,7 @@ check(morphOf(pally).items[16] == 900002, "the ported part is read after a size 
 	wait(3)
 	check(channelSays(" wp-b"), "how your weapon is sheathed goes out to DMorph users around you")
 	quiet()
-	hear("Porter", "Q Tester")
+	ask("Porter", "Q Tester")
 	wait(4)
 	check(channelSays(" wp-b"), "and with your look when someone asks")
 	-- 2.29.0: extra wear is shared ("x" token, "X" message).
@@ -3409,11 +3434,11 @@ check(morphOf(pally).items[16] == 900002, "the ported part is read after a size 
 	wait(3)
 end)()
 quiet()
-hear("Porter", "Q Tester:" .. fingerprint(base))
+ask("Porter", "Q Tester:" .. fingerprint(base))
 wait(4)
 check(channelSays("DMO2 L ") and not channelSays("DMO2 H "), "a fingerprint without your ported part asks for the whole look")
 quiet()
-hear("Porter", "Q Tester:" .. fingerprint(base .. " " .. portedPart))
+ask("Porter", "Q Tester:" .. fingerprint(base .. " " .. portedPart))
 wait(4)
 check(channelSays("DMO2 H ") and not channelSays("DMO2 L "), "one with it is answered with a fingerprint")
 Mock.units.target = nil
